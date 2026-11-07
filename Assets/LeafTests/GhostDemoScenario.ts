@@ -20,7 +20,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
-import {BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, SHELF_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
+import {BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, FRONT_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
 import {GhostDemoPlayer} from "../Scripts/GhostDemoPlayer"
 import {buildGlyphPath} from "../Scripts/GhostKanaPath"
 
@@ -43,7 +43,7 @@ export class GhostDemoScenario extends Scenario {
     const interactor = new GhostLeafInteractor()
     await sleep(1500)
 
-    const shelf = requireObject(SHELF_ROOT)
+    const front = requireObject(FRONT_ROOT)
     const lesson = requireObject(LESSON_ROOT)
     const practiceSheet = requireObject("PracticeSheet")
     const sheetFurniture = requireObject("SheetFurniture")
@@ -124,13 +124,17 @@ export class GhostDemoScenario extends Scenario {
     }
 
     // ── 1. Open the Japanese lesson; the demo starts by itself ──────────────
+    // Open Japanese from the FRONT DOOR's notebook row. The Lens no longer
+    // opens on the five-notebook shelf -- the front door ("What do you want to
+    // learn?") is home, and the packs sit under "Your notebook". Waiting for
+    // the shelf here timed out at 5s, because nothing routes to it any more.
     if (!lesson.enabled) {
       await waitUntil(
-        () => shelf.enabled,
+        () => front.enabled,
         5000,
-        () => `waiting for the shelf; Shelf.enabled=${shelf.enabled}`,
+        () => `waiting for the front door; FrontDoor.enabled=${front.enabled}`,
       )
-      await interactor.pinchShelfCard("Japanese")
+      await interactor.pinchNotebook("Japanese")
     }
     await waitUntil(
       () => lesson.enabled,
@@ -149,11 +153,15 @@ export class GhostDemoScenario extends Scenario {
     // and resets the counter, which is the brief's "the brush comes to rest at
     // the start of stroke 1, and it's my turn". Asserting "3 / 3" at this point
     // would be asserting that the handover never happened.
+    // The TOTAL matches the glyph actually on the sheet -- not a hard-coded 3.
+    // The lesson is ordered simplest-first, so the opening character is い (two
+    // strokes). That あ specifically has three is asserted against the stroke
+    // data further down, where it belongs.
     const total = counter.text.split("/")[1].trim()
     expect(
       total,
-      `stroke counter total for あ (counter reads "${counter.text}")`,
-    ).toBe("3")
+      `stroke counter total matches the glyph on the sheet (counter reads "${counter.text}")`,
+    ).toBe(String(strokeCount()))
     expect(
       counter.text.trim(),
       "counter hands over to the user at stroke 1 once the ghost finishes",
