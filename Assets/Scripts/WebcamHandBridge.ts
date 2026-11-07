@@ -41,6 +41,31 @@ export class WebcamHandBridge extends BaseScriptComponent {
   @hint("Use only the hand nearest the centre of the camera view, so a second person in frame cannot take over the brush.")
   singleHandOnly: boolean = true;
 
+  /**
+   * Point the camera mapping at a different surface at runtime.
+   *
+   * The bridge was built against the Japanese practice sheet, so the surface
+   * was fixed at author time. Every other thing GHOST shows -- the notebook
+   * shelf, the bookmark tabs, the guitar neck, the ASL area, the Ask and Teach
+   * me cards -- is a different size in a different place, and a cursor mapped
+   * to the sheet lands nowhere near them. The ACTIVE surface is therefore
+   * state, not configuration: whoever changes what is on screen also says what
+   * the camera now maps onto.
+   *
+   * Passing null falls back to the plane in front of the camera, which is
+   * better than silently keeping a surface that is no longer visible.
+   */
+  setSurface(obj: SceneObject | null, widthCm: number, heightCm: number): void {
+    this.surface = obj;
+    if (widthCm > 0) this.surfaceWidthCm = widthCm;
+    if (heightCm > 0) this.surfaceHeightCm = heightCm;
+    // Drop the smoothing history: it is in world space, and the old points
+    // belong to the old surface, so keeping them drags the first frames of the
+    // new one towards wherever the last surface was.
+    this.smoothed = null;
+    this.fingertipWorld = null;
+  }
+
   @input
   @hint("Decide the pinch HERE from pinchDist, instead of trusting the tracker page's own pinch flag. The page latches that flag per hand side, and MediaPipe's handedness label is unreliable on a mirrored image, so with two hands in frame the flag can belong to the other hand.")
   ownPinchDecision: boolean = true;

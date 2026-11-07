@@ -77,6 +77,24 @@ export class GhostBridgeCursor extends BaseScriptComponent {
     this.dotObj.enabled = false;
   }
 
+  /**
+   * Follow the cursor onto a different surface.
+   *
+   * The dot is PARENTED to the surface so it inherits its transform, which
+   * means a surface change is a re-parent, not just a maths change. Re-parented
+   * rather than rebuilt so the mesh and material survive the switch.
+   */
+  setSurface(obj: SceneObject): void {
+    if (!obj || this.surface === obj) return;
+    this.surface = obj;
+    if (this.dotObj) {
+      this.dotObj.setParent(obj);
+      // Hide for a frame: the old local position means nothing on the new
+      // surface, and showing it there would flash the dot in the wrong place.
+      this.dotObj.enabled = false;
+    }
+  }
+
   private onUpdate(): void {
     if (!this.dot || !this.dotObj || !this.surface) return;
 

@@ -152,6 +152,27 @@ export class GhostPinchInput extends BaseScriptComponent {
     print("[GhostPinchInput] webcam bridge hooked - bridge pinches will paint.");
   }
 
+  /**
+   * Project onto a different surface from now on. Kept in step with the
+   * bridge's own surface by whoever switches screens; an in-flight pinch is
+   * ended first, because a stroke that begins on one surface and finishes on
+   * another is not a stroke anyone meant to draw.
+   */
+  setSurface(obj: SceneObject): void {
+    if (this.surface === obj) return;
+    if (this.active || this.bridgePinching) {
+      const p = this.lastPoint;
+      this.active = null;
+      this.bridgePinching = false;
+      this.anchorHand = null;
+      this.anchorTarget = null;
+      if (p) this._onPinchEnd.invoke(p);
+      this.lastPoint = null;
+      this.lastEmitted = null;
+    }
+    this.surface = obj;
+  }
+
   private handleTriggerStart(it: Interactor): void {
     if (!this.accepting || this.active) return;
     const p = this.projectInteractor(it);
