@@ -12,9 +12,13 @@ canvas{position:absolute;left:0;top:16px}
 #stat{margin-top:10px;font-variant-numeric:tabular-nums}
 </style></head><body><main>
 <h1>GHOST hand tracker</h1>
-<p>Keep this tab open while you test in Lens Studio. Pinch thumb and index finger to paint.</p>
+<p>Keep this tab open while you test in Lens Studio. Pinch thumb and index finger to paint, and tap the mic (or press the mic in the Lens) to say a skill.</p>
 <div class="wrap"><video id="v" playsinline muted></video><canvas id="c"></canvas></div>
 <div id="coach" style="margin-top:14px;font-size:22px;color:#b3261e;min-height:28px"></div>
+<div style="margin-top:12px">
+  <button id="mic" style="font-size:20px;padding:10px 20px;border-radius:999px;border:1px solid #888;background:#fff;cursor:pointer">Hold a skill &mdash; tap to speak</button>
+  <span id="speech" style="margin-left:14px;font-size:19px;color:#444"></span>
+</div>
 <div id="stat">starting</div>
 </main>
 <script type="module">
@@ -43,6 +47,72 @@ const lastDbg=[null];
 function connect(){ ws=new WebSocket('ws://127.0.0.1:8765'); ws.onopen=()=>{open=true; ws.send('source')}; ws.onclose=()=>{open=false; setTimeout(connect,1000)}; ws.onerror=()=>{}; }
 connect();
 setInterval(async()=>{try{lenses=(await (await fetch('/status')).json()).lenses}catch(e){}},1000);
+
+// ── Speech ──────────────────────────────────────────────────────────────────
+// The Lens cannot open a microphone in the Lens Studio preview, and this page
+// already has one open for the camera. So the browser does the listening and
+// hands the words over through the bridge.
+//
+// Two ways in, one path out: this page's own button, or the Lens pressing its
+// ink mic (which POSTs /listen, and the poll below picks it up). Either way
+// the transcript goes to POST /heard and the Lens collects it from GET /heard.
+// webkitSpeechRecognition is Chrome-only, which is the browser this page
+// already requires for the GPU hand tracking.
+const micBtn=document.getElementById('mic'), speechEl=document.getElementById('speech');
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null, listening=false;
+
+function speechSay(t,colour){speechEl.textContent=t; speechEl.style.color=colour||'#444';}
+
+if(!SR){
+  micBtn.disabled=true;
+  speechSay('This browser has no speech recognition - use Chrome.','#b3261e');
+}else{
+  rec=new SR();
+  rec.lang='en-US'; rec.interimResults=true; rec.maxAlternatives=1; rec.continuous=false;
+
+  rec.onstart=()=>{listening=true; micBtn.textContent='Listening...'; speechSay('Say a skill, e.g. "draw a star"');};
+  rec.onerror=(e)=>{
+    listening=false; micBtn.textContent='Hold a skill - tap to speak';
+    // no-speech just means silence; it is not worth shouting about.
+    speechSay(e.error==='no-speech'?'Heard nothing - tap to try again'
+             :'Speech error: '+e.error,'#b3261e');
+    // Tell the Lens to stop waiting rather than sit on "Listening..." forever.
+    fetch('/heard',{method:'POST',headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({text:''})}).catch(()=>{});
+  };
+  rec.onend=()=>{listening=false; micBtn.textContent='Hold a skill - tap to speak';};
+  rec.onresult=(ev)=>{
+    let finalText='', interim='';
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const r=ev.results[i];
+      if(r.isFinal) finalText+=r[0].transcript; else interim+=r[0].transcript;
+    }
+    if(interim) speechSay('... '+interim.trim());
+    if(finalText){
+      const text=finalText.trim();
+      speechSay('Heard: "'+text+'"','#1b7f3b');
+      fetch('/heard',{method:'POST',headers:{'Content-Type':'application/json'},
+                      body:JSON.stringify({text:text})}).catch(()=>{});
+    }
+  };
+
+  function startListening(){
+    if(listening) return;
+    try{ rec.start(); }catch(e){ /* already starting; harmless */ }
+  }
+  micBtn.onclick=startListening;
+
+  // The Lens's own mic button arrives here: it POSTs /listen, and this poll
+  // turns that into a real microphone start, which must happen in the page.
+  setInterval(async()=>{
+    try{
+      const r=await (await fetch('/listen')).json();
+      if(r.listen) startListening();
+    }catch(e){}
+  },400);
+}
+
 const fileset=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
 const lm=await HandLandmarker.createFromOptions(fileset,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2,minHandDetectionConfidence:0.6,minHandPresenceConfidence:0.6,minTrackingConfidence:0.5});
 v.srcObject=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:960},height:{ideal:540},frameRate:{ideal:60,min:24}}});

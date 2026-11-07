@@ -4968,6 +4968,15 @@
               "uiInfo": "{\"hint\":\"Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":1}",
               "defaultValue": "1"
             },
+            "speech": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "6a408698-1da5-4539-b6b9-def19bcf1d9c",
+                "name": "GhostSpeech"
+              },
+              "type": "AssignableType_15",
+              "uiInfo": "{\"hint\":\"Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback.\"}"
+            },
             "aslUI": {
               "isScriptInput": true,
               "value": {
@@ -4983,7 +4992,7 @@
                 "UUID": "31344314-8576-480c-a972-fbd63c3ecbe6",
                 "name": "GhostAudio"
               },
-              "type": "AssignableType_15",
+              "type": "AssignableType_16",
               "uiInfo": "{\"hint\":\"Brush, paper, stamp and spoken-character sounds.\"}"
             },
             "demo": {
@@ -5066,8 +5075,9 @@
             "inputNames.22": "sheetUI",
             "inputNames.23": "shelfRoot",
             "inputNames.24": "shelfUI",
-            "inputNames.25": "stampHoldSec",
-            "inputNames.26": "turn",
+            "inputNames.25": "speech",
+            "inputNames.26": "stampHoldSec",
+            "inputNames.27": "turn",
             "name": "GhostMain",
             "enabled": true,
             "sceneObject": "@sceneObject:GHOST",
@@ -7082,6 +7092,89 @@
             "isPrefabInstanceRoot": false,
             "hasPrefabChanges": false,
             "id": "59563978-083f-486c-891e-d1f483058974",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "1bd491ae-d7db-4578-9e05-040ff9eaed36",
+      "name": "Speech",
+      "enabled": true,
+      "parentId": "d343f1c3-771e-4811-935b-0c37960832c5",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "6a408698-1da5-4539-b6b9-def19bcf1d9c",
+          "type": "ScriptComponent",
+          "name": "GhostSpeech",
+          "enabled": true,
+          "properties": {
+            "timeoutSec": {
+              "isScriptInput": true,
+              "value": 12,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Give up listening after this many seconds and go back to the suggestions. Speech recognition itself usually stops sooner.\", \"widget\":\"slider\", \"min\":3, \"max\":30, \"step\":1}",
+              "defaultValue": "12"
+            },
+            "useBridge": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Let the tracker page listen when the mic is pinched. Off falls straight back to the typed suggestions.\"}",
+              "defaultValue": "true"
+            },
+            "pollSec": {
+              "isScriptInput": true,
+              "value": 0.4000000059604645,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How often to check whether anything was heard, in seconds.\", \"widget\":\"slider\", \"min\":0.2, \"max\":2, \"step\":0.1}",
+              "defaultValue": "0.4"
+            },
+            "internetModule": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "46241788-3794-4d79-b8b3-1684fe9f1e20"
+              },
+              "type": "Asset.InternetModule",
+              "uiInfo": "{\"hint\":\"Internet Module. Without it the mic falls back to the typed suggestion list, which is a working state, not an error.\"}"
+            },
+            "bridgeUrl": {
+              "isScriptInput": true,
+              "value": "http://127.0.0.1:8766",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"The webcam bridge, used in the preview. Needs Experimental API enabled for a plain http:// URL, the same setting the hand bridge needs.\"}",
+              "defaultValue": "http://127.0.0.1:8766"
+            },
+            "scriptAsset": "@asset:Scripts/GhostSpeech.ts",
+            "inputNames.0": "bridgeUrl",
+            "inputNames.1": "internetModule",
+            "inputNames.2": "pollSec",
+            "inputNames.3": "timeoutSec",
+            "inputNames.4": "useBridge",
+            "name": "GhostSpeech",
+            "enabled": true,
+            "sceneObject": "@sceneObject:Speech",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "6a408698-1da5-4539-b6b9-def19bcf1d9c",
             "type": "ScriptComponent"
           }
         }

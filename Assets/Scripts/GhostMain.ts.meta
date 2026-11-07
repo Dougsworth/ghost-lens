@@ -53,6 +53,7 @@
     sheetUI: false
     shelfRoot: false
     shelfUI: false
+    speech: false
     stampHoldSec: false
     turn: false
   ScriptTypesHidden:
@@ -84,7 +85,8 @@
       frontUI: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
       lessonSource: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
       coach: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
-      audio: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
+      speech: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
+      audio: !<MappingBased.AssignableType_16> 00000000-0000-0000-0000-000000000000
       lessonSequence: あいうえお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
@@ -119,7 +121,8 @@
     - '// @input AssignableType_12 frontUI {"hint":"The front door: what do you want to learn?"}'
     - '// @input AssignableType_13 lessonSource {"hint":"Plans a lesson, or falls back to a bundled one. Never fails."}'
     - '// @input AssignableType_14 coach {"hint":"One short line after each attempt. Never blocks the lesson."}'
-    - '// @input AssignableType_15 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
+    - '// @input AssignableType_15 speech {"hint":"Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback."}'
+    - '// @input AssignableType_16 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'

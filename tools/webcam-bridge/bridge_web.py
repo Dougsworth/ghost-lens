@@ -61,6 +61,47 @@ class Spend(object):
 
 _spend = Spend()
 
+
+class Speech(object):
+    """A one-slot mailbox between the Lens and the tracker page.
+
+    The Lens cannot reach the browser and the browser cannot reach the Lens, so
+    the bridge holds two flags between them: "someone asked to listen" and
+    "here is what was heard". Both are one-shot — read clears them — so a
+    transcript can never be delivered twice and a stale request cannot start
+    the microphone an hour later.
+
+    Deliberately polled rather than pushed over the websocket: that socket
+    carries hand frames at 30 fps into a parser that expects nothing else, and
+    speech is not worth risking it.
+    """
+
+    def __init__(self):
+        self.listen_requested = False
+        self.heard = ""
+        self.listening = False
+
+    def request_listen(self):
+        self.listen_requested = True
+        self.heard = ""
+
+    def take_request(self):
+        was = self.listen_requested
+        self.listen_requested = False
+        return was
+
+    def say_heard(self, text):
+        self.heard = (text or "").strip()
+        self.listening = False
+
+    def take_heard(self):
+        t = self.heard
+        self.heard = ""
+        return t
+
+
+_speech = Speech()
+
 async def handler(ws):
     role = "lens"
     try:
@@ -100,6 +141,16 @@ def serve_http():
 
         def do_GET(self):
             if self.path in ("/", ""): self.path = "/tracker.html"
+            # The tracker page polls this twice a second; true means the Lens
+            # asked for the microphone. Reading it clears it.
+            if self.path == "/listen":
+                return self._json(200, {"listen": _speech.take_request()})
+
+            # The Lens polls this while it is waiting for a transcript.
+            if self.path == "/heard":
+                return self._json(200, {"text": _speech.take_heard(),
+                                        "listening": _speech.listening})
+
             if self.path == "/status":
                 # "llm" is the provider NAME only -- never the key, and never
                 # anything derived from it.
@@ -125,6 +176,25 @@ def serve_http():
             # On failure it returns an error and GHOST falls back to a bundled
             # lesson, so a dead key or no network never blocks the learner.
             route = self.path.rstrip("/")
+
+            # POST /listen  -- the Lens's mic button. Arms the page.
+            if route == "/listen":
+                _speech.request_listen()
+                _speech.listening = True
+                print("listen requested by the Lens")
+                return self._json(200, {"ok": True})
+
+            # POST /heard {"text"} -- the page hands over what it recognised.
+            if route == "/heard":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    body = json.loads(self.rfile.read(n) or b"{}")
+                except Exception as e:
+                    return self._json(400, {"error": "bad request body: %s" % e})
+                text = (body.get("text") or "").strip()[:200]
+                _speech.say_heard(text)
+                print("heard: %r" % text)
+                return self._json(200, {"ok": True, "text": text})
 
             # POST /coach  {"skill","step","reason","detail"}  ->  {"tip": "..."}
             # One short line after an attempt, from the same provider the

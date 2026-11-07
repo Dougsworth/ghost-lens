@@ -35,6 +35,7 @@ import { GUITAR_CHORDS } from "./GhostGuitarPack";
 import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
 import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
 import { GhostCoach } from "./GhostCoach";
+import { GhostSpeech } from "./GhostSpeech";
 import { Lesson } from "./GhostLessonSchema";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import {
@@ -136,6 +137,10 @@ export class GhostMain extends BaseScriptComponent {
   coach!: GhostCoach;
 
   @input
+  @hint("Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback.")
+  speech!: GhostSpeech;
+
+  @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
   audio!: GhostAudio;
   @ui.group_end
@@ -203,7 +208,8 @@ export class GhostMain extends BaseScriptComponent {
       !this.sheet || !this.demo || !this.turn || !this.pinchInput || !this.audio ||
       !this.aslRoot || !this.aslUI || !this.asl ||
       !this.guitarRoot || !this.guitarUI || !this.guitar ||
-      !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach
+      !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach ||
+      !this.speech
     ) {
       print("[GhostMain] ERROR: a required @input is not wired. Check the scene bootstrap's input-wiring pass.");
       return;
@@ -245,6 +251,8 @@ export class GhostMain extends BaseScriptComponent {
     this.frontUI.onMicPressed.add(() => this.onMicPressed());
     this.frontUI.onNotebookPicked.add((id: string) => this.onPackSelected(id));
     this.coach.onTip.add((tip: string) => this.onCoachTip(tip));
+    this.speech.onHeard.add((text: string) => this.onHeard(text));
+    this.speech.onGaveUp.add(() => this.onSpeechGaveUp());
 
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
     this.guitarUI.onNext.add(() => this.onGuitarNext());
@@ -815,10 +823,33 @@ export class GhostMain extends BaseScriptComponent {
    * listen the mic offers the typed list — which is the brief's own stand-in
    * rule, and leaves the flow after it identical either way.
    */
+  /**
+   * The mic. The tracker page opens the microphone and hands the words back.
+   *
+   * If speech is unavailable at all — no bridge, no page, no Internet Module —
+   * this falls straight through to the typed suggestions rather than making
+   * the user watch "Listening..." time out. Same flow either way: whatever
+   * arrives is treated exactly as a pinched suggestion.
+   */
   private onMicPressed(): void {
     this.audio.playTap();
+    if (!this.speech.startListening()) {
+      this.onSpeechGaveUp();
+      return;
+    }
+    this.frontUI.setWaiting("Listening...");
+  }
+
+  private onHeard(text: string): void {
+    if (this.mode !== "front") return;
+    this.frontUI.setWaiting("");
+    this.onSkillPicked(text);
+  }
+
+  private onSpeechGaveUp(): void {
+    if (this.mode !== "front") return;
     this.frontUI.setSuggestions(this.pickSuggestions());
-    this.frontUI.setWaiting("Speech is off in the preview — pick one of these.");
+    this.frontUI.setWaiting("Did not catch that — pick one of these.");
   }
 
   /**
