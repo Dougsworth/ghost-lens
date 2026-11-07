@@ -20,17 +20,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
-import {
-  BRUSH,
-  GUIDE_INK,
-  GhostLeafInteractor,
-  LESSON_ROOT,
-  SHELF_ROOT,
-  STROKE_COUNTER,
-  VOICE_SOURCE,
-  requireDescendant,
-  requireObject,
-} from "./GhostLeafInteractor"
+import {BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, SHELF_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
 import {GhostDemoPlayer} from "../Scripts/GhostDemoPlayer"
 
 const EXPECTED_STROKES = 3
@@ -123,6 +113,41 @@ export class GhostDemoScenario extends Scenario {
       5000,
       () => `Lesson.enabled=${lesson.enabled} after opening the Japanese pack`,
     )
+
+    // Navigate to あ rather than assuming it is first.
+    //
+    // The lesson sequence is ordered simplest-first (いうえあお: the two-stroke
+    // kana before the three-stroke ones), so あ is no longer the character the
+    // pack opens on. This scenario is about あ specifically -- criterion 2
+    // names it -- so it steps forward until the sheet shows it, identified by
+    // the romaji under the sheet. Asserting position would make the test fail
+    // whenever the teaching order is tuned, which is a property of the lesson,
+    // not of the engine being tested.
+    const romajiOf = (): string => {
+      const t = textOfDescendant(requireObject("SheetFurniture"), "SheetRomaji")
+      return (t || "").trim()
+    }
+    let hops = 0
+    while (romajiOf() !== "a" && hops < 8) {
+      await interactor.pinchTab("Next")
+      hops++
+      await waitUntil(
+        () => romajiOf().length > 0,
+        5000,
+        () => `waiting for the next character; romaji reads "${romajiOf()}"`,
+      )
+    }
+    expect(
+      romajiOf(),
+      `stepped to あ within ${hops} presses of Next (romaji under the sheet)`,
+    ).toBe("a")
+
+    // Re-arm: the hops above ran their own demonstrations.
+    strokeOrder.length = 0
+    counterReadings.length = 0
+    finishedAt = 0
+    firstStrokeAt = 0
+    await interactor.pinchTab("Replay")
 
     await awaitDemo("the automatic demonstration", 30000)
     assertOneWriting("automatic demonstration")

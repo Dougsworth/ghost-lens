@@ -4746,15 +4746,6 @@
               "type": "AssignableType_6",
               "uiInfo": "{\"hint\":\"The user's turn: pinch, drag, check, dry.\"}"
             },
-            "shelfUI": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "ca80db2b-b2cf-4cbc-a6b4-7dcbc56c5bd9",
-                "name": "GhostShelfUI"
-              },
-              "type": "AssignableType_1",
-              "uiInfo": "{\"hint\":\"The notebook shelf UI module.\"}"
-            },
             "reanchorOnOpen": {
               "isScriptInput": true,
               "value": true,
@@ -4780,24 +4771,6 @@
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the practice sheet and its bookmark tabs.\"}"
             },
-            "aslRoot": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc",
-                "name": "Asl"
-              },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
-            },
-            "guitarRoot": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "613765d3-bd12-41c0-82f0-ba712e5e567d",
-                "name": "Guitar"
-              },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the guitar pack's fretboard and tabs.\"}"
-            },
             "sheetUI": {
               "isScriptInput": true,
               "value": {
@@ -4812,6 +4785,22 @@
               "value": false,
               "type": "bool",
               "uiInfo": "{\"hint\":\"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart.\"}"
+            },
+            "shelfUI": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "ca80db2b-b2cf-4cbc-a6b4-7dcbc56c5bd9",
+                "name": "GhostShelfUI"
+              },
+              "type": "AssignableType_1",
+              "uiInfo": "{\"hint\":\"The notebook shelf UI module.\"}"
+            },
+            "cleanRunsBeforeFade": {
+              "isScriptInput": true,
+              "value": 1,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":1}",
+              "defaultValue": "1"
             },
             "stampHoldSec": {
               "isScriptInput": true,
@@ -4876,10 +4865,10 @@
             },
             "lessonSequence": {
               "isScriptInput": true,
-              "value": "あいうえお",
+              "value": "いうえあお",
               "type": "string",
-              "uiInfo": "{\"hint\":\"Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.\"}",
-              "defaultValue": "あいうえお"
+              "uiInfo": "{\"hint\":\"Characters taught by the Japanese pack, in order. SIMPLEST FIRST: い う え are two strokes, あ お are three. Starting on the easiest shape and adding a stroke later is what lets the guide outline be withdrawn without the lesson falling over. The engine can read any of KanaStrokes' 168 kana.\"}",
+              "defaultValue": "いうえあお"
             },
             "anchorDistanceCm": {
               "isScriptInput": true,
@@ -4896,6 +4885,24 @@
               },
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the Ask GHOST word picker.\"}"
+            },
+            "guitarRoot": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "613765d3-bd12-41c0-82f0-ba712e5e567d",
+                "name": "Guitar"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the guitar pack's fretboard and tabs.\"}"
+            },
+            "aslRoot": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc",
+                "name": "Asl"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
             },
             "guitar": {
               "isScriptInput": true,
@@ -4932,21 +4939,22 @@
             "inputNames.4": "aslRoot",
             "inputNames.5": "aslUI",
             "inputNames.6": "audio",
-            "inputNames.7": "debugColliders",
-            "inputNames.8": "demo",
-            "inputNames.9": "guitar",
-            "inputNames.10": "guitarRoot",
-            "inputNames.11": "guitarUI",
-            "inputNames.12": "lessonRoot",
-            "inputNames.13": "lessonSequence",
-            "inputNames.14": "pinchInput",
-            "inputNames.15": "reanchorOnOpen",
-            "inputNames.16": "sheet",
-            "inputNames.17": "sheetUI",
-            "inputNames.18": "shelfRoot",
-            "inputNames.19": "shelfUI",
-            "inputNames.20": "stampHoldSec",
-            "inputNames.21": "turn",
+            "inputNames.7": "cleanRunsBeforeFade",
+            "inputNames.8": "debugColliders",
+            "inputNames.9": "demo",
+            "inputNames.10": "guitar",
+            "inputNames.11": "guitarRoot",
+            "inputNames.12": "guitarUI",
+            "inputNames.13": "lessonRoot",
+            "inputNames.14": "lessonSequence",
+            "inputNames.15": "pinchInput",
+            "inputNames.16": "reanchorOnOpen",
+            "inputNames.17": "sheet",
+            "inputNames.18": "sheetUI",
+            "inputNames.19": "shelfRoot",
+            "inputNames.20": "shelfUI",
+            "inputNames.21": "stampHoldSec",
+            "inputNames.22": "turn",
             "name": "GhostMain",
             "enabled": true,
             "sceneObject": "@sceneObject:GHOST",
@@ -5422,13 +5430,6 @@
               "uiInfo": "{\"hint\":\"Width of each bookmark tab, in cm.\", \"widget\":\"slider\", \"min\":2, \"max\":8, \"step\":0.1}",
               "defaultValue": "3"
             },
-            "tabOffsetXCm": {
-              "isScriptInput": true,
-              "value": 8,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.\", \"widget\":\"slider\", \"min\":6, \"max\":16, \"step\":0.1}",
-              "defaultValue": "8.4"
-            },
             "tabHighlightColor": {
               "isScriptInput": true,
               "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
@@ -5450,13 +5451,6 @@
               "uiInfo": "{\"hint\":\"Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.\", \"widget\":\"color\"}",
               "defaultValue": "{0.26,0.23,0.17,1}"
             },
-            "progressDotRadiusCm": {
-              "isScriptInput": true,
-              "value": 0.20000000298023224,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"Radius of each progress dot, in cm.\", \"widget\":\"slider\", \"min\":0.08, \"max\":0.6, \"step\":0.02}",
-              "defaultValue": "0.2"
-            },
             "progressDoneColor": {
               "isScriptInput": true,
               "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
@@ -5464,12 +5458,33 @@
               "uiInfo": "{\"hint\":\"A progress dot for a character already finished.\", \"widget\":\"color\"}",
               "defaultValue": "{1.0,0.95,0.86,1}"
             },
+            "progressDotRadiusCm": {
+              "isScriptInput": true,
+              "value": 0.20000000298023224,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Radius of each progress dot, in cm.\", \"widget\":\"slider\", \"min\":0.08, \"max\":0.6, \"step\":0.02}",
+              "defaultValue": "0.2"
+            },
             "progressDimColor": {
               "isScriptInput": true,
               "value": "{x: 0.3, y: 0.28, z: 0.24, w: 1}",
               "type": "vec4",
               "uiInfo": "{\"hint\":\"A dot for a character not reached yet. Dim, never dark: on the additive display an 'empty' dot can only be dim.\", \"widget\":\"color\"}",
               "defaultValue": "{0.30,0.28,0.24,1}"
+            },
+            "tabOffsetXCm": {
+              "isScriptInput": true,
+              "value": 8,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.\", \"widget\":\"slider\", \"min\":6, \"max\":16, \"step\":0.1}",
+              "defaultValue": "8.4"
+            },
+            "markerColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.86, z: 0.55, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the turn markers: the numbered start dot, the direction arrow and the faint end dot. Warm amber so they read as guidance rather than as ink.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.86,0.55,1}"
             },
             "tabHeightCm": {
               "isScriptInput": true,
@@ -5494,17 +5509,18 @@
             },
             "scriptAsset": "@asset:Scripts/GhostSheetUI.ts",
             "inputNames.0": "counterOffsetCm",
-            "inputNames.1": "progressCurrentColor",
-            "inputNames.2": "progressDimColor",
-            "inputNames.3": "progressDoneColor",
-            "inputNames.4": "progressDotRadiusCm",
-            "inputNames.5": "tabGapCm",
-            "inputNames.6": "tabHeightCm",
-            "inputNames.7": "tabHighlightColor",
-            "inputNames.8": "tabOffsetXCm",
-            "inputNames.9": "tabPaperColor",
-            "inputNames.10": "tabWidthCm",
-            "inputNames.11": "typeColor",
+            "inputNames.1": "markerColor",
+            "inputNames.2": "progressCurrentColor",
+            "inputNames.3": "progressDimColor",
+            "inputNames.4": "progressDoneColor",
+            "inputNames.5": "progressDotRadiusCm",
+            "inputNames.6": "tabGapCm",
+            "inputNames.7": "tabHeightCm",
+            "inputNames.8": "tabHighlightColor",
+            "inputNames.9": "tabOffsetXCm",
+            "inputNames.10": "tabPaperColor",
+            "inputNames.11": "tabWidthCm",
+            "inputNames.12": "typeColor",
             "name": "GhostSheetUI",
             "enabled": true,
             "sceneObject": "@sceneObject:SheetFurniture",
@@ -5562,35 +5578,19 @@
               "type": "AssignableType_1",
               "uiInfo": "{\"hint\":\"The practice sheet. User ink is drawn into its inkRoot, in front of the ghost's guide.\"}"
             },
-            "wetInkColor": {
+            "onLineColor": {
               "isScriptInput": true,
-              "value": "{x: 1, y: 0.97, z: 0.9, w: 1}",
+              "value": "{x: 0.46, y: 1, z: 0.6, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}",
-              "defaultValue": "{1,0.97,0.90,1}"
+              "uiInfo": "{\"hint\":\"Live ink where the stroke is ON the guide. Additive display: an emitted green, bright enough to read against the warm paper.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.46,1,0.60,1}"
             },
-            "inputSmoothing": {
+            "onLineCm": {
               "isScriptInput": true,
-              "value": 0.5,
+              "value": 0.8999999761581421,
               "type": "float",
-              "uiInfo": "{\"hint\":\"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.\", \"widget\":\"slider\", \"min\":0, \"max\":0.9, \"step\":0.05}",
-              "defaultValue": "0.5"
-            },
-            "pinchInput": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "81890501-22b4-4d6f-9127-2579d6587b04",
-                "name": "GhostPinchInput"
-              },
-              "type": "AssignableType_2",
-              "uiInfo": "{\"hint\":\"Pinch source: SIK hand or mouse, plus the webcam bridge when connected.\"}"
-            },
-            "pulseColor": {
-              "isScriptInput": true,
-              "value": "{x: 1, y: 0.86, z: 0.55, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Colour of the pulsing marker that shows where to begin again after a miss.\", \"widget\":\"color\"}",
-              "defaultValue": "{1,0.86,0.55,1}"
+              "uiInfo": "{\"hint\":\"Distance from the guide, in cm, within which the ink reads as ON the line.\", \"widget\":\"slider\", \"min\":0.2, \"max\":3, \"step\":0.1}",
+              "defaultValue": "0.9"
             },
             "missesBeforeDemo": {
               "isScriptInput": true,
@@ -5613,12 +5613,49 @@
               "uiInfo": "{\"hint\":\"And at most this multiple of it, so scribbling cannot pass.\", \"widget\":\"slider\", \"min\":1, \"max\":5, \"step\":0.1}",
               "defaultValue": "3"
             },
-            "inkWidthCm": {
+            "wetInkColor": {
               "isScriptInput": true,
-              "value": 0.550000011920929,
+              "value": "{x: 1, y: 0.97, z: 0.9, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.97,0.90,1}"
+            },
+            "pulseColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.86, z: 0.55, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the pulsing marker that shows which part of the stroke to fix.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.86,0.55,1}"
+            },
+            "pinchInput": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "81890501-22b4-4d6f-9127-2579d6587b04",
+                "name": "GhostPinchInput"
+              },
+              "type": "AssignableType_2",
+              "uiInfo": "{\"hint\":\"Pinch source: SIK hand or mouse, plus the webcam bridge when connected.\"}"
+            },
+            "inputSmoothing": {
+              "isScriptInput": true,
+              "value": 0.5,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}",
-              "defaultValue": "0.55"
+              "uiInfo": "{\"hint\":\"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.\", \"widget\":\"slider\", \"min\":0, \"max\":0.9, \"step\":0.05}",
+              "defaultValue": "0.5"
+            },
+            "offColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.46, z: 0.38, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Live ink where the stroke is OFF. A warm red-orange rather than a signal red: the brief rules out a harsh error, so this has to read as ink that drifted, not as an alarm.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.46,0.38,1}"
+            },
+            "feedbackBands": {
+              "isScriptInput": true,
+              "value": 6,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How many coloured bands one stroke is split into. More bands localise a mistake more precisely; fewer read more calmly.\", \"widget\":\"slider\", \"min\":2, \"max\":10, \"step\":1}",
+              "defaultValue": "6"
             },
             "driedInkColor": {
               "isScriptInput": true,
@@ -5626,6 +5663,20 @@
               "type": "vec4",
               "uiInfo": "{\"hint\":\"Colour the user's ink dries to once a stroke is accepted. Stays on the sheet until the page turns.\", \"widget\":\"color\"}",
               "defaultValue": "{0.92,0.86,0.74,1}"
+            },
+            "inkWidthCm": {
+              "isScriptInput": true,
+              "value": 0.550000011920929,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}",
+              "defaultValue": "0.55"
+            },
+            "closeCm": {
+              "isScriptInput": true,
+              "value": 2.200000047683716,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"And within which it reads as CLOSE. Past this it reads as off. Both are display thresholds only — whether the stroke actually passes is still the mean test below.\", \"widget\":\"slider\", \"min\":0.5, \"max\":5, \"step\":0.1}",
+              "defaultValue": "2.2"
             },
             "toleranceCm": {
               "isScriptInput": true,
@@ -5641,6 +5692,13 @@
               "uiInfo": "{\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}",
               "defaultValue": "0.3"
             },
+            "closeColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.8, z: 0.36, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Live ink where the stroke is CLOSE. This still passes — it is a nudge, not a failure.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.80,0.36,1}"
+            },
             "armDistanceCm": {
               "isScriptInput": true,
               "value": 0.6000000238418579,
@@ -5650,19 +5708,25 @@
             },
             "scriptAsset": "@asset:Scripts/GhostTurnController.ts",
             "inputNames.0": "armDistanceCm",
-            "inputNames.1": "driedInkColor",
-            "inputNames.2": "inkWidthCm",
-            "inputNames.3": "inputSmoothing",
-            "inputNames.4": "maxLengthRatio",
-            "inputNames.5": "minDragSec",
-            "inputNames.6": "minLengthRatio",
-            "inputNames.7": "missesBeforeDemo",
-            "inputNames.8": "pinchInput",
-            "inputNames.9": "pulseColor",
-            "inputNames.10": "sheet",
-            "inputNames.11": "startToleranceCm",
-            "inputNames.12": "toleranceCm",
-            "inputNames.13": "wetInkColor",
+            "inputNames.1": "closeCm",
+            "inputNames.2": "closeColor",
+            "inputNames.3": "driedInkColor",
+            "inputNames.4": "feedbackBands",
+            "inputNames.5": "inkWidthCm",
+            "inputNames.6": "inputSmoothing",
+            "inputNames.7": "maxLengthRatio",
+            "inputNames.8": "minDragSec",
+            "inputNames.9": "minLengthRatio",
+            "inputNames.10": "missesBeforeDemo",
+            "inputNames.11": "offColor",
+            "inputNames.12": "onLineCm",
+            "inputNames.13": "onLineColor",
+            "inputNames.14": "pinchInput",
+            "inputNames.15": "pulseColor",
+            "inputNames.16": "sheet",
+            "inputNames.17": "startToleranceCm",
+            "inputNames.18": "toleranceCm",
+            "inputNames.19": "wetInkColor",
             "name": "GhostTurnController",
             "enabled": true,
             "sceneObject": "@sceneObject:TurnController",
@@ -6507,8 +6571,8 @@
               "isScriptInput": true,
               "value": "{x: 0.4, y: 0.38, z: 0.33, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.95,0.91,0.83,1}"
+              "uiInfo": "{\"hint\":\"Ghost hand colour, and the only thing that makes it TRANSLUCENT. The display is additive, so a surface is see-through exactly to the degree that it is dim: at the ASL pack's bright off-white the hand renders as a solid white slab covering the strings and the circles underneath it. Dim is what makes it a ghost.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.40,0.38,0.33,1}"
             },
             "chordBoxSizeCm": {
               "isScriptInput": true,

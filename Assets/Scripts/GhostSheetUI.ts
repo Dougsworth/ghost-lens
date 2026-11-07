@@ -25,7 +25,8 @@ import {
 } from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes";
 import { RoundedRectangleVisual } from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangleVisual";
 import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
-import { createDot, createWashiSheet } from "./GhostInkRibbon";
+import { Pt } from "./GhostKanaPath";
+import { createDot, createQuads, createWashiSheet } from "./GhostInkRibbon";
 
 // ── Typography ───────────────────────────────────────────────────────────────
 // Sizes are the Snap Specs type scale, calibrated at z = -110 cm. GHOST's sheet
@@ -33,20 +34,31 @@ import { createDot, createWashiSheet } from "./GhostInkRibbon";
 const FONT_SIZE_SCALE = 1.0;
 const PANEL_DISTANCE_CM = 45;
 
-type TextRole = "Title1" | "Headline1" | "Body" | "Caption" | "TabThin";
+type TextRole = "Title1" | "Headline1" | "Body" | "Caption" | "TabThin" | "Counter" | "StrokeNum";
 
+// Sizes below were raised substantially after testing え on glass: the whole
+// scale was calibrated for a panel at 110 cm and then scaled DOWN for a sheet
+// at 45 cm, which is backwards — closer content subtends more angle per cm, so
+// the cm sizes should not have shrunk nearly as much as they did. Everything a
+// learner has to read mid-stroke (the counter, the stroke numbers, the tip and
+// the romaji) is now sized to be legible without looking straight at it.
 const TYPE_SCALE: Record<TextRole, { size: number; weight: number }> = {
-  Title1: { size: 105, weight: 700 },
+  Title1: { size: 170, weight: 700 },
   Headline1: { size: 54, weight: 700 },
-  Body: { size: 39, weight: 500 },
+  Body: { size: 72, weight: 500 },
   Caption: { size: 38, weight: 500 },
+  /** "1 / 3" at the sheet's corner — glanced at, never studied, so it has to
+   *  be readable out of the corner of an eye. Over 3x its old size. */
+  Counter: { size: 124, weight: 700 },
+  /** The small numeral at each stroke's start point. Also over 3x. */
+  StrokeNum: { size: 124, weight: 700 },
   // The brief asks for "thin grey type" on the tabs, but a 300 weight at 38 on
   // an ADDITIVE display is barely there: thin strokes emit too little light to
   // read at 45 cm, and the washi tab behind them is deliberately faint, so
   // there is no dark ground to carry them. Medium weight at a slightly larger
   // size keeps the quiet, un-boxy bookmark look while actually being readable.
   // The tab PAPER is unchanged — only the type got heavier.
-  TabThin: { size: 42, weight: 500 },
+  TabThin: { size: 78, weight: 500 },
 };
 
 function roleSize(role: TextRole, distanceCm: number = PANEL_DISTANCE_CM): number {
@@ -73,6 +85,11 @@ export class GhostSheetUI extends BaseScriptComponent {
 
   @ui.label('<span style="color: #60A5FA;">Settings</span>')
   @ui.group_start("Settings")
+  @input("vec4", "{1,0.86,0.55,1}")
+  @hint("Colour of the turn markers: the numbered start dot, the direction arrow and the faint end dot. Warm amber so they read as guidance rather than as ink.")
+  @widget(new ColorWidget())
+  markerColor: vec4;
+
   @input("vec4", "{0.26,0.23,0.17,1}")
   @hint("Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.")
   @widget(new ColorWidget())
@@ -142,6 +159,7 @@ export class GhostSheetUI extends BaseScriptComponent {
   private dotRoot: SceneObject | null = null;
   private strokeNumberRoot: SceneObject | null = null;
   private strokeNumbers: SceneObject[] = [];
+  private turnMarkers: SceneObject[] = [];
   private tabButtons: Button[] = [];
   private tabPapers: RenderMeshVisual[] = [];
 
@@ -263,15 +281,89 @@ export class GhostSheetUI extends BaseScriptComponent {
     const t = so.createComponent("Component.Text") as Text;
     t.text = String(n);
     t.depthTest = true;
-    applyTextRole(t, "Caption");
+    applyTextRole(t, "StrokeNum");
     t.textFill.color = this.typeColor;
     t.horizontalAlignment = HorizontalAlignment.Center;
     t.verticalAlignment = VerticalAlignment.Center;
     t.horizontalOverflow = HorizontalOverflow.Overflow;
     t.verticalOverflow = VerticalOverflow.Overflow;
-    t.layoutRect = Rect.create(-0.6, 0.6, -0.5, 0.5);
+    t.layoutRect = Rect.create(-1.3, 1.3, -1.1, 1.1);
 
     this.strokeNumbers.push(so);
+  }
+
+  /**
+   * Where this stroke starts, which way it goes, and where it ends.
+   *
+   * Shown during the USER's turn, not the ghost's. Watching a demonstration
+   * tells you the shape; it does not tell you where to put the brush down
+   * thirty seconds later, and "1 / 3" does not either. So the stroke about to
+   * be drawn gets a numbered dot at its start, a short arrow along its first
+   * centimetre for direction, and a faint dot where it ends.
+   *
+   * Only ever ONE stroke's markers are up at a time — the one being drawn.
+   * Marking every stroke at once would be a diagram, and the brief's rule is
+   * one thing at a time.
+   */
+  showTurnMarkers(n: number, start: Pt, heading: Pt, end: Pt): void {
+    this.clearTurnMarkers();
+    if (!this.strokeNumberRoot) return;
+
+    // The faint end dot first, so the brighter start marker wins any overlap.
+    const endDot = createDot(
+      this.strokeNumberRoot, "StrokeEndDot", 0.42, this.fade(this.markerColor, 0.42), 0.01, 18
+    );
+    endDot.getSceneObject().getTransform().setLocalPosition(new vec3(end.x, end.y, 0.01));
+    this.turnMarkers.push(endDot.getSceneObject());
+
+    // Direction arrow: a short bar from the start point along the heading,
+    // with a chevron at its far end. Built along +x and then rotated, so the
+    // geometry is written once regardless of which way the stroke runs.
+    const dx = heading.x - start.x;
+    const dy = heading.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 1e-3) {
+      const angle = Math.atan2(dy, dx);
+      const shaft = Math.min(2.4, Math.max(1.1, len));
+      const t = 0.17;
+      const arrow = createQuads(this.strokeNumberRoot, "StrokeArrow", [
+        { x: shaft * 0.5, y: 0, w: shaft, h: t },
+        { x: shaft - 0.3, y: 0.22, w: 0.62, h: t },
+        { x: shaft - 0.3, y: -0.22, w: 0.62, h: t },
+      ], this.markerColor, 0.02);
+      const so = arrow.getSceneObject();
+      so.getTransform().setLocalPosition(new vec3(start.x, start.y, 0.02));
+      so.getTransform().setLocalRotation(quat.fromEulerAngles(0, 0, angle));
+      this.turnMarkers.push(so);
+    }
+
+    // The numbered start dot, brightest of the three.
+    const startDot = createDot(
+      this.strokeNumberRoot, "StrokeStartDot", 0.95, this.markerColor, 0.03, 22
+    );
+    startDot.getSceneObject().getTransform().setLocalPosition(new vec3(start.x, start.y, 0.03));
+    this.turnMarkers.push(startDot.getSceneObject());
+
+    const numSO = this.obj(this.strokeNumberRoot, "StrokeStartNumber",
+      new vec3(start.x, start.y, 0.05));
+    const t2 = numSO.createComponent("Component.Text") as Text;
+    t2.text = String(n);
+    t2.depthTest = true;
+    applyTextRole(t2, "StrokeNum");
+    // Dark numeral on the bright dot: on an additive display the dot cannot be
+    // punched through, so the number is a dimmer value sitting over a brighter one.
+    t2.textFill.color = new vec4(0.08, 0.07, 0.055, 1);
+    t2.horizontalAlignment = HorizontalAlignment.Center;
+    t2.verticalAlignment = VerticalAlignment.Center;
+    t2.horizontalOverflow = HorizontalOverflow.Overflow;
+    t2.verticalOverflow = VerticalOverflow.Overflow;
+    t2.layoutRect = Rect.create(-1.3, 1.3, -1.1, 1.1);
+    this.turnMarkers.push(numSO);
+  }
+
+  clearTurnMarkers(): void {
+    for (let i = 0; i < this.turnMarkers.length; i++) this.turnMarkers[i].destroy();
+    this.turnMarkers = [];
   }
 
   clearStrokeNumbers(): void {
@@ -301,13 +393,13 @@ export class GhostSheetUI extends BaseScriptComponent {
     const t = so.createComponent("Component.Text") as Text;
     t.text = "1 / 1";
     t.depthTest = true;
-    applyTextRole(t, "Body");
+    applyTextRole(t, "Counter");
     t.textFill.color = this.typeColor;
     t.horizontalAlignment = HorizontalAlignment.Center;
     t.verticalAlignment = VerticalAlignment.Center;
     t.horizontalOverflow = HorizontalOverflow.Overflow;
     t.verticalOverflow = VerticalOverflow.Overflow;
-    t.layoutRect = Rect.create(-2.0, 2.0, -0.6, 0.6);
+    t.layoutRect = Rect.create(-3.6, 3.6, -1.3, 1.3);
     this.counterText = t;
   }
 
@@ -328,7 +420,9 @@ export class GhostSheetUI extends BaseScriptComponent {
   }
 
   /** A text object under (or above) the sheet, centred, hidden until set. */
-  private buildText(name: string, y: number, role: TextRole, halfWidth: number): Text {
+  private buildText(
+    name: string, y: number, role: TextRole, halfWidth: number, halfHeight: number = 1.6
+  ): Text {
     const so = this.obj(this.sceneObject, name, new vec3(0, y, 0.03));
     const t = so.createComponent("Component.Text") as Text;
     t.text = "";
@@ -339,7 +433,7 @@ export class GhostSheetUI extends BaseScriptComponent {
     t.verticalAlignment = VerticalAlignment.Center;
     t.horizontalOverflow = HorizontalOverflow.Overflow;
     t.verticalOverflow = VerticalOverflow.Overflow;
-    t.layoutRect = Rect.create(-halfWidth, halfWidth, -1.2, 1.2);
+    t.layoutRect = Rect.create(-halfWidth, halfWidth, -halfHeight, halfHeight);
     so.enabled = false;
     return t;
   }
@@ -349,15 +443,17 @@ export class GhostSheetUI extends BaseScriptComponent {
   // sits ABOVE the sheet so a changing instruction never jostles the fixed
   // block of text underneath it.
   private buildRomaji(): void {
-    this.romajiText = this.buildText("SheetRomaji", -8.9, "Title1", 7);
+    // Moved up from -8.9: at the new Title1 size the glyph is a centimetre
+    // taller, and content past about -11 cm is outside the SPECS frame.
+    this.romajiText = this.buildText("SheetRomaji", -8.4, "Title1", 8, 1.7);
   }
 
   private buildHook(): void {
-    this.hookText = this.buildText("SheetHook", -10.3, "Body", 11);
+    this.hookText = this.buildText("SheetHook", -10.2, "Body", 12, 1.0);
   }
 
   private buildLine(): void {
-    this.lineText = this.buildText("SheetLine", 9.2, "Body", 9);
+    this.lineText = this.buildText("SheetLine", 9.3, "Body", 11, 1.1);
   }
 
   private buildDotRoot(): void {
@@ -512,7 +608,7 @@ export class GhostSheetUI extends BaseScriptComponent {
     t.verticalAlignment = VerticalAlignment.Center;
     t.horizontalOverflow = HorizontalOverflow.Overflow;
     t.verticalOverflow = VerticalOverflow.Overflow;
-    t.layoutRect = Rect.create(-widthCm / 2, widthCm / 2, -0.6, 0.6);
+    t.layoutRect = Rect.create(-widthCm / 2, widthCm / 2, -1.1, 1.1);
     so.createComponent(FlexItem.getTypeName());
   }
 }

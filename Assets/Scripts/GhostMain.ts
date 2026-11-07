@@ -121,8 +121,8 @@ export class GhostMain extends BaseScriptComponent {
   @ui.label('<span style="color: #60A5FA;">Settings</span>')
   @ui.group_start("Settings")
   @input
-  @hint("Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.")
-  lessonSequence: string = "あいうえお";
+  @hint("Characters taught by the Japanese pack, in order. SIMPLEST FIRST: い う え are two strokes, あ お are three. Starting on the easiest shape and adding a stroke later is what lets the guide outline be withdrawn without the lesson falling over. The engine can read any of KanaStrokes' 168 kana.")
+  lessonSequence: string = "いうえあお";
 
   @input
   @hint("Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin.")
@@ -132,6 +132,11 @@ export class GhostMain extends BaseScriptComponent {
   @hint("How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.")
   @widget(new SliderWidget(25, 90, 1))
   anchorDistanceCm: number = 45;
+
+  @input
+  @hint("Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.")
+  @widget(new SliderWidget(1, 6, 1))
+  cleanRunsBeforeFade: number = 1;
 
   @input
   @hint("Seconds the finished sheet rests with its stamp before the page turns.")
@@ -144,6 +149,10 @@ export class GhostMain extends BaseScriptComponent {
   @ui.group_end
 
   private characters: string[] = [];
+  /** Characters finished with no miss, in a row. Drives the guide fade. */
+  private cleanRun = 0;
+  /** True while the character on the sheet has not been missed once. */
+  private cleanCharacter = true;
   private introShown = false;
   private praiseCount = 0;
   private currentChar = "";
@@ -283,6 +292,9 @@ export class GhostMain extends BaseScriptComponent {
     this.sheetUI.setProgress(this.characters.length, this.lessonIndex, this.lessonIndex);
     this.sheetUI.setLine("");
 
+    this.cleanCharacter = true;
+    this.demo.setGuideStrength(this.guideStrengthNow());
+
     this.shelfRoot.enabled = false;
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
@@ -303,6 +315,9 @@ export class GhostMain extends BaseScriptComponent {
   private startDemo(slow: boolean): void {
     if (!this.glyph) return;
     this.mode = "demo";
+    // The ghost is showing the stroke; its own brush is the marker.
+    this.sheetUI.clearTurnMarkers();
+    this.demo.setBrushVisible(true);
     this.redemoIndex = -1;
     this.turn.stop();
     this.sheetUI.clearStrokeNumbers();
@@ -316,8 +331,14 @@ export class GhostMain extends BaseScriptComponent {
     if (!this.glyph) return;
     this.mode = "turn";
     this.sheetUI.setStrokeCounter(1, this.glyph.strokeCount);
-    this.demo.parkBrushAt(0);
+    // The ghost's own furniture comes down as the sheet is handed over: its
+    // scattered stroke numbers, and its brush. Both are replaced by the single
+    // numbered start marker below, which says the same thing for the one
+    // stroke that matters and nothing for the others.
+    this.sheetUI.clearStrokeNumbers();
+    this.demo.setBrushVisible(false);
     this.turn.begin(this.glyph);
+    this.showTurnMarkers(0);
 
     // First lesson only: say what to do, once, then get out of the way. After
     // that the line carries the per-stroke tip instead.
@@ -330,6 +351,38 @@ export class GhostMain extends BaseScriptComponent {
       return;
     }
     this.showStrokeTip(0);
+  }
+
+  /**
+   * How much guide outline this character gets: the full outline, then a
+   * ghost of it, then none.
+   *
+   * The ladder is earned per CHARACTER rather than per stroke, because one
+   * lucky stroke is not evidence and withdrawing the outline mid-character
+   * would change the task halfway through it.
+   */
+  private guideStrengthNow(): number {
+    const n = Math.max(1, this.cleanRunsBeforeFade);
+    if (this.cleanRun < n) return 1;
+    if (this.cleanRun < n * 2) return 0.45;
+    return 0;
+  }
+
+  /**
+   * Put the start dot, the direction arrow and the end dot on ONE stroke: the
+   * one the user is about to draw. Clears them when there is no such stroke.
+   */
+  private showTurnMarkers(strokeIndex: number): void {
+    if (!this.glyph || strokeIndex < 0 || strokeIndex >= this.glyph.strokeCount) {
+      this.sheetUI.clearTurnMarkers();
+      return;
+    }
+    const s = this.glyph.strokes[strokeIndex];
+    // The heading is taken a little way along the stroke rather than from the
+    // very next point: adjacent points are a fraction of a millimetre apart
+    // after the spline densification, and their direction is noise.
+    const headAt = Math.min(s.points.length - 1, Math.max(1, Math.floor(s.points.length * 0.12)));
+    this.sheetUI.showTurnMarkers(strokeIndex + 1, s.start, s.points[headAt], s.end);
   }
 
   /** The one line above the sheet: how to move for the stroke about to be drawn. */
@@ -362,9 +415,11 @@ export class GhostMain extends BaseScriptComponent {
 
     // Re-showed one stroke after misses: give the sheet straight back.
     if (this.redemoIndex >= 0) {
+      const back = this.redemoIndex;
       this.redemoIndex = -1;
       this.mode = "turn";
       this.turn.resume();
+      this.showTurnMarkers(back);
       return;
     }
 
@@ -381,9 +436,10 @@ export class GhostMain extends BaseScriptComponent {
   private onStrokeAccepted(index: number): void {
     if (!this.glyph) return;
     this.audio.playInkDry();
-    // The brush hops to the start of the next stroke.
-    const next = Math.min(index + 1, this.glyph.strokeCount - 1);
-    this.demo.parkBrushAt(next);
+    // The marker hops to the start of the next stroke. The ghost's brush used
+    // to do this, but it is hidden during the user's turn now — parkBrushAt
+    // re-enables it as a side effect, so calling it here would bring it back.
+    this.showTurnMarkers(index + 1 < this.glyph.strokeCount ? index + 1 : -1);
     this.sheetUI.setStrokeCounter(Math.min(index + 2, this.glyph.strokeCount), this.glyph.strokeCount);
 
     // A word, then the next instruction. Praise alone would leave the user
@@ -399,8 +455,13 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private onStrokeMissed(info: MissInfo): void {
-    // No harsh error and no red X — a soft sound, and the start point pulses.
+    // No harsh error and no red X — a soft sound, and the missed part pulses.
     this.audio.playMiss();
+    // Struggling: give the outline straight back, at full strength, and start
+    // earning the fade again. Guidance that only ever goes away is a trap.
+    this.cleanCharacter = false;
+    this.cleanRun = 0;
+    this.demo.setGuideStrength(1);
     // Re-show the movement for THIS stroke. Saying nothing after a miss reads
     // as a dead end; repeating the tip is the quietest useful answer.
     this.showStrokeTip(info.index);
@@ -416,6 +477,7 @@ export class GhostMain extends BaseScriptComponent {
 
   private onCharacterComplete(): void {
     this.mode = "finished";
+    if (this.cleanCharacter) this.cleanRun++;
     this.audio.playStamp();
     this.sheet.showStamp();
     const after = this.createEvent("DelayedCallbackEvent");

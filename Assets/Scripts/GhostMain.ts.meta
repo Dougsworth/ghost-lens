@@ -35,6 +35,7 @@
     aslRoot: false
     aslUI: false
     audio: false
+    cleanRunsBeforeFade: false
     debugColliders: false
     demo: false
     guitar: false
@@ -79,6 +80,7 @@
       lessonSequence: あいうえお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
+      cleanRunsBeforeFade: !<float> 1.000000
       stampHoldSec: 1.100000
       debugColliders: false
   ScriptTypes:
@@ -110,9 +112,10 @@
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - "// @input string lessonSequence = \"あいうえお\" {\"hint\":\"Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.\"}"
+    - "// @input string lessonSequence = \"いうえあお\" {\"hint\":\"Characters taught by the Japanese pack, in order. SIMPLEST FIRST: い う え are two strokes, あ お are three. Starting on the easiest shape and adding a stroke later is what lets the guide outline be withdrawn without the lesson falling over. The engine can read any of KanaStrokes' 168 kana.\"}"
     - '// @input bool reanchorOnOpen = true {"hint":"Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin."}'
     - "// @input float anchorDistanceCm = 45 {\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}"
+    - '// @input float cleanRunsBeforeFade = 1 {"hint":"Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.", "widget":"slider", "min":1, "max":6, "step":1}'
     - '// @input float stampHoldSec = 1.1 {"hint":"Seconds the finished sheet rests with its stamp before the page turns.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
     - '// @input bool debugColliders {"hint":"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart."}'
     - '// @ui {"widget":"group_end"}'

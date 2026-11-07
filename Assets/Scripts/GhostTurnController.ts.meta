@@ -29,13 +29,19 @@
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
     armDistanceCm: false
+    closeCm: false
+    closeColor: false
     driedInkColor: false
+    feedbackBands: false
     inkWidthCm: false
     inputSmoothing: false
     maxLengthRatio: false
     minDragSec: false
     minLengthRatio: false
     missesBeforeDemo: false
+    offColor: false
+    onLineCm: false
+    onLineColor: false
     pinchInput: false
     pulseColor: false
     sheet: false
@@ -56,6 +62,12 @@
       wetInkColor: !<Vec4> {x: 1.000000, y: 0.970000, z: 0.900000, w: 1.000000}
       driedInkColor: !<Vec4> {x: 0.920000, y: 0.860000, z: 0.740000, w: 1.000000}
       pulseColor: !<Vec4> {x: 1.000000, y: 0.860000, z: 0.550000, w: 1.000000}
+      onLineColor: !<Vec4> {x: 0.460000, y: 1.000000, z: 0.600000, w: 1.000000}
+      closeColor: !<Vec4> {x: 1.000000, y: 0.800000, z: 0.360000, w: 1.000000}
+      offColor: !<Vec4> {x: 1.000000, y: 0.460000, z: 0.380000, w: 1.000000}
+      onLineCm: 0.900000
+      closeCm: 2.200000
+      feedbackBands: !<float> 6.000000
       toleranceCm: 1.600000
       minLengthRatio: 0.450000
       maxLengthRatio: 2.200000
@@ -81,7 +93,13 @@
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - "// @input vec4 wetInkColor = \"{1,0.97,0.90,1}\" {\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}"
     - "// @input vec4 driedInkColor = \"{0.92,0.86,0.74,1}\" {\"hint\":\"Colour the user's ink dries to once a stroke is accepted. Stays on the sheet until the page turns.\", \"widget\":\"color\"}"
-    - '// @input vec4 pulseColor = "{1,0.86,0.55,1}" {"hint":"Colour of the pulsing marker that shows where to begin again after a miss.", "widget":"color"}'
+    - '// @input vec4 pulseColor = "{1,0.86,0.55,1}" {"hint":"Colour of the pulsing marker that shows which part of the stroke to fix.", "widget":"color"}'
+    - '// @input vec4 onLineColor = "{0.46,1,0.60,1}" {"hint":"Live ink where the stroke is ON the guide. Additive display: an emitted green, bright enough to read against the warm paper.", "widget":"color"}'
+    - '// @input vec4 closeColor = "{1,0.80,0.36,1}" {"hint":"Live ink where the stroke is CLOSE. This still passes — it is a nudge, not a failure.", "widget":"color"}'
+    - '// @input vec4 offColor = "{1,0.46,0.38,1}" {"hint":"Live ink where the stroke is OFF. A warm red-orange rather than a signal red: the brief rules out a harsh error, so this has to read as ink that drifted, not as an alarm.", "widget":"color"}'
+    - '// @input float onLineCm = 0.9 {"hint":"Distance from the guide, in cm, within which the ink reads as ON the line.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
+    - '// @input float closeCm = 2.2 {"hint":"And within which it reads as CLOSE. Past this it reads as off. Both are display thresholds only — whether the stroke actually passes is still the mean test below.", "widget":"slider", "min":0.5, "max":5, "step":0.1}'
+    - '// @input float feedbackBands = 6 {"hint":"How many coloured bands one stroke is split into. More bands localise a mistake more precisely; fewer read more calmly.", "widget":"slider", "min":2, "max":10, "step":1}'
     - '// @input float toleranceCm = 2.4 {"hint":"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.", "widget":"slider", "min":0.3, "max":5, "step":0.1}'
     - "// @input float minLengthRatio = 0.3 {\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}"
     - '// @input float maxLengthRatio = 3 {"hint":"And at most this multiple of it, so scribbling cannot pass.", "widget":"slider", "min":1, "max":5, "step":0.1}'

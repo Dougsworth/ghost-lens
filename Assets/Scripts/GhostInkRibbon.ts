@@ -22,6 +22,19 @@ import { Pt, StrokePath } from "./GhostKanaPath";
 /** Unlit additive source material, cloned per surface. Created by the scene bootstrap. */
 const ADDITIVE_SOURCE = requireAsset("../Materials/GhostAdditive.mat") as Material;
 
+/** The end-edge frame a round cap is built from. */
+interface CapInfo {
+  nx: number;
+  ny: number;
+  tx: number;
+  ty: number;
+  h: number;
+  u: number;
+}
+
+/** Triangles per semicircular end cap. Eight is already smooth at brush width. */
+const CAP_SEGMENTS = 8;
+
 const LAYOUT = [
   { name: "position", components: 3 },
   { name: "normal", components: 3, normalized: true },
@@ -56,15 +69,68 @@ function makeVisual(parent: SceneObject, name: string, z: number, color: vec4): 
 }
 
 /**
- * Sumi brush thickness along a stroke: a quick press at the entry, a full-bodied
- * middle, and a taper out towards the lift. `s` is position along the WHOLE
- * stroke (0..1), never along the drawn prefix — so ink already laid down keeps
- * its width as the brush advances.
+ * Sumi brush thickness along a stroke. `s` is position along the WHOLE stroke
+ * (0..1), never along the drawn prefix — so ink already laid down keeps its
+ * width as the brush advances.
+ *
+ * The shape of a real stroke, and the reason this is not a symmetric taper:
+ *   - the START is a PRESS, not a point. The brush lands, splays slightly, and
+ *     is therefore at its WIDEST in the first few millimetres. An earlier
+ *     version ramped up from near zero, which gave every stroke an arrow-like
+ *     pointed tip — the opposite of how a brush meets paper.
+ *   - the END is a harai: the brush is drawn away and lifts, so the width
+ *     thins out over roughly the last third into a tail rather than stopping.
+ * The start is additionally capped with a semicircle by the ribbon builder, so
+ * the press reads as round rather than as a cut-off rectangle.
  */
 function widthFactor(s: number): number {
-  const inRamp = Math.min(1, s / 0.12);
-  const outRamp = s > 0.72 ? Math.max(0, 1 - (s - 0.72) / 0.28) : 1;
-  return 0.24 + 0.76 * Math.pow(inRamp, 0.55) * Math.pow(outRamp, 0.85);
+  // Lands wide, eases to the body width over the first sixth of the stroke.
+  const press = 1.18 - 0.18 * Math.min(1, s / 0.16);
+  // Holds, then thins away over the last 40% into a tail.
+  const tail = s <= 0.6 ? 1 : Math.pow(Math.max(0, 1 - (s - 0.6) / 0.4), 1.5);
+  return Math.max(0.08, press * (0.1 + 0.9 * tail));
+}
+
+/**
+ * Append a semicircular cap to a ribbon's vertex/index arrays.
+ *
+ * A quad strip ends in a flat edge, which at a brush's width reads as a blunt
+ * rectangle — the "blocky ends" problem. This fans a half-disc off that edge so
+ * the stroke begins (and, where wanted, ends) round.
+ *
+ * @param cx,cy   centre of the cap — the end point of the ribbon
+ * @param nx,ny   unit normal of the end edge (the direction the two edge
+ *                vertices are offset along)
+ * @param dirX,dirY unit tangent pointing OUT of the ribbon, so the fan bulges
+ *                away from the stroke rather than back over it
+ */
+function appendCap(
+  verts: number[],
+  idx: number[],
+  cx: number,
+  cy: number,
+  nx: number,
+  ny: number,
+  dirX: number,
+  dirY: number,
+  radius: number,
+  u: number,
+  segments: number
+): void {
+  if (radius <= 1e-4) return;
+  const base = verts.length / 8;
+  // Centre vertex, then the rim swept from +normal round to -normal, bulging
+  // along the outward tangent.
+  verts.push(cx, cy, 0, 0, 0, 1, u, 0.5);
+  for (let i = 0; i <= segments; i++) {
+    const a = (i / segments) * Math.PI;
+    const ox = nx * Math.cos(a) + dirX * Math.sin(a);
+    const oy = ny * Math.cos(a) + dirY * Math.sin(a);
+    verts.push(cx + ox * radius, cy + oy * radius, 0, 0, 0, 1, u, i / segments);
+  }
+  for (let i = 0; i < segments; i++) {
+    idx.push(base, base + 1 + i, base + 2 + i);
+  }
 }
 
 /**
@@ -151,6 +217,8 @@ export class InkRibbon {
   private readonly material: Material;
   private stroke: StrokePath | null = null;
   private widthCm: number;
+  private uniform = false;
+  private color: vec4;
   private vertexCount = 0;
   private indexCount = 0;
 
@@ -165,6 +233,7 @@ export class InkRibbon {
     this.builder.topology = MeshTopology.Triangles;
     this.builder.indexType = MeshIndexType.UInt16;
 
+    this.color = color;
     this.material = makeAdditiveMaterial(color);
     this.rmv = this.sceneObject.createComponent("Component.RenderMeshVisual") as RenderMeshVisual;
     this.rmv.mesh = this.builder.getMesh();
@@ -178,11 +247,34 @@ export class InkRibbon {
   }
 
   setColor(color: vec4): void {
+    this.color = color;
     this.material.mainPass.baseColor = color;
+  }
+
+  /** The colour this ribbon is currently drawn in. */
+  get currentColor(): vec4 {
+    return this.color;
+  }
+
+  /** Whether this ribbon is showing. `enabled` is write-only, so this reads it. */
+  get enabledState(): boolean {
+    return this.sceneObject.enabled;
   }
 
   setWidth(widthCm: number): void {
     this.widthCm = widthCm;
+  }
+
+  /**
+   * Draw at constant thickness, with no entry or exit taper.
+   *
+   * Used when ONE stroke is rendered as several ribbons laid end to end — the
+   * per-segment feedback colouring. Each piece would otherwise taper to a point
+   * at both its ends, and the stroke would read as a row of beads instead of a
+   * single brush line that changes colour.
+   */
+  setUniformWidth(on: boolean): void {
+    this.uniform = on;
   }
 
   set enabled(on: boolean) {
@@ -230,6 +322,8 @@ export class InkRibbon {
     const verts: number[] = [];
     const idx: number[] = [];
     const n = pts.length;
+    let capStart: CapInfo | null = null;
+    let capEnd: CapInfo | null = null;
 
     for (let k = 0; k < n; k++) {
       let tx: number;
@@ -261,6 +355,13 @@ export class InkRibbon {
       // Right edge then left edge: vertex 2k = R, 2k+1 = L.
       verts.push(pts[k].x - nx * h, pts[k].y - ny * h, 0, 0, 0, 1, u, 0);
       verts.push(pts[k].x + nx * h, pts[k].y + ny * h, 0, 0, 0, 1, u, 1);
+
+      if (k === 0) {
+        capStart = { nx: nx, ny: ny, tx: tx, ty: ty, h: h, u: u };
+      }
+      if (k === n - 1) {
+        capEnd = { nx: nx, ny: ny, tx: tx, ty: ty, h: h, u: u };
+      }
     }
 
     for (let k = 0; k < n - 1; k++) {
@@ -270,9 +371,23 @@ export class InkRibbon {
       idx.push(b, b + 3, b + 1);
     }
 
+    // Round the ends. The start cap is the brush's landing press, so it is the
+    // one that matters; the end is already a thin harai tail, and its cap is
+    // small enough only to stop the tail finishing on a flat cut.
+    if (capStart) {
+      appendCap(verts, idx, pts[0].x, pts[0].y,
+        capStart.nx, capStart.ny, -capStart.tx, -capStart.ty, capStart.h, capStart.u, CAP_SEGMENTS);
+    }
+    if (capEnd) {
+      appendCap(verts, idx, pts[n - 1].x, pts[n - 1].y,
+        -capEnd.nx, -capEnd.ny, capEnd.tx, capEnd.ty, capEnd.h, capEnd.u, CAP_SEGMENTS);
+    }
+
     this.builder.appendVerticesInterleaved(verts);
     this.builder.appendIndices(idx);
-    this.vertexCount = n * 2;
+    // Counted from the arrays, not from n: the end caps add vertices too, and
+    // clear() erases exactly what was appended.
+    this.vertexCount = verts.length / 8;
     this.indexCount = idx.length;
     this.builder.updateMesh();
   }
@@ -304,6 +419,8 @@ export class InkRibbon {
     const verts: number[] = [];
     const idx: number[] = [];
     const n = pts.length;
+    let capStart: CapInfo | null = null;
+    let capEnd: CapInfo | null = null;
 
     const arc: number[] = [0];
     for (let k = 1; k < n; k++) {
@@ -342,14 +459,22 @@ export class InkRibbon {
       }
       const nx = -ty;
       const ny = tx;
-      const entry = Math.min(1, arc[k] / ENTRY_CM);
-      const exit = Math.min(1, (totalArc - arc[k]) / EXIT_CM);
-      const taper = Math.pow(entry, 0.6) * Math.pow(exit, 0.75);
-      const h = this.widthCm * 0.5 * (0.22 + 0.78 * taper);
+      let h: number;
+      if (this.uniform) {
+        h = this.widthCm * 0.5;
+      } else {
+        const entry = Math.min(1, arc[k] / ENTRY_CM);
+        const exit = Math.min(1, (totalArc - arc[k]) / EXIT_CM);
+        const taper = Math.pow(entry, 0.6) * Math.pow(exit, 0.75);
+        h = this.widthCm * 0.5 * (0.22 + 0.78 * taper);
+      }
       const u = totalArc > 1e-6 ? arc[k] / totalArc : 0;
 
       verts.push(pts[k].x - nx * h, pts[k].y - ny * h, 0, 0, 0, 1, u, 0);
       verts.push(pts[k].x + nx * h, pts[k].y + ny * h, 0, 0, 0, 1, u, 1);
+
+      if (k === 0) capStart = { nx: nx, ny: ny, tx: tx, ty: ty, h: h, u: u };
+      if (k === n - 1) capEnd = { nx: nx, ny: ny, tx: tx, ty: ty, h: h, u: u };
     }
 
     for (let k = 0; k < n - 1; k++) {
@@ -358,9 +483,18 @@ export class InkRibbon {
       idx.push(b, b + 3, b + 1);
     }
 
+    if (capStart) {
+      appendCap(verts, idx, pts[0].x, pts[0].y,
+        capStart.nx, capStart.ny, -capStart.tx, -capStart.ty, capStart.h, capStart.u, CAP_SEGMENTS);
+    }
+    if (capEnd) {
+      appendCap(verts, idx, pts[n - 1].x, pts[n - 1].y,
+        -capEnd.nx, -capEnd.ny, capEnd.tx, capEnd.ty, capEnd.h, capEnd.u, CAP_SEGMENTS);
+    }
+
     this.builder.appendVerticesInterleaved(verts);
     this.builder.appendIndices(idx);
-    this.vertexCount = n * 2;
+    this.vertexCount = verts.length / 8;
     this.indexCount = idx.length;
     this.builder.updateMesh();
   }
@@ -557,8 +691,15 @@ export function createStamp(parent: SceneObject, sizeCm: number, color: vec4, z:
 }
 
 /**
- * The ghost brush tip: a flat teardrop whose point is the contact point, so the
- * SceneObject's origin is exactly where the ink is being laid down.
+ * The ghost brush tip: a soft teardrop whose POINT is the contact point, so the
+ * SceneObject's origin is exactly where the ink is being laid down and the
+ * brush sits ON the stroke rather than beside it.
+ *
+ * Built from a swept outline rather than a handful of corners. An earlier
+ * six-point version rendered as a hard white diamond — at brush size on an
+ * additive display, every facet reads, and a diamond does not look like a
+ * brush. The silhouette here flares smoothly from the tip to a belly, then
+ * rounds over the top like a loaded bristle bundle.
  */
 export function createBrush(parent: SceneObject, lengthCm: number, widthCm: number, color: vec4, z: number): SceneObject {
   const rmv = makeVisual(parent, "GhostBrush", z, color);
@@ -566,25 +707,42 @@ export function createBrush(parent: SceneObject, lengthCm: number, widthCm: numb
   builder.topology = MeshTopology.Triangles;
   builder.indexType = MeshIndexType.UInt16;
 
-  const w = widthCm;
+  const R = widthCm * 0.5;
   const L = lengthCm;
-  // Counter-clockwise from the tip at the origin.
-  const outline: Pt[] = [
-    { x: 0, y: 0 },
-    { x: w * 0.28, y: L * 0.22 },
-    { x: w * 0.5, y: L * 0.55 },
-    { x: 0, y: L },
-    { x: -w * 0.5, y: L * 0.55 },
-    { x: -w * 0.28, y: L * 0.22 },
-  ];
+  /** Where the brush is widest, as a fraction of its length. */
+  const BELLY = 0.58;
+  const STEPS = 22;
+
+  const halfWidthAt = (t: number): number => {
+    if (t <= BELLY) {
+      // Flare out of the tip. The exponent below 1 makes it leave the point
+      // quickly, which is what stops the tip reading as a spike.
+      return R * Math.pow(t / BELLY, 0.55);
+    }
+    // Round over the top, as a circular arc, so there is no flat crown.
+    const k = Math.min(1, (t - BELLY) / (1 - BELLY));
+    return R * Math.sqrt(Math.max(0, 1 - k * k));
+  };
+
+  // Up the right side from the tip, then back down the left.
+  const outline: Pt[] = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS;
+    outline.push({ x: halfWidthAt(t), y: L * t });
+  }
+  for (let i = STEPS - 1; i >= 1; i--) {
+    const t = i / STEPS;
+    outline.push({ x: -halfWidthAt(t), y: L * t });
+  }
 
   const verts: number[] = [];
   for (let i = 0; i < outline.length; i++) {
     verts.push(outline[i].x, outline[i].y, 0, 0, 0, 1, 0.5, outline[i].y / L);
   }
   const idx: number[] = [];
+  // Fan from the tip; the outline is CCW so every triangle is CCW from +Z.
   for (let i = 1; i < outline.length - 1; i++) {
-    idx.push(0, i, i + 1); // Fan from the tip; outline is CCW so each triangle is CCW.
+    idx.push(0, i, i + 1);
   }
 
   builder.appendVerticesInterleaved(verts);

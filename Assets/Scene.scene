@@ -902,9 +902,9 @@
   Enabled: true
   ScriptAsset: !<reference> 1cfe76b1-423e-487b-a75e-a28dde59e473
   ScriptInputsDefault:
-    lessonSequence: true
     reanchorOnOpen: true
     anchorDistanceCm: true
+    cleanRunsBeforeFade: true
     stampHoldSec: true
     debugColliders: true
   ScriptTypesDefault:
@@ -928,9 +928,10 @@
       guitarUI: !<MappingBased.AssignableType_10> eff714b8-2a38-4a04-8c9f-08cf73b0a767
       guitar: !<MappingBased.AssignableType_11> 6c243e8b-bc4a-4c15-8631-6848532a862c
       audio: !<MappingBased.AssignableType_12> 31344314-8576-480c-a972-fbd63c3ecbe6
-      lessonSequence: あいうえお
+      lessonSequence: いうえあお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
+      cleanRunsBeforeFade: !<float> 1.000000
       stampHoldSec: 1.100000
       debugColliders: false
   ScriptTypes:
@@ -1694,6 +1695,12 @@
     wetInkColor: true
     driedInkColor: true
     pulseColor: true
+    onLineColor: true
+    closeColor: true
+    offColor: true
+    onLineCm: true
+    closeCm: true
+    feedbackBands: true
     startToleranceCm: true
     minDragSec: true
     armDistanceCm: true
@@ -1709,6 +1716,12 @@
       wetInkColor: !<Vec4> {x: 1.000000, y: 0.970000, z: 0.900000, w: 1.000000}
       driedInkColor: !<Vec4> {x: 0.920000, y: 0.860000, z: 0.740000, w: 1.000000}
       pulseColor: !<Vec4> {x: 1.000000, y: 0.860000, z: 0.550000, w: 1.000000}
+      onLineColor: !<Vec4> {x: 0.460000, y: 1.000000, z: 0.600000, w: 1.000000}
+      closeColor: !<Vec4> {x: 1.000000, y: 0.800000, z: 0.360000, w: 1.000000}
+      offColor: !<Vec4> {x: 1.000000, y: 0.460000, z: 0.380000, w: 1.000000}
+      onLineCm: 0.900000
+      closeCm: 2.200000
+      feedbackBands: !<float> 6.000000
       toleranceCm: 2.400000
       minLengthRatio: 0.300000
       maxLengthRatio: !<float> 3.000000
