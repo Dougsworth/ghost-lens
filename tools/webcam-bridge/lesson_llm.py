@@ -34,8 +34,82 @@ GEMINI_MODEL = "gemini-flash-latest"
 #: that have to get a strict schema right first time, so they get a small
 #: budget; a coach tip is one sentence the learner is waiting on mid-stroke, so
 #: it gets none at all and comes back as fast as the network allows.
+#: Measured, not guessed: at 0 the planner produced star paths whose strokes
+#: did not join up (0 of 2 trials connected), while 128 and 512 both produced
+#: correct geometry in every trial. Thinking is what makes it get a strict
+#: schema right first time, so the plan pass keeps it even though it costs
+#: about a second. 128 looked just as good on a small sample if you need that
+#: second back.
 GEMINI_PLAN_THINKING = 512
+#: The review pass re-reads a lesson that already validated, so it is checking
+#: rather than inventing. Thinking adds latency there for very little, and the
+#: learner is watching step titles appear while it runs.
+GEMINI_REVIEW_THINKING = 0
 GEMINI_COACH_THINKING = 0
+
+# ── Cost ─────────────────────────────────────────────────────────────────────
+# USD per MILLION tokens. These are rates, not facts: Google changes them, and
+# "gemini-flash-latest" is an alias that currently resolves to gemini-3.8-flash
+# but will move. Token COUNTS below are exact (they come back from the API);
+# the dollar figure is only ever as good as these two numbers, so check them
+# against https://ai.google.dev/pricing before quoting a cost to anyone.
+# Gemini 3.8 Flash, paid "Standard" tier, USD per MILLION tokens, read from
+# aistudio.google.com/docs/pricing on 2026-11-07.
+#
+# These rates STEP UP on 2027-01-01 to 1.50 input / 7.50 output. Change them
+# then, or every figure below silently halves.
+#
+# The output rate INCLUDES thinking tokens -- the page prices them together --
+# so the plan call's thinking budget shows up here as output, not as a free
+# extra.
+#
+# The previous values (0.30 / 2.50) were Gemini 3.5 Flash-LITE's rates, which
+# understated a lesson by about 40%. Flash and Flash-Lite are different models
+# at different prices; do not copy one's rates onto the other.
+#
+# Unverified: the pricing page never mentions the alias "gemini-flash-latest",
+# so which concrete model it resolves to is not confirmed. These are the rates
+# for the current Flash. If the alias ever points at Flash-Lite the figures
+# here OVERSTATE cost, which is the safer direction to be wrong in.
+GEMINI_USD_PER_M_INPUT = 0.75
+GEMINI_USD_PER_M_OUTPUT = 3.75
+
+
+def estimate_cost(prompt_tokens, output_tokens):
+    """USD for one call, from the rates above. See the warning on them."""
+    return (prompt_tokens * GEMINI_USD_PER_M_INPUT / 1e6
+            + output_tokens * GEMINI_USD_PER_M_OUTPUT / 1e6)
+
+
+class Usage(object):
+    """Tokens and estimated cost accumulated across the calls of one lesson."""
+
+    def __init__(self):
+        self.calls = 0
+        self.prompt = 0
+        self.output = 0
+
+    def add(self, prompt, output):
+        self.calls += 1
+        self.prompt += int(prompt or 0)
+        self.output += int(output or 0)
+
+    @property
+    def total(self):
+        return self.prompt + self.output
+
+    @property
+    def usd(self):
+        return estimate_cost(self.prompt, self.output)
+
+    def as_dict(self):
+        return {"calls": self.calls, "prompt_tokens": self.prompt,
+                "output_tokens": self.output, "total_tokens": self.total,
+                "estimated_usd": round(self.usd, 6)}
+
+    def __str__(self):
+        return ("%d call(s), %d in + %d out = %d tokens, about $%.5f"
+                % (self.calls, self.prompt, self.output, self.total, self.usd))
 ANTHROPIC_MODEL = "claude-opus-5-5"
 OPENAI_MODEL = "gpt-5"
 TIMEOUT_S = 90
@@ -264,7 +338,7 @@ def _post(url, headers, payload):
         return json.loads(r.read().decode("utf-8"))
 
 
-def _gemini(system, user, key, json_mode=True, thinking_budget=None):
+def _gemini(system, user, key, json_mode=True, thinking_budget=None, _usage=None):
     """Gemini via the REST endpoint. The key goes in a header, never the URL —
     query strings end up in proxy logs and shell history."""
     cfg = {"temperature": 0.4}
@@ -285,6 +359,10 @@ def _gemini(system, user, key, json_mode=True, thinking_budget=None):
          "contents": [{"role": "user", "parts": [{"text": user}]}],
          "generationConfig": cfg},
     )
+    u = body.get("usageMetadata") or {}
+    if _usage is not None:
+        _usage.add(u.get("promptTokenCount"), u.get("candidatesTokenCount"))
+
     cands = body.get("candidates") or []
     if not cands:
         # A blocked prompt comes back with no candidate and a reason; surfacing
@@ -296,7 +374,7 @@ def _gemini(system, user, key, json_mode=True, thinking_budget=None):
     return "".join(p.get("text", "") for p in parts)
 
 
-def _anthropic(system, user, key, json_mode=True, thinking_budget=None):
+def _anthropic(system, user, key, json_mode=True, thinking_budget=None, _usage=None):
     body = _post(
         "https://api.anthropic.com/v1/messages",
         {"content-type": "application/json",
@@ -311,7 +389,7 @@ def _anthropic(system, user, key, json_mode=True, thinking_budget=None):
                    if b.get("type") == "text")
 
 
-def _openai(system, user, key, json_mode=True, thinking_budget=None):
+def _openai(system, user, key, json_mode=True, thinking_budget=None, _usage=None):
     payload = {"model": OPENAI_MODEL,
                "messages": [{"role": "system", "content": system},
                             {"role": "user", "content": user}]}
@@ -357,7 +435,7 @@ def model_name():
             "openai": OPENAI_MODEL}.get(name)
 
 
-def _call(system, user, json_mode=True, thinking_budget=None):
+def _call(system, user, json_mode=True, thinking_budget=None, usage=None):
     name, key = provider()
     if not name:
         raise RuntimeError(
@@ -365,8 +443,10 @@ def _call(system, user, json_mode=True, thinking_budget=None):
             "OPENAI_API_KEY) before starting the bridge. GHOST falls back to "
             "its bundled lessons.")
     # thinking_budget is Gemini-only; the other backends accept and ignore it
-    # so the caller never has to know which provider is live.
-    return _BACKENDS[name](system, user, key, json_mode, thinking_budget)
+    # so the caller never has to know which provider is live. Same for usage:
+    # only Gemini reports it back today, so a cost of 0 means "not measured",
+    # never "free".
+    return _BACKENDS[name](system, user, key, json_mode, thinking_budget, usage)
 
 
 def _parse(text):
@@ -400,9 +480,11 @@ REVIEW_SYSTEM = (
 )
 
 
-def _attempt(system, user):
+def _attempt(system, user, thinking_budget=None, usage=None):
     """One call plus at most one repair round, fed the validator's complaints."""
-    raw = _call(system, user, thinking_budget=GEMINI_PLAN_THINKING)
+    if thinking_budget is None:
+        thinking_budget = GEMINI_PLAN_THINKING
+    raw = _call(system, user, thinking_budget=thinking_budget, usage=usage)
     try:
         return validate(_parse(raw))
     except (LessonInvalid, json.JSONDecodeError, KeyError) as e:
@@ -414,7 +496,8 @@ def _attempt(system, user):
             + "\n\nYour previous reply was:\n" + (raw or "")[:12000]
         )
         return validate(_parse(_call(system, repair,
-                                     thinking_budget=GEMINI_PLAN_THINKING)))
+                                     thinking_budget=thinking_budget,
+                                     usage=usage)))
 
 
 # ── Coach ────────────────────────────────────────────────────────────────────
@@ -459,8 +542,11 @@ def coach_tip(skill, step, reason, detail=None):
             user += "\nExtra detail: %s" % detail
         # Plain text, not JSON: this is one sentence, and forcing JSON mode
         # here would only make the model wrap it in an object to unwrap again.
+        u = Usage()
         text = (_call(COACH_SYSTEM, user, json_mode=False,
-                      thinking_budget=GEMINI_COACH_THINKING) or "").strip()
+                      thinking_budget=GEMINI_COACH_THINKING, usage=u) or "").strip()
+        if u.calls:
+            print("  coach cost: %s" % u)
         text = text.strip('"').strip()
         # A model that ignores "one sentence" should not get to fill the HUD.
         if text and len(text) <= 160:
@@ -470,19 +556,50 @@ def coach_tip(skill, step, reason, detail=None):
     return COACH_FALLBACK.get(reason, COACH_DEFAULT)
 
 
-def build_lesson(skill):
-    """Plan, then review. Returns a validated lesson dict."""
-    planned = _attempt(PLAN_SYSTEM, "Teach me: " + skill)
+def plan_lesson(skill, usage=None):
+    """STAGE 1 — write the lesson. Returns a validated lesson dict.
+
+    Split out from the review so the Lens can show the step titles the moment
+    these exist, instead of waiting for both calls. The learner reads the
+    outline while stage 2 runs behind it.
+    """
+    return _attempt(PLAN_SYSTEM, "Teach me: " + skill,
+                    thinking_budget=GEMINI_PLAN_THINKING, usage=usage)
+
+
+def review_lesson(skill, planned, usage=None):
+    """STAGE 2 — a second model re-reads stage 1 and corrects it.
+
+    Runs with thinking off: it is checking work that already validated, not
+    inventing, and the learner is looking at the outline while it happens.
+
+    Never raises. The review is an improvement, not a gate — a lesson that
+    passed validation is a usable lesson, so a failed review returns the
+    planned one with reviewed=False rather than losing it.
+    """
     try:
         reviewed = _attempt(
             REVIEW_SYSTEM,
             "The learner asked to be taught: " + skill
             + "\n\nLesson to review:\n" + json.dumps(planned, ensure_ascii=False),
+            thinking_budget=GEMINI_REVIEW_THINKING,
+            usage=usage,
         )
         reviewed["reviewed"] = True
         return reviewed
-    except Exception:
-        # The review is an improvement, not a gate. A lesson that passed
-        # validation is still a usable lesson.
-        planned["reviewed"] = False
-        return planned
+    except Exception as e:
+        print("  review failed (%s); keeping the planned lesson" % e)
+        out = dict(planned)
+        out["reviewed"] = False
+        return out
+
+
+def build_lesson(skill, usage=None):
+    """Plan, then review, in one go. Returns a validated lesson dict.
+
+    Kept for callers that want the finished article in a single request. The
+    Lens uses the two stages separately so it can show progress; this is the
+    same work with the same result.
+    """
+    planned = plan_lesson(skill, usage=usage)
+    return review_lesson(skill, planned, usage=usage)

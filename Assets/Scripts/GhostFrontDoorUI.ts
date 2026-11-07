@@ -112,6 +112,17 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   private outlineRoot: SceneObject | null = null;
   private pickRoot: SceneObject | null = null;
 
+  // ── The brush progress line ───────────────────────────────────────────────
+  private progressRoot: SceneObject | null = null;
+  private progressFill: RenderMeshVisual | null = null;
+  private progressTip: SceneObject | null = null;
+  private stageText: Text | null = null;
+  /** Where the fill is now, and the cap it may creep to, both 0..1. */
+  private progressAt = 0;
+  private progressCap = 0;
+  private bobT = 0;
+  private progressWidthCm = 0;
+
   private readonly _onSkillPicked = new Event<string>();
   private readonly _onMicPressed = new Event<void>();
   private readonly _onNotebookPicked = new Event<string>();
@@ -132,6 +143,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas");
     this.build();
+    this.createEvent("UpdateEvent").bind(() => this.updateProgress(getDeltaTime()));
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -152,6 +164,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     if (this.outlineRoot) this.outlineRoot.enabled = false;
     if (this.titleText) this.titleText.text = "What do you want to learn?";
     this.setWaiting("");
+    this.hideProgress();
     this.clearOutline();
   }
 
@@ -174,6 +187,29 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
         this.outlineTexts[i].getSceneObject().enabled = true;
         return;
       }
+    }
+  }
+
+  /** How many outline lines are currently inked on. */
+  outlineCount(): number {
+    let n = 0;
+    for (let i = 0; i < this.outlineTexts.length; i++) {
+      if (this.outlineTexts[i].text !== "") n++;
+    }
+    return n;
+  }
+
+  /**
+   * Rewrite the lines already showing, in place.
+   *
+   * Used when the review pass changes a title the learner may already have
+   * read. Lines beyond what is showing are left alone so the caller can keep
+   * inking them on in order.
+   */
+  replaceOutline(steps: { title: string }[]): void {
+    for (let i = 0; i < this.outlineTexts.length; i++) {
+      if (this.outlineTexts[i].text === "") return;
+      if (i < steps.length) this.outlineTexts[i].text = steps[i].title;
     }
   }
 
@@ -209,7 +245,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     createWashiSheet(root, this.sheetWidthCm, this.sheetHeightCm, 0.14, this.paperColor, 0);
 
     const halfH = this.sheetHeightCm * 0.5;
-    this.titleText = this.addText(root, "FrontTitle", 0, halfH - 2.6, "Title",
+    this.titleText = this.addText(root, "FrontTitle", 0, halfH - 1.9, "Title",
       this.sheetWidthCm - 2.0, 1.6, this.inkColor);
     this.titleText.text = "What do you want to learn?";
     this.titleText.horizontalOverflow = HorizontalOverflow.Wrap;
@@ -220,22 +256,121 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     // Laid out against the frame, not against the paper: the sheet is allowed
     // to run to its own edges, but nothing readable may sit past about 11 cm
     // from centre or it is simply not on screen.
-    this.buildMic(this.pickRoot, halfH - 7.4);
-    this.buildSuggestions(this.pickRoot, -1.9);
-    this.buildNotebookRow(this.pickRoot, -9.0);
+    this.buildMic(this.pickRoot, halfH - 6.8);
+    this.buildSuggestions(this.pickRoot, -1.2);
+    this.buildNotebookRow(this.pickRoot, -8.2);
 
     this.outlineRoot = this.obj(root, "Outline");
     this.outlineRoot.enabled = false;
     for (let i = 0; i < 6; i++) {
+      // Below the progress line, never across it: the outline grows downward
+      // from under the bar as each title lands.
       const t = this.addText(this.outlineRoot, "OutlineLine" + i,
-        0, halfH - 6.2 - i * 2.1, "Body", this.sheetWidthCm - 3.0, 0.9, this.inkColor);
+        0, halfH - 7.3 - i * 1.9, "Body", this.sheetWidthCm - 3.0, 0.8, this.inkColor);
       t.getSceneObject().enabled = false;
       this.outlineTexts.push(t);
     }
 
-    this.waitText = this.addText(root, "FrontWaiting", 0, -halfH + 6.0, "Meta",
+    this.buildProgress(root, halfH - 5.6);
+
+    this.waitText = this.addText(root, "FrontWaiting", 0, -halfH + 1.4, "Meta",
       this.sheetWidthCm - 3.0, 0.8, this.dimInkColor);
     this.waitText.getSceneObject().enabled = false;
+  }
+
+  /**
+   * The stage label and the brush line under it.
+   *
+   * Not a spinner and not a fake bar: the fill creeps toward a CAP that each
+   * stage sets, and it can only pass that cap when the stage genuinely ends.
+   * So the line is always moving — which is what stops it feeling frozen — but
+   * it can never claim to be further along than the work actually is.
+   */
+  private buildProgress(parent: SceneObject, y: number): void {
+    const w = this.sheetWidthCm - 4.0;
+    this.progressWidthCm = w;
+    const root = this.obj(parent, "Progress", new vec3(0, y, 0.03));
+    root.enabled = false;
+    this.progressRoot = root;
+
+    this.stageText = this.addText(root, "StageLabel", 0, 1.1, "Body",
+      w + 1.0, 0.85, this.inkColor);
+
+    // The dry track the brush travels along.
+    createQuads(root, "ProgressTrack",
+      [{ x: 0, y: 0, w: w, h: 0.09 }], this.fade(this.inkColor, 0.22), 0);
+    // The wet line itself. Anchored left by shifting it as it grows, since the
+    // quad is built centred.
+    this.progressFill = createQuads(root, "ProgressFill",
+      [{ x: 0, y: 0, w: 1, h: 0.17 }], this.inkColor, 0.01);
+
+    const tip = this.obj(root, "ProgressBrush", new vec3(-w * 0.5, 0, 0.02));
+    createDot(tip, "ProgressBrushTip", 0.26, this.inkColor, 0, 18);
+    this.progressTip = tip;
+  }
+
+  /**
+   * Begin a stage. `cap` is how far the line may creep while it runs, 0..1.
+   *
+   * The caller passes the cap rather than the module deriving it, because only
+   * the caller knows how many stages there are and which this is.
+   */
+  beginStage(label: string, startAt: number, cap: number): void {
+    if (this.progressRoot) this.progressRoot.enabled = true;
+    if (this.stageText) this.stageText.text = label;
+    this.progressAt = Math.max(this.progressAt, startAt);
+    this.progressCap = cap;
+  }
+
+  /** Relabel without moving: used for "Still writing, nearly there". */
+  setStageLabel(label: string): void {
+    if (this.stageText) this.stageText.text = label;
+  }
+
+  /** Run the line out and put it away. */
+  finishProgress(): void {
+    this.progressCap = 1;
+    this.progressAt = 1;
+    const hide = this.createEvent("DelayedCallbackEvent");
+    hide.bind(() => {
+      if (this.progressRoot) this.progressRoot.enabled = false;
+      this.progressAt = 0;
+      this.progressCap = 0;
+    });
+    hide.reset(0.35);
+  }
+
+  hideProgress(): void {
+    if (this.progressRoot) this.progressRoot.enabled = false;
+    this.progressAt = 0;
+    this.progressCap = 0;
+  }
+
+  private updateProgress(dt: number): void {
+    if (!this.progressRoot || !this.progressRoot.enabled) return;
+
+    // Asymptotic creep: fast at the start of a stage, slower as it approaches
+    // that stage's cap, never arriving. A linear crawl reads as a countdown
+    // and invites the learner to time it.
+    const gap = this.progressCap - this.progressAt;
+    if (gap > 0.0005) this.progressAt += gap * Math.min(1, dt * 0.9);
+
+    const w = this.progressWidthCm;
+    const len = Math.max(0.001, this.progressAt * w);
+    if (this.progressFill) {
+      const t = this.progressFill.getSceneObject().getTransform();
+      // The quad is a unit-width centred bar: scale it to length, then shift
+      // it right by half of that so its LEFT edge stays pinned to the track.
+      t.setLocalScale(new vec3(len, 1, 1));
+      t.setLocalPosition(new vec3(-w * 0.5 + len * 0.5, 0, 0.01));
+    }
+    if (this.progressTip) {
+      // A subtle bob, as a loaded brush has when it is drawn along.
+      this.bobT += dt;
+      const bob = Math.sin(this.bobT * 7.0) * 0.055;
+      this.progressTip.getTransform()
+        .setLocalPosition(new vec3(-w * 0.5 + len, bob, 0.02));
+    }
   }
 
   /** The one primary action: a brushed ink disc with a mic glyph on it. */
@@ -282,8 +417,9 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
       { x: 0.60, y: -0.12, w: 0.17, h: 0.72 },
     ], this.inkColor, 0.001);
 
-    this.addText(parent, "MicHint", 0, y - r - 0.9, "Meta",
-      this.sheetWidthCm - 4, 0.7, this.dimInkColor).text = "Pinch to say a skill";
+    // No hint line under the mic. A mic glyph does not need a caption, the
+    // tracker page carries its own labelled button, and the front door was a
+    // row too tall — this is the row that was doing the least.
   }
 
   /** Three handwritten lines. Pinch one to start. */
@@ -314,15 +450,18 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
           if (s) this._onSkillPicked.invoke(s);
         });
 
-        // A wash of paper behind the line, brightening on hover. No chip, no
-        // border, no shadow — the spec rules all three out.
+        // At rest there is NO panel behind the line — just ink on the sheet,
+        // because the spec rules out chips and a filled bar under every row is
+        // exactly that. The wash is the hover state and nothing else: the
+        // paper darkens where your hand is, the way wet ink spreads.
+        const REST = new vec4(0, 0, 0, 0);
         const wash = createQuads(cell, "SuggestionWash",
-          [{ x: 0, y: 0, w: w, h: h }], this.fade(this.paperColor, 0.75), -0.01);
+          [{ x: 0, y: 0, w: w, h: h }], REST, -0.01);
         btn.onHoverEnter.add(() => {
-          wash.mainMaterial.mainPass.baseColor = this.hoverColor;
+          wash.mainMaterial.mainPass.baseColor = this.fade(this.hoverColor, 0.55);
         });
         btn.onHoverExit.add(() => {
-          wash.mainMaterial.mainPass.baseColor = this.fade(this.paperColor, 0.75);
+          wash.mainMaterial.mainPass.baseColor = REST;
         });
 
         const t = this.addText(cell, "SuggestionText", 0, 0, "Body", w - 1.0, 0.8, this.inkColor);
@@ -363,12 +502,16 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
         });
         btn.onTriggerUp.add(() => this._onNotebookPicked.invoke(pack.id));
 
-        const cover = createWashiSheet(cell, w, h, 0.04, this.fade(this.paperColor, 0.9), -0.01);
+        // A cover SHOULD read as a slip of paper, so unlike the suggestions
+        // it keeps a resting value — just a much fainter one than the sheet it
+        // sits on, so three of them do not read as a row of buttons.
+        const REST_COVER = this.fade(this.paperColor, 0.42);
+        const cover = createWashiSheet(cell, w, h, 0.04, REST_COVER, -0.01);
         btn.onHoverEnter.add(() => {
-          cover.mainMaterial.mainPass.baseColor = this.hoverColor;
+          cover.mainMaterial.mainPass.baseColor = this.fade(this.hoverColor, 0.6);
         });
         btn.onHoverExit.add(() => {
-          cover.mainMaterial.mainPass.baseColor = this.fade(this.paperColor, 0.9);
+          cover.mainMaterial.mainPass.baseColor = REST_COVER;
         });
 
         this.addText(cell, "NotebookName", 0, 0, "Meta", w - 0.5, 0.7, this.dimInkColor)
@@ -400,42 +543,38 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   }
 
   /**
-   * Turn off a UIKit plate's own face and border, leaving only its collider.
+   * Turn off a UIKit plate's own face, leaving only its collider.
    *
-   * Every write is guarded. UIKit exposes some of these as GETTER-ONLY
-   * properties, and a `!== undefined` check does NOT tell you that: a
-   * read-only property is perfectly defined, and assigning to it throws. One
-   * such assignment (borderSize) threw inside Button.initialize, which took
-   * rendering down with "Rendering failed 5 times in a row" and a black
-   * preview. A cosmetic tweak must never be able to do that, hence the try.
+   * The plate is drawn by a single RenderMeshVisual that the Visual base class
+   * exposes publicly, so disabling that kills the face, the border and the
+   * corner marks in one go — and leaves the collider and the Interactable,
+   * which are the only parts this UI actually wants.
+   *
+   * Two earlier attempts were worse. `opacity = 0` leaves the Rectangle
+   * variant's corner brackets drawn, which read as the chip outline the design
+   * spec rules out. Clearing the border COLOURS does nothing either, because
+   * they are not flat properties: they live inside per-state objects
+   * (default / hovered / toggled), so the flat names I was writing to simply
+   * did not exist. One of them, borderSize, is getter-only and assigning to it
+   * threw inside Button.initialize and took rendering down entirely.
+   *
+   * Hence the guard. A cosmetic tweak must never be able to break the Lens.
    */
   private stripPlate(btn: Button): void {
-    const vis: any = btn.visual;
-    if (!vis) return;
-    const clear = new vec4(0, 0, 0, 0);
-    const set = (key: string, value: any) => {
-      try {
-        if (vis[key] !== undefined) vis[key] = value;
-      } catch (e) {
-        // Read-only on this UIKit version. The plate keeps that one trait;
-        // the lesson keeps working, which matters more.
+    try {
+      const vis: any = btn.visual;
+      if (!vis) return;
+      const rmv: RenderMeshVisual = vis.renderMeshVisual;
+      if (rmv && !isNull(rmv)) {
+        rmv.enabled = false;
+        return;
       }
-    };
-
-    set("defaultHasBorder", false);
-    set("hoveredHasBorder", false);
-    set("triggeredHasBorder", false);
-    // The flags alone still leave the Rectangle variant's corner marks drawn,
-    // so the border COLOURS are cleared as well. Those brackets read as a chip
-    // outline, which the design spec rules out.
-    set("isBorderGradient", false);
-    set("borderDefaultColor", clear);
-    set("borderHoveredColor", clear);
-    set("borderTriggeredColor", clear);
-    set("baseType", "Color");
-    set("baseDefaultColor", clear);
-    set("baseHoveredColor", clear);
-    set("baseTriggeredColor", clear);
+      // No handle on the mesh: fall back to making it invisible instead.
+      if (vis.opacity !== undefined) vis.opacity = 0;
+    } catch (e) {
+      // Read-only on this UIKit version. The plate keeps its face; the lesson
+      // keeps working, which matters more.
+    }
   }
 
   private fade(c: vec4, f: number): vec4 {

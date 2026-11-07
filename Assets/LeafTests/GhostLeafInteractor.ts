@@ -22,6 +22,9 @@ export type LeafInteractable = ReturnType<typeof getInteractables>[number]
 
 /** Scene object names, confirmed against the live scene graph. */
 export const SHELF_ROOT = "Shelf"
+/** The front door is the opening screen now; the shelf is no longer reached. */
+export const FRONT_ROOT = "FrontDoor"
+export const NOTEBOOK_ROW = "Notebooks"
 export const LESSON_ROOT = "Lesson"
 export const SHELF_PANEL = "ShelfPanel"
 export const TAB_STACK = "BookmarkTabs"
@@ -125,6 +128,34 @@ export class GhostLeafInteractor extends DefaultLeafInteractor {
       ancestorName: TAB_STACK,
       enabledInHierarchy: enabledOnly ? true : undefined,
     })
+  }
+
+  /** The small pack covers under "Your notebook" on the front door. */
+  notebookCards(enabledOnly: boolean = false): LeafInteractable[] {
+    return getInteractables({
+      sceneObjectName: "Item",
+      ancestorName: NOTEBOOK_ROW,
+      enabledInHierarchy: enabledOnly ? true : undefined,
+    })
+  }
+
+  /** Name printed on a front-door notebook cover, e.g. "Japanese". */
+  notebookName(card: LeafInteractable): string | null {
+    return textOfDescendant(card.getSceneObject(), "NotebookName")
+  }
+
+  /** Pinch a front-door notebook cover by the name printed on it. */
+  async pinchNotebook(name: string): Promise<void> {
+    const card = this.notebookCards().find((c) => this.notebookName(c) === name)
+    if (card === undefined) {
+      throw new Error(
+        `No notebook titled "${name}". Found: [${this.notebookCards()
+          .map((c) => this.notebookName(c))
+          .join(", ")}]`,
+      )
+    }
+    await this.trigger(card)
+    await sleep(200)
   }
 
   /** Title printed on a shelf cover, e.g. "Japanese". */

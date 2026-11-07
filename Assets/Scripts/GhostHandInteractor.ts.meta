@@ -1,0 +1,66 @@
+- !<AssetImportMetadata/d3d09a86-9a1e-4808-a588-7fe18d91912f>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 8194e471-f03f-4d9f-87ff-fde4941c2d12
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 8194e471-f03f-4d9f-87ff-fde4941c2d12
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 41073e5c-1151-49bf-b2d1-f247c4c877ef
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/41073e5c-1151-49bf-b2d1-f247c4c877ef>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 99d15903-7f97-4127-a951-288b1087ab61
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    _drawDebug: false
+    handDrivesUI: false
+    indirectDragThreshold: false
+    reachCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - indirectDragThreshold: !<float> 10.000000
+      _drawDebug: false
+      handDrivesUI: true
+      reachCm: !<float> 200.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Drag Configuration</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #94A3B8; font-size: 11px;\">Configure drag sensitivity for indirect (raycast) interactions</span>"}'
+    - '// @input float indirectDragThreshold = 10 {"label":"Indirect Drag Threshold", "hint":"Controls the minimum distance (in cm) the hand must move during indirect interaction to be considered a drag. When the distance between the interaction origin position and current position exceeds this threshold, dragging behavior is detected and tracked. Lower values make dragging more sensitive and easier to trigger, while higher values require more deliberate movement before dragging begins."}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Debug</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #94A3B8; font-size: 11px;\">Visual debugging options for development</span>"}'
+    - '// @input bool _drawDebug {"label":"Draw Debug", "hint":"When enabled, draws debug gizmos in the scene to visualize raycasts, colliders, and other interactor geometry. Useful for troubleshooting targeting issues during development."}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostHandInteractor &ndash; your hand presses things, not just paints</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - "// @input bool handDrivesUI = true {\"hint\":\"Let the webcam bridge's hand drive the UI. Off leaves the mouse and real SIK hands completely untouched — this component then reports nothing at all.\"}"
+    - '// @input float reachCm = 200 {"hint":"How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.", "widget":"slider", "min":50, "max":400, "step":10}'
+    - '// @ui {"widget":"group_end"}'

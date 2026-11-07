@@ -35,6 +35,7 @@ import { GUITAR_CHORDS } from "./GhostGuitarPack";
 import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
 import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
 import { GhostCoach } from "./GhostCoach";
+import { GhostSpeech } from "./GhostSpeech";
 import { Lesson } from "./GhostLessonSchema";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import { Help, SkillTeacher } from "./GhostTeacher";
@@ -135,6 +136,10 @@ export class GhostMain extends BaseScriptComponent {
   @input
   @hint("One short line after each attempt. Never blocks the lesson.")
   coach!: GhostCoach;
+
+  @input
+  @hint("Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback.")
+  speech!: GhostSpeech;
 
   @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
@@ -248,7 +253,8 @@ export class GhostMain extends BaseScriptComponent {
       !this.sheet || !this.demo || !this.turn || !this.pinchInput || !this.audio ||
       !this.aslRoot || !this.aslUI || !this.asl ||
       !this.guitarRoot || !this.guitarUI || !this.guitar ||
-      !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach
+      !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach ||
+      !this.speech
     ) {
       print("[GhostMain] ERROR: a required @input is not wired. Check the scene bootstrap's input-wiring pass.");
       return;
@@ -290,6 +296,8 @@ export class GhostMain extends BaseScriptComponent {
     this.frontUI.onMicPressed.add(() => this.onMicPressed());
     this.frontUI.onNotebookPicked.add((id: string) => this.onPackSelected(id));
     this.coach.onTip.add((tip: string) => this.onCoachTip(tip));
+    this.speech.onHeard.add((text: string) => this.onHeard(text));
+    this.speech.onGaveUp.add(() => this.onSpeechGaveUp());
 
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
     this.guitarUI.onNext.add(() => this.onGuitarNext());
@@ -904,54 +912,142 @@ export class GhostMain extends BaseScriptComponent {
    * listen the mic offers the typed list — which is the brief's own stand-in
    * rule, and leaves the flow after it identical either way.
    */
+  /**
+   * The mic. The tracker page opens the microphone and hands the words back.
+   *
+   * If speech is unavailable at all — no bridge, no page, no Internet Module —
+   * this falls straight through to the typed suggestions rather than making
+   * the user watch "Listening..." time out. Same flow either way: whatever
+   * arrives is treated exactly as a pinched suggestion.
+   */
   private onMicPressed(): void {
     this.audio.playTap();
-    this.frontUI.setSuggestions(this.pickSuggestions());
-    this.frontUI.setWaiting("Speech is off in the preview — pick one of these.");
+    if (!this.speech.startListening()) {
+      this.onSpeechGaveUp();
+      return;
+    }
+    this.frontUI.setWaiting("Listening...");
   }
 
-  /** A suggestion was pinched. Plan the lesson, sketching it in as it lands. */
+  private onHeard(text: string): void {
+    if (this.mode !== "front") return;
+    this.frontUI.setWaiting("");
+    this.onSkillPicked(text);
+  }
+
+  private onSpeechGaveUp(): void {
+    if (this.mode !== "front") return;
+    this.frontUI.setSuggestions(this.pickSuggestions());
+    this.frontUI.setWaiting("Did not catch that — pick one of these.");
+  }
+
+  /**
+   * A suggestion was pinched. Plan the lesson in visible stages.
+   *
+   * The three stages are real work, not a decorated wait:
+   *   0.00 - 0.55   "Planning your steps"   the plan call
+   *   0.55 - 0.85   "Checking it"           the review call, running BEHIND
+   *                                         the step titles already on screen
+   *   0.85 - 1.00   "Drawing it out"        the titles inking on
+   * Within each the line creeps but cannot pass its cap, so it is always
+   * moving and never lies about how far along the work is.
+   */
   private onSkillPicked(skill: string): void {
     this.audio.playTap();
     this.lessonSkill = skill;
     this.frontUI.beginOutline(skill);
-    // No spinner, and no fake progress: one honest line, replaced by the real
-    // step titles the moment they exist.
-    this.frontUI.setWaiting("Writing your lesson...");
+    this.frontUI.setWaiting("");
+    this.frontUI.beginStage("Planning your steps", 0, 0.55);
     this.audio.playUnroll();
 
-    this.pending = this.lessonSource.request(skill, (r: LessonResult) => {
-      this.pending = null;
-      if (this.mode !== "front") return;
-      this.onLessonReady(r);
+    // Two honest escalations, both measured from the pinch.
+    const nudge = this.createEvent("DelayedCallbackEvent");
+    nudge.bind(() => {
+      if (this.mode === "front" && this.pending) {
+        this.frontUI.setStageLabel("Still writing, nearly there");
+      }
     });
+    nudge.reset(15);
+
+    const giveUp = this.createEvent("DelayedCallbackEvent");
+    giveUp.bind(() => {
+      if (this.mode !== "front" || !this.pending) return;
+      // Thirty seconds is past the point where waiting is respectful. The
+      // bundled lesson is a real lesson, so this is a swap, not a failure.
+      this.pending.cancel();
+      this.pending = null;
+      const l = this.lessonSource.bundledFor(skill);
+      this.frontUI.setStageLabel("Drawing it out");
+      this.onLessonReady({
+        lesson: l, origin: "bank",
+        note: "The planner was slow, so this one is from the notebook.",
+      });
+    });
+    giveUp.reset(30);
+
+    this.pending = this.lessonSource.requestStaged(
+      skill,
+      (planned: Lesson) => {
+        if (this.mode !== "front") return;
+        // Stage 1 is done the moment real titles exist. They go up NOW and
+        // the review runs behind them — that is the whole reason for the split.
+        this.frontUI.beginStage("Checking it", 0.55, 0.85);
+        this.lesson = planned;
+        this.inkOutline(planned, 0);
+      },
+      (r: LessonResult) => {
+        this.pending = null;
+        if (this.mode !== "front") return;
+        this.onLessonReady(r);
+      }
+    );
   }
 
-  /** The lesson exists. Ink its title lines on, then begin. */
+  /**
+   * Ink the step titles on, one at a time.
+   *
+   * Called as soon as the PLAN lands. If the review later changes a title it
+   * is rewritten in place by onLessonReady — quietly, because a line that
+   * re-animates after you have read it is worse than one that just corrects.
+   */
+  private inkOutline(lesson: Lesson, i: number): void {
+    if (this.mode !== "front") return;
+    const steps = lesson.steps || [];
+    if (i >= steps.length) return;
+    this.frontUI.addOutlineLine(steps[i].title);
+    this.audio.playBrush();
+    const next = this.createEvent("DelayedCallbackEvent");
+    next.bind(() => this.inkOutline(lesson, i + 1));
+    next.reset(0.4);
+  }
+
+  /** The reviewed lesson has landed. Correct the outline quietly, then begin. */
   private onLessonReady(r: LessonResult): void {
     this.lesson = r.lesson;
     this.lessonSteps = traceableSteps(r.lesson);
     this.lessonPos = 0;
     this.frontUI.setWaiting(r.origin === "bank" ? r.note : "");
 
-    // The outline is brushed on one line at a time rather than appearing whole,
-    // which is the spec's "ghost sketches the lesson as it arrives".
+    this.frontUI.beginStage("Drawing it out", 0.85, 0.97);
+
+    // The review may have reworded a title that is already on screen. It is
+    // replaced in place rather than re-animated: a line that brushes itself on
+    // a second time reads as a glitch, not as a correction.
     const steps = r.lesson.steps || [];
-    const inkOne = (i: number) => {
-      if (this.mode !== "front") return;
-      if (i >= steps.length) {
-        const go = this.createEvent("DelayedCallbackEvent");
-        go.bind(() => this.startPlannedLesson());
-        go.reset(1.2);
-        return;
-      }
+    const alreadyInked = this.frontUI.outlineCount();
+    this.frontUI.replaceOutline(steps);
+    for (let i = alreadyInked; i < steps.length; i++) {
       this.frontUI.addOutlineLine(steps[i].title);
-      this.audio.playBrush();
-      const next = this.createEvent("DelayedCallbackEvent");
-      next.bind(() => inkOne(i + 1));
-      next.reset(0.45);
-    };
-    inkOne(0);
+    }
+
+    const go = this.createEvent("DelayedCallbackEvent");
+    go.bind(() => {
+      this.frontUI.finishProgress();
+      const start = this.createEvent("DelayedCallbackEvent");
+      start.bind(() => this.startPlannedLesson());
+      start.reset(0.5);
+    });
+    go.reset(0.8);
   }
 
   /**

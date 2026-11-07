@@ -67,6 +67,11 @@ export class GhostLessonSource extends BaseScriptComponent {
   /** Set while a request is in flight, so the UI can show it is thinking. */
   private inFlight = false;
 
+  /** The bundled lesson nearest a skill. Always returns one. */
+  bundledFor(skill: string): Lesson {
+    return bankLessonFor(skill) || LESSON_BANK[BANK_KEYS[0]];
+  }
+
   /** Skills offered when nothing can be planned. */
   offlineSkills(): string[] {
     return BANK_KEYS;
@@ -133,6 +138,140 @@ export class GhostLessonSource extends BaseScriptComponent {
     );
 
     return { cancel: () => { cancelled = true; this.inFlight = false; } };
+  }
+
+  /**
+   * The same lesson, in two visible stages.
+   *
+   * `onPlanned` fires as soon as stage 1 lands, so the step titles can be
+   * inked on while stage 2 runs behind them; `onDone` fires with the reviewed
+   * lesson, which may have changed and should be updated quietly. If anything
+   * fails, onDone still arrives — with the planned lesson, or a bundled one.
+   *
+   * Why two calls rather than one: the whole point is that the learner sees
+   * real step titles at about seven seconds instead of staring at a frozen
+   * line for fourteen. Same work, same result, shown in the middle.
+   */
+  requestStaged(
+    skill: string,
+    onPlanned: (lesson: Lesson) => void,
+    onDone: (r: LessonResult) => void
+  ): { cancel: () => void } {
+    let done = false;
+    let cancelled = false;
+    this.inFlight = true;
+
+    const finish = (r: LessonResult) => {
+      if (done || cancelled) return;
+      done = true;
+      this.inFlight = false;
+      onDone(r);
+    };
+    const toBank = (note: string) => {
+      const l = bankLessonFor(skill) || LESSON_BANK[BANK_KEYS[0]];
+      finish({ lesson: l, origin: "bank", note: note });
+    };
+
+    const deadline = this.createEvent("DelayedCallbackEvent");
+    deadline.bind(() => toBank("the planner took too long"));
+    deadline.reset(this.timeoutSec);
+
+    if (!this.internetModule || !this.useBridge) {
+      toBank(this.internetModule
+        ? "planning is switched off, so lessons are the bundled ones"
+        : "no Internet Module, so lessons are the bundled ones");
+      return { cancel: () => { cancelled = true; this.inFlight = false; } };
+    }
+
+    this.askStage(
+      "/lesson/plan",
+      { skill: skill },
+      (planned) => {
+        if (cancelled) return;
+        onPlanned(planned);
+        // Stage 2. A failure here is not fatal: the planned lesson already
+        // validated, so it is shipped as-is with reviewed left false.
+        this.askStage(
+          "/lesson/review",
+          { skill: skill, lesson: planned },
+          (reviewed) => finish({
+            lesson: reviewed,
+            origin: "bridge",
+            note: reviewed.reviewed ? "planned and checked" : "planned",
+          }),
+          () => finish({ lesson: planned, origin: "bridge", note: "planned" })
+        );
+      },
+      (why) => toBank(why)
+    );
+
+    return { cancel: () => { cancelled = true; this.inFlight = false; } };
+  }
+
+  /** One staged POST. Shares askBridge's error handling, different path. */
+  private askStage(
+    path: string,
+    body: any,
+    ok: (l: Lesson) => void,
+    fail: (why: string) => void
+  ): void {
+    const base = this.bridgeUrl.replace(/\/lesson.*$/, "");
+    let req: Request;
+    try {
+      req = new Request(base + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      fail("could not build the request: " + e);
+      return;
+    }
+
+    this.internetModule
+      .fetch(req)
+      .then((response: Response) => {
+        if (response.status !== 200) {
+          response.text()
+            .then((t: string) => fail(this.describe(response.status, t)))
+            .catch(() => fail("the planner replied " + response.status));
+          return;
+        }
+        response.text()
+          .then((text: string) => {
+            let raw: any;
+            try {
+              raw = JSON.parse(text);
+            } catch (e) {
+              fail("the planner's reply was not JSON");
+              return;
+            }
+            const check = validateLesson(raw);
+            if (!check.ok) {
+              print("[GhostLessonSource] rejected a lesson from " + path + ": " +
+                check.problems.join("; "));
+              fail("the planned lesson did not fit the schema");
+              return;
+            }
+            // The bridge reports what the call cost. Logged, never shown: the
+            // learner is not the one paying attention to tokens.
+            if (raw.usage) {
+              print("[GhostLessonSource] " + path + " " +
+                raw.usage.total_tokens + " tokens, about $" +
+                raw.usage.estimated_usd + ", " + raw.seconds + "s");
+            }
+            ok(raw as Lesson);
+          })
+          .catch((e: any) => fail("could not read the planner's reply: " + e));
+      })
+      .catch((e: any) => {
+        const s = String(e);
+        if (s.indexOf("not secure") >= 0 || s.indexOf("Experimental") >= 0) {
+          fail("the planner needs Project Settings > Experimental API");
+          return;
+        }
+        fail("could not reach the planner");
+      });
   }
 
   private askBridge(

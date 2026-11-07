@@ -547,6 +547,21 @@
     []
   Components:
     []
+- !<SceneObject/1bd491ae-d7db-4578-9e05-040ff9eaed36>
+  PrefabRemaps:
+    []
+  Name: Speech
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6a408698-1da5-4539-b6b9-def19bcf1d9c
 - !<RenderMeshVisual/1f969daa-5809-4500-b314-98d91ccba131>
   PrefabRemaps:
     []
@@ -946,7 +961,8 @@
       frontUI: !<MappingBased.AssignableType_12> d1b6791f-b464-43b1-8a42-c0269bddd019
       lessonSource: !<MappingBased.AssignableType_13> ccecc6dd-db91-4517-9eea-04a0b2398090
       coach: !<MappingBased.AssignableType_14> 59563978-083f-486c-891e-d1f483058974
-      audio: !<MappingBased.AssignableType_15> 31344314-8576-480c-a972-fbd63c3ecbe6
+      speech: !<MappingBased.AssignableType_15> 6a408698-1da5-4539-b6b9-def19bcf1d9c
+      audio: !<MappingBased.AssignableType_16> 31344314-8576-480c-a972-fbd63c3ecbe6
       lessonSequence: いうえあお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
@@ -1523,6 +1539,29 @@
   ScriptTypes:
     "":
       {}
+- !<ScriptComponent/6a408698-1da5-4539-b6b9-def19bcf1d9c>
+  PrefabRemaps:
+    []
+  Name: GhostSpeech
+  Enabled: true
+  ScriptAsset: !<reference> ce3cb497-9881-4a4e-bd4e-a1b4842a60e9
+  ScriptInputsDefault:
+    bridgeUrl: true
+    useBridge: true
+    pollSec: true
+    timeoutSec: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      internetModule: !<reference.InternetModule> 46241788-3794-4d79-b8b3-1684fe9f1e20
+      bridgeUrl: "http://127.0.0.1:8766"
+      useBridge: true
+      pollSec: 0.400000
+      timeoutSec: !<float> 12.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/6a7a67db-5675-49bb-8f31-ba0588e3cffc>
   PrefabRemaps:
     []
@@ -1625,6 +1664,28 @@
       chordBoxAtCm: !<Vec3> {x: 7.300000, y: 0.000000, z: 0.000000}
       chordBoxSizeCm: !<Vec3> {x: 3.400000, y: 5.000000, z: 0.000000}
       fingertipReachCm: 2.600000
+  ScriptTypes:
+    "":
+      {}
+- !<ScriptComponent/6d8047d0-2c9e-4f60-beb5-052b462fa5b1>
+  PrefabRemaps:
+    []
+  Name: GhostHandInteractor
+  Enabled: true
+  ScriptAsset: !<reference> 8194e471-f03f-4d9f-87ff-fde4941c2d12
+  ScriptInputsDefault:
+    indirectDragThreshold: true
+    _drawDebug: true
+    handDrivesUI: true
+    reachCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      indirectDragThreshold: !<float> 10.000000
+      _drawDebug: false
+      handDrivesUI: true
+      reachCm: !<float> 200.000000
   ScriptTypes:
     "":
       {}
@@ -2192,6 +2253,21 @@
     - !<own> 3615ab74-360c-4e7a-b503-7955c5e64ee7
   Components:
     []
+- !<SceneObject/969e79b9-8cf7-4073-99db-95d753049ddb>
+  PrefabRemaps:
+    []
+  Name: GhostHandInteractor
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6d8047d0-2c9e-4f60-beb5-052b462fa5b1
 - !<SceneObject/988c408a-99dc-47e6-b7c4-efbf4bf8dc3c>
   PrefabRemaps:
     []
@@ -2285,6 +2361,7 @@
     - !<own> 77ba75e7-504d-4297-9085-483ac15f3f0b
     - !<own> 4cb212ad-5246-4215-adf1-aaf3ccfc0e9c
     - !<own> 82a4b4e8-283b-441c-8b94-9fdc50c958f2
+    - !<own> 969e79b9-8cf7-4073-99db-95d753049ddb
   Components:
     []
 - !<SceneObject/a4de4ce7-f468-4966-8a06-e29eea60c023>
@@ -2911,6 +2988,7 @@
     - !<own> e2bcd6f6-93fe-4444-942d-4faff8bfc3f1
     - !<own> 22bdd82e-fff2-4ec3-b00c-f378117a8264
     - !<own> 76d3821b-2bfc-438c-b42e-7219fbb5ff81
+    - !<own> 1bd491ae-d7db-4578-9e05-040ff9eaed36
   Components:
     - !<own> 3dd27e24-4b90-4977-9c02-d5621fc2dd8c
 - !<ScriptComponent/d3e2fbc5-8795-4913-9af6-c8626f8e6d9c>
