@@ -942,6 +942,79 @@
       ]
     },
     {
+      "id": "969e79b9-8cf7-4073-99db-95d753049ddb",
+      "name": "GhostHandInteractor",
+      "enabled": true,
+      "parentId": "a4b1ce71-4840-4493-bc52-58f3c13933e1",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "6d8047d0-2c9e-4f60-beb5-052b462fa5b1",
+          "type": "ScriptComponent",
+          "name": "GhostHandInteractor",
+          "enabled": true,
+          "properties": {
+            "indirectDragThreshold": {
+              "isScriptInput": true,
+              "value": 10,
+              "type": "float",
+              "uiInfo": "{\"label\":\"Indirect Drag Threshold\", \"hint\":\"Controls the minimum distance (in cm) the hand must move during indirect interaction to be considered a drag. When the distance between the interaction origin position and current position exceeds this threshold, dragging behavior is detected and tracked. Lower values make dragging more sensitive and easier to trigger, while higher values require more deliberate movement before dragging begins.\"}",
+              "defaultValue": "10"
+            },
+            "handDrivesUI": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Let the webcam bridge's hand drive the UI. Off leaves the mouse and real SIK hands completely untouched — this component then reports nothing at all.\"}",
+              "defaultValue": "true"
+            },
+            "reachCm": {
+              "isScriptInput": true,
+              "value": 200,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.\", \"widget\":\"slider\", \"min\":50, \"max\":400, \"step\":10}",
+              "defaultValue": "200"
+            },
+            "_drawDebug": {
+              "isScriptInput": true,
+              "value": false,
+              "type": "bool",
+              "uiInfo": "{\"label\":\"Draw Debug\", \"hint\":\"When enabled, draws debug gizmos in the scene to visualize raycasts, colliders, and other interactor geometry. Useful for troubleshooting targeting issues during development.\"}"
+            },
+            "scriptAsset": "@asset:Scripts/GhostHandInteractor.ts",
+            "inputNames.0": "_drawDebug",
+            "inputNames.1": "handDrivesUI",
+            "inputNames.2": "indirectDragThreshold",
+            "inputNames.3": "reachCm",
+            "name": "GhostHandInteractor",
+            "enabled": true,
+            "sceneObject": "@sceneObject:GhostHandInteractor",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": true,
+            "id": "6d8047d0-2c9e-4f60-beb5-052b462fa5b1",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
       "id": "9468c53c-f76f-49b7-8a49-b5ec6af1c5a3",
       "name": "[OPTIONAL] Visuals",
       "enabled": true,

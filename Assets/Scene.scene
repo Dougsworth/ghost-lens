@@ -1628,6 +1628,28 @@
   ScriptTypes:
     "":
       {}
+- !<ScriptComponent/6d8047d0-2c9e-4f60-beb5-052b462fa5b1>
+  PrefabRemaps:
+    []
+  Name: GhostHandInteractor
+  Enabled: true
+  ScriptAsset: !<reference> 8194e471-f03f-4d9f-87ff-fde4941c2d12
+  ScriptInputsDefault:
+    indirectDragThreshold: true
+    _drawDebug: true
+    handDrivesUI: true
+    reachCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      indirectDragThreshold: !<float> 10.000000
+      _drawDebug: false
+      handDrivesUI: true
+      reachCm: !<float> 200.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/6d8247d2-e61c-45fd-b75c-8ec88e2e0a01>
   PrefabRemaps:
     []
@@ -2192,6 +2214,21 @@
     - !<own> 3615ab74-360c-4e7a-b503-7955c5e64ee7
   Components:
     []
+- !<SceneObject/969e79b9-8cf7-4073-99db-95d753049ddb>
+  PrefabRemaps:
+    []
+  Name: GhostHandInteractor
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6d8047d0-2c9e-4f60-beb5-052b462fa5b1
 - !<SceneObject/988c408a-99dc-47e6-b7c4-efbf4bf8dc3c>
   PrefabRemaps:
     []
@@ -2285,6 +2322,7 @@
     - !<own> 77ba75e7-504d-4297-9085-483ac15f3f0b
     - !<own> 4cb212ad-5246-4215-adf1-aaf3ccfc0e9c
     - !<own> 82a4b4e8-283b-441c-8b94-9fdc50c958f2
+    - !<own> 969e79b9-8cf7-4073-99db-95d753049ddb
   Components:
     []
 - !<SceneObject/a4de4ce7-f468-4966-8a06-e29eea60c023>
