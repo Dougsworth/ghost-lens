@@ -1,5 +1,20 @@
 /**
- * Criterion 1 — "The Lens opens on the notebook shelf: Japanese, ASL and Guitar
+ * Criterion 1, as the product now works.
+ *
+ * The brief wrote this criterion when the Lens opened on a five-notebook
+ * shelf. It opens on the FRONT DOOR now ("What do you want to learn?"), and
+ * the packs live as a small "Your notebook" row underneath it — which is what
+ * NEXT_AI_FIRST.md asks for: teach-me-anything is the hero, the packs are
+ * examples of it. So the entry assertions below moved to the front door and
+ * the pack is opened from that row.
+ *
+ * What this costs: the old shelf also carried Chinese and Knots as "Coming
+ * soon" covers, and the front door's row shows only the three open packs, so
+ * those assertions are gone with the screen they tested. The shelf code is
+ * still there but nothing reaches it. Retiring it or surfacing it again is a
+ * product decision, not a test one.
+ *
+ * ORIGINAL — "The Lens opens on the notebook shelf: Japanese, ASL and Guitar
  * Chords are open, and Chinese and Knots are wrapped with 'Coming soon'.
  * Pinching Japanese flips the notebook open into the 15 cm washi practice
  * sheet, with Replay, Slower, Next and Packs tabs on the right — all of it in
@@ -28,8 +43,8 @@ import {getInteractables} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {
   GhostLeafInteractor,
   LESSON_ROOT,
-  SHELF_PANEL,
-  SHELF_ROOT,
+  FRONT_ROOT,
+  NOTEBOOK_ROW,
   TAB_STACK,
   requireDescendant,
   requireObject,
@@ -43,8 +58,8 @@ import {GhostSheet} from "../Scripts/GhostSheet"
 // The criterion itself is unchanged — "the open packs are pinchable, the locked
 // ones wear a Coming soon band" — only which packs are in which list. Chinese
 // and Knots are still covers only.
-const OPEN_PACKS = ["Japanese", "ASL", "Guitar Chords"]
-const LOCKED_PACKS = ["Chinese", "Knots"]
+/** The front door's row uses short names: "Guitar", not "Guitar Chords". */
+const OPEN_PACKS = ["Japanese", "ASL", "Guitar"]
 const TAB_LABELS = ["Replay", "Slower", "Next", "Packs"]
 
 @component
@@ -57,75 +72,38 @@ export class GhostShelfToSheetScenario extends Scenario {
     // OnStart, so nothing below exists at frame 0.
     await sleep(1500)
 
-    const shelf = requireObject(SHELF_ROOT)
+    const front = requireObject(FRONT_ROOT)
     const lesson = requireObject(LESSON_ROOT)
 
-    // ── The Lens opens on the shelf ─────────────────────────────────────────
-    expect(shelf.enabled, "Shelf root enabled at Lens start").toBe(true)
+    // ── The Lens opens on the front door ────────────────────────────────────
+    expect(front.enabled, "Front door enabled at Lens start").toBe(true)
     expect(lesson.enabled, "Lesson root disabled at Lens start").toBe(false)
 
-    // ── Five notebook covers ────────────────────────────────────────────────
-    const cards = interactor.shelfCards()
-    const titles = cards.map((card) => interactor.cardTitle(card))
+    // ── The packs, as a row under "Your notebook" ───────────────────────────
+    const cards = interactor.notebookCards()
+    const titles = cards.map((card) => interactor.notebookName(card))
     expect(
       cards.length,
-      `notebook covers under ${SHELF_PANEL}; titles found: [${titles.join(", ")}]`,
-    ).toBe(5)
-
-    for (const pack of OPEN_PACKS.concat(LOCKED_PACKS)) {
-      expect(
-        titles.indexOf(pack) >= 0,
-        `shelf carries a "${pack}" cover; titles found: [${titles.join(", ")}]`,
-      ).toBe(true)
-    }
-
-    // ── Japanese and ASL read as open, the other three as locked ────────────
-    const japaneseCard = interactor.requireCardByTitle("Japanese")
-    const openRed = required(
-      textRedOfDescendant(japaneseCard.getSceneObject(), "CoverTitle"),
-      "a fill colour on the Japanese cover title",
-    )
-    expect(
-      openRed,
-      "Japanese cover title has a readable fill colour",
-    ).toBeGreaterThan(0)
+      `pack covers under ${NOTEBOOK_ROW}; names found: [${titles.join(", ")}]`,
+    ).toBe(OPEN_PACKS.length)
 
     for (const pack of OPEN_PACKS) {
-      const card = interactor.requireCardByTitle(pack)
       expect(
-        textOfDescendant(card.getSceneObject(), "ComingSoonBand"),
-        `"${pack}" is open, so it wears no Coming soon band`,
-      ).toBeNull()
-    }
-
-    for (const pack of LOCKED_PACKS) {
-      const card = interactor.requireCardByTitle(pack)
-      expect(
-        textOfDescendant(card.getSceneObject(), "ComingSoonBand"),
-        `"${pack}" is wrapped with a Coming soon band`,
-      ).toBe("Coming soon")
-      // "slightly faded": GhostShelfUI dims a locked cover by scaling the
-      // title's RGB, so a locked title must be strictly darker than an open one.
-      const lockedRed = required(
-        textRedOfDescendant(card.getSceneObject(), "CoverTitle"),
-        `a fill colour on the "${pack}" cover title`,
-      )
-      expect(
-        lockedRed < openRed,
-        `"${pack}" title is faded (red ${lockedRed}) relative to an open cover (red ${openRed})`,
+        titles.indexOf(pack) >= 0,
+        `front door offers "${pack}"; names found: [${titles.join(", ")}]`,
       ).toBe(true)
     }
 
-    // ── THE PINCH: Japanese cover flips the notebook open ───────────────────
-    await interactor.pinchShelfCard("Japanese")
+    // ── THE PINCH: the Japanese notebook opens into the sheet ───────────────
+    await interactor.pinchNotebook("Japanese")
 
     await waitUntil(
-      () => lesson.enabled && !shelf.enabled,
+      () => lesson.enabled && !front.enabled,
       5000,
       () =>
-        `after pinching Japanese: Shelf.enabled=${shelf.enabled}, Lesson.enabled=${lesson.enabled}`,
+        `after pinching Japanese: FrontDoor.enabled=${front.enabled}, Lesson.enabled=${lesson.enabled}`,
     )
-    expect(shelf.enabled, "pinching Japanese hides the shelf").toBe(false)
+    expect(front.enabled, "pinching Japanese hides the front door").toBe(false)
     expect(lesson.enabled, "pinching Japanese shows the lesson").toBe(true)
 
     // ── The 15 cm washi practice sheet, fully unrolled ──────────────────────
