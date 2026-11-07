@@ -37,9 +37,12 @@
     audio: false
     debugColliders: false
     demo: false
+    fadedGuideStrength: false
     guitar: false
     guitarRoot: false
     guitarUI: false
+    hintAfterSec: false
+    hintGuideStrength: false
     lessonRoot: false
     lessonSequence: false
     pinchInput: false
@@ -80,6 +83,9 @@
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
       stampHoldSec: 1.100000
+      fadedGuideStrength: 0.400000
+      hintAfterSec: 2.500000
+      hintGuideStrength: 0.500000
       debugColliders: false
   ScriptTypes:
     -
@@ -114,5 +120,8 @@
     - '// @input bool reanchorOnOpen = true {"hint":"Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin."}'
     - "// @input float anchorDistanceCm = 45 {\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}"
     - '// @input float stampHoldSec = 1.1 {"hint":"Seconds the finished sheet rests with its stamp before the page turns.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
+    - "// @input float fadedGuideStrength = 0.4 {\"hint\":\"Help ladder: how bright the guide shows at the 'Faded guide' level, 0..1 of the full outline.\", \"widget\":\"slider\", \"min\":0.1, \"max\":0.9, \"step\":0.05}"
+    - "// @input float hintAfterSec = 2.5 {\"hint\":\"Help ladder: at the 'Hint only' level the guide stays hidden until the user has been idle this many seconds, then shows just the current stroke.\", \"widget\":\"slider\", \"min\":0.5, \"max\":8, \"step\":0.5}"
+    - '// @input float hintGuideStrength = 0.5 {"hint":"Help ladder: brightness of that one-stroke hint, 0..1 of the full outline.", "widget":"slider", "min":0.1, "max":1, "step":0.05}'
     - '// @input bool debugColliders {"hint":"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart."}'
     - '// @ui {"widget":"group_end"}'

@@ -19,13 +19,14 @@
 import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
 import { GlyphPath, Pt } from "./GhostKanaPath";
 import { InkRibbon, createQuads } from "./GhostInkRibbon";
-import { checkStroke } from "./GhostStrokeCheck";
+import { checkStroke, STROKE_PARTS } from "./GhostStrokeCheck";
 import { GhostSheet } from "./GhostSheet";
 import { GhostPinchInput } from "./GhostPinchInput";
 
 type Fading = { ribbon: InkRibbon; t: number; from: vec4 };
 
-export type MissInfo = { index: number; reason: string };
+/** A missed stroke: which one, why, and which part of it was furthest off. */
+export type MissInfo = { index: number; reason: string; worstPart: number; parts: number };
 
 @component
 export class GhostTurnController extends BaseScriptComponent {
@@ -122,7 +123,11 @@ export class GhostTurnController extends BaseScriptComponent {
   private fading: Fading[] = [];
   private pulse: RenderMeshVisual | null = null;
   private pulseOn = false;
+  /** The guide piece the last miss was furthest from, lit up until the next try. */
+  private worstGlow: InkRibbon | null = null;
   private elapsed = 0;
+  /** When the user last did anything (turn began, pinched, released). */
+  private lastActivity = 0;
 
   private readonly _onStrokeAccepted = new Event<number>();
   private readonly _onStrokeMissed = new Event<MissInfo>();
@@ -146,6 +151,16 @@ export class GhostTurnController extends BaseScriptComponent {
   /** 0-based index of the stroke the user is on. */
   get currentStroke(): number {
     return this.strokeIndex;
+  }
+
+  /**
+   * Seconds since the user last did anything during their turn, 0 while a
+   * pinch is in progress or the turn is not active. The "hint only" help level
+   * shows the guide when this passes a threshold — help when stuck, not before.
+   */
+  get idleSeconds(): number {
+    if (!this.active || this.live || this.pendingStart) return 0;
+    return getTime() - this.lastActivity;
   }
 
   onAwake(): void {
@@ -172,6 +187,7 @@ export class GhostTurnController extends BaseScriptComponent {
     this.strokeIndex = 0;
     this.misses = 0;
     this.active = true;
+    this.lastActivity = getTime();
     this.setPulse(false);
     if (this.pinchInput) this.pinchInput.accepting = true;
     this.publishStrokeStart();
@@ -184,6 +200,7 @@ export class GhostTurnController extends BaseScriptComponent {
     this.publishStrokeStart();
     this.discardLive();
     this.setPulse(false);
+    this.clearWorstGlow();
   }
 
   /** Resume after the ghost re-demonstrated a stroke. */
@@ -201,6 +218,7 @@ export class GhostTurnController extends BaseScriptComponent {
     for (let i = 0; i < this.fading.length; i++) this.fading[i].ribbon.sceneObject.destroy();
     this.fading = [];
     this.setPulse(false);
+    this.clearWorstGlow();
   }
 
   // ── Drawing ───────────────────────────────────────────────────────────────
@@ -223,8 +241,10 @@ export class GhostTurnController extends BaseScriptComponent {
     this.livePoints = [p];
     this.smoothed = { x: p.x, y: p.y };
     this.strokeBeganAt = getTime();
+    this.lastActivity = this.strokeBeganAt;
     this.live = null;
     this.setPulse(false);
+    this.clearWorstGlow();
   }
 
   /** Create the ribbon on first real movement, starting at the armed point. */
@@ -277,6 +297,7 @@ export class GhostTurnController extends BaseScriptComponent {
 
   private endStroke(p: Pt): void {
     if (!this.active || !this.glyph) return;
+    this.lastActivity = getTime();
     // Armed but never moved: no ink, no attempt, no miss.
     if (!this.live) {
       this.discardLive();
@@ -315,6 +336,7 @@ export class GhostTurnController extends BaseScriptComponent {
       this.smoothed = null;
       this.misses = 0;
       this.setPulse(false);
+      this.clearWorstGlow();
 
       const done = this.strokeIndex;
       this._onStrokeAccepted.invoke(done);
@@ -334,7 +356,16 @@ export class GhostTurnController extends BaseScriptComponent {
     this.livePoints = [];
     this.misses++;
     this.setPulse(true);
-    this._onStrokeMissed.invoke({ index: this.strokeIndex, reason: verdict.reason });
+    // Light up only the piece that was furthest off — "just this part", not
+    // the whole stroke. A reversed or too-short drag has no meaningful worst
+    // piece, so the start-point pulse alone carries those.
+    if (verdict.reason === "off") this.showWorstGlow(verdict.worstPoints);
+    this._onStrokeMissed.invoke({
+      index: this.strokeIndex,
+      reason: verdict.reason,
+      worstPart: verdict.worstPart,
+      parts: STROKE_PARTS,
+    });
 
     if (this.misses >= this.missesBeforeDemo) {
       this.misses = 0;
@@ -374,14 +405,11 @@ export class GhostTurnController extends BaseScriptComponent {
       f.ribbon.setColor(new vec4(f.from.x * k, f.from.y * k, f.from.z * k, f.from.w));
     }
 
-    if (this.pulse && this.pulseOn) {
+    if (this.pulseOn) {
       const k = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this.elapsed * 6.0));
-      this.pulse.mainMaterial.mainPass.baseColor = new vec4(
-        this.pulseColor.x * k,
-        this.pulseColor.y * k,
-        this.pulseColor.z * k,
-        this.pulseColor.w
-      );
+      const c = new vec4(this.pulseColor.x * k, this.pulseColor.y * k, this.pulseColor.z * k, this.pulseColor.w);
+      if (this.pulse) this.pulse.mainMaterial.mainPass.baseColor = c;
+      if (this.worstGlow) this.worstGlow.setColor(c);
     }
   }
 
@@ -402,6 +430,20 @@ export class GhostTurnController extends BaseScriptComponent {
     }
     const st = this.glyph.strokes[this.strokeIndex].start;
     this.pinchInput.strokeStart = { x: st.x, y: st.y };
+  }
+
+  private showWorstGlow(points: Pt[]): void {
+    this.clearWorstGlow();
+    if (!this.sheet || points.length < 2) return;
+    this.worstGlow = new InkRibbon(this.sheet.inkRoot, "WorstPart", this.pulseColor, this.inkWidthCm * 1.4, 0.03);
+    this.worstGlow.setRawPoints(points);
+  }
+
+  private clearWorstGlow(): void {
+    if (this.worstGlow) {
+      this.worstGlow.sceneObject.destroy();
+      this.worstGlow = null;
+    }
   }
 
   private setPulse(on: boolean): void {

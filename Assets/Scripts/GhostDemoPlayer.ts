@@ -193,6 +193,26 @@ export class GhostDemoPlayer extends BaseScriptComponent {
     this.parkBrush();
   }
 
+  /**
+   * The help dial for the user's turn: how strongly the guide shows.
+   * 1 = the full pale outline, 0 = gone. The display is additive, so dimming
+   * the colour toward black IS fading toward invisible.
+   *
+   * @param only if >= 0, show just that one stroke at `strength` and hide the
+   *             rest — the "hint only when stuck" level, which by the research
+   *             shows the current target rather than the whole path.
+   */
+  setGuideStrength(strength: number, only: number = -1): void {
+    const k = Math.max(0, Math.min(1, strength));
+    for (let i = 0; i < this.ribbons.length; i++) {
+      const s = only >= 0 && i !== only ? 0 : k;
+      this.ribbons[i].setProgress(1);
+      this.ribbons[i].setColor(
+        new vec4(this.guideColor.x * s, this.guideColor.y * s, this.guideColor.z * s, this.guideColor.w)
+      );
+    }
+  }
+
   private beginStroke(index: number): void {
     this.strokeIndex = index;
     this.phase = "stroke";

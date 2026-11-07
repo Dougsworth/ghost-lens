@@ -27,6 +27,8 @@ import { GhostAslUI } from "./GhostAslUI";
 import { GhostAslController } from "./GhostAslController";
 import { ASL_SIGNS } from "./GhostAslPack";
 import { INTRO_LINE, lessonFor, praiseFor, tipFor } from "./GhostKanaLesson";
+import { Help, HELP_NAMES, SkillTeacher } from "./GhostTeacher";
+import { pathPartName } from "./GhostSkillCheck";
 import { GhostGuitarUI } from "./GhostGuitarUI";
 import { GhostGuitarController } from "./GhostGuitarController";
 import { GUITAR_CHORDS } from "./GhostGuitarPack";
@@ -139,6 +141,21 @@ export class GhostMain extends BaseScriptComponent {
   stampHoldSec: number = 1.1;
 
   @input
+  @hint("Help ladder: how bright the guide shows at the 'Faded guide' level, 0..1 of the full outline.")
+  @widget(new SliderWidget(0.1, 0.9, 0.05))
+  fadedGuideStrength: number = 0.4;
+
+  @input
+  @hint("Help ladder: at the 'Hint only' level the guide stays hidden until the user has been idle this many seconds, then shows just the current stroke.")
+  @widget(new SliderWidget(0.5, 8, 0.5))
+  hintAfterSec: number = 2.5;
+
+  @input
+  @hint("Help ladder: brightness of that one-stroke hint, 0..1 of the full outline.")
+  @widget(new SliderWidget(0.1, 1, 0.05))
+  hintGuideStrength: number = 0.5;
+
+  @input
   @hint("Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart.")
   debugColliders: boolean = false;
   @ui.group_end
@@ -153,6 +170,18 @@ export class GhostMain extends BaseScriptComponent {
   /** >= 0 while the ghost is re-showing one stroke after repeated misses. */
   private redemoIndex = -1;
 
+  /**
+   * The shared coach: per-character help level, stamps, shuffled reviews. The
+   * Japanese pack is the first to run on it; it knows nothing about kana.
+   */
+  private teacher = new SkillTeacher();
+  /** True once the 'Hint only' level has shown its one-stroke hint this stroke. */
+  private hintShown = false;
+  /** True while the sheet holds a review of an already-stamped character. */
+  private reviewing = false;
+  /** Bumped every time a character is put on the sheet, so a delayed rewrite can tell it is stale. */
+  private pageSerial = 0;
+
   // Ask GHOST writes a whole word, one character at a time.
   private askChars: string[] = [];
   private askPos = 0;
@@ -163,6 +192,16 @@ export class GhostMain extends BaseScriptComponent {
     // through an @input has not run its own onAwake yet, so its Event fields do
     // not exist. Lens Studio runs every onAwake before any onStart.
     this.createEvent("OnStartEvent").bind(() => this.onStart());
+    this.createEvent("UpdateEvent").bind(() => this.onUpdate());
+  }
+
+  /** Per frame: only the 'Hint only' help level needs watching (help when stuck). */
+  private onUpdate(): void {
+    if (this.mode !== "turn" || this.hintShown || !this.glyph || !this.turn) return;
+    if (this.teacher.level(this.currentChar) !== Help.Hint) return;
+    if (this.turn.idleSeconds < this.hintAfterSec) return;
+    this.hintShown = true;
+    this.demo.setGuideStrength(this.hintGuideStrength, this.turn.currentStroke);
   }
 
   private onStart(): void {
@@ -255,14 +294,20 @@ export class GhostMain extends BaseScriptComponent {
     if (this.characters.length === 0) return;
     const n = this.characters.length;
     this.lessonIndex = ((index % n) + n) % n;
+    this.reviewing = false;
     this.askChars = [];
     this.askCaption = "";
     this.sheetUI.setCaption("");
     this.beginCharacter(this.characters[this.lessonIndex], true);
   }
 
-  /** Shared by the lesson and by Ask GHOST: put one character on a fresh sheet. */
-  private beginCharacter(character: string, unroll: boolean): void {
+  /**
+   * Shared by the lesson and by Ask GHOST: put one character on a fresh sheet.
+   * `review` skips the demonstration: a stamped character coming back for a
+   * quick unaided check, so the ghost must not write it first.
+   */
+  private beginCharacter(character: string, unroll: boolean, review: boolean = false): void {
+    this.pageSerial++;
     this.glyph = buildGlyphPath(character, this.demo.glyphUnitCm, true);
     if (!this.glyph) {
       print("[GhostMain] ERROR: no stroke data for '" + character + "'.");
@@ -288,6 +333,15 @@ export class GhostMain extends BaseScriptComponent {
     this.aslRoot.enabled = false;
     this.guitarRoot.enabled = false;
     this.lessonRoot.enabled = true;
+
+    if (review) {
+      this.anchorInFrontOfUser();
+      this.sheet.showImmediate();
+      this.sheet.hideStamp();
+      this.demo.showGuideOnly();
+      this.beginUserTurn();
+      return;
+    }
 
     if (unroll) {
       this.anchorInFrontOfUser();
@@ -318,6 +372,10 @@ export class GhostMain extends BaseScriptComponent {
     this.sheetUI.setStrokeCounter(1, this.glyph.strokeCount);
     this.demo.parkBrushAt(0);
     this.turn.begin(this.glyph);
+    // The demonstration has been seen: the coach starts this character at full
+    // help (Trace) the first time, or wherever it got to on earlier tries.
+    this.teacher.watched(this.currentChar);
+    this.applyHelp("");
 
     // First lesson only: say what to do, once, then get out of the way. After
     // that the line carries the per-stroke tip instead.
@@ -330,6 +388,27 @@ export class GhostMain extends BaseScriptComponent {
       return;
     }
     this.showStrokeTip(0);
+  }
+
+  /**
+   * Make the sheet show the help level the coach has for this character:
+   *   Trace       -> the full pale outline
+   *   Faded guide -> a faint outline
+   *   Hint only   -> nothing, until the user is stuck (see onUpdate)
+   *   Solo        -> nothing at all
+   * The caption under the sheet says where they are on the ladder, prefixed by
+   * `lead` (what just happened) when there is something to say.
+   */
+  private applyHelp(lead: string): void {
+    const level = this.teacher.level(this.currentChar);
+    this.hintShown = false;
+    if (level <= Help.Shadow) this.demo.setGuideStrength(1);
+    else if (level === Help.Faded) this.demo.setGuideStrength(this.fadedGuideStrength);
+    else this.demo.setGuideStrength(0);
+
+    const step = Math.max(1, level) + " of " + Help.Solo;
+    const where = (this.reviewing ? "Review · " : "") + HELP_NAMES[level] + " (" + step + ")";
+    this.sheetUI.setCaption(lead.length > 0 ? lead + " · " + where : where);
   }
 
   /** The one line above the sheet: how to move for the stroke about to be drawn. */
@@ -388,6 +467,13 @@ export class GhostMain extends BaseScriptComponent {
 
     // A word, then the next instruction. Praise alone would leave the user
     // without a next step; the tip alone would feel like silence after effort.
+    // 'Hint only': the one-stroke hint was for the stroke just finished. Hide it
+    // again so the next stroke starts unaided, and re-arm the stuck timer.
+    if (this.teacher.level(this.currentChar) === Help.Hint) {
+      this.demo.setGuideStrength(0);
+      this.hintShown = false;
+    }
+
     const last = index >= this.glyph.strokeCount - 1;
     this.sheetUI.setLine(praiseFor(this.praiseCount));
     this.praiseCount++;
@@ -404,6 +490,18 @@ export class GhostMain extends BaseScriptComponent {
     // Re-show the movement for THIS stroke. Saying nothing after a miss reads
     // as a dead end; repeating the tip is the quietest useful answer.
     this.showStrokeTip(info.index);
+
+    // The coach: a miss means one level MORE help, shown straight away. The
+    // feedback leads with what went right, then names the single worst part
+    // (the turn controller is already lighting that part up on the sheet).
+    if (!this.glyph) return;
+    this.teacher.recordMiss(this.currentChar);
+    const before = info.index > 0 ? "Strokes 1–" + info.index + " good" : "Good start";
+    let fix = "";
+    if (info.reason === "reversed") fix = "stroke " + (info.index + 1) + " goes the other way";
+    else if (info.reason === "short") fix = "draw all of stroke " + (info.index + 1);
+    else fix = pathPartName(info.worstPart, info.parts) + " of stroke " + (info.index + 1) + " drifted — follow the glow";
+    this.applyHelp(before + "; " + fix);
   }
 
   private onNeedsDemo(index: number): void {
@@ -415,7 +513,30 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private onCharacterComplete(): void {
+    if (!this.glyph) return;
+    const outcome = this.teacher.recordPass(this.currentChar);
+
+    // Not Solo yet: the character is written, so take one level of help away
+    // and write it again on a clean sheet — the practice-paper progression of
+    // dark model, faded tracing, then empty boxes.
+    if (!outcome.stamped) {
+      this.mode = "finished";
+      this.audio.playInkDry();
+      this.sheetUI.setCaption("Well done! Less help now: " + HELP_NAMES[outcome.level]);
+      const page = this.pageSerial;
+      const again = this.createEvent("DelayedCallbackEvent");
+      again.bind(() => {
+        if (this.mode !== "finished" || !this.glyph || page !== this.pageSerial) return;
+        this.turn.clearAll();
+        this.beginUserTurn();
+      });
+      again.reset(this.stampHoldSec + 0.4);
+      return;
+    }
+
+    // Solo pass: the stamp is earned — only ever for an unaided attempt.
     this.mode = "finished";
+    this.sheetUI.setCaption(outcome.wasReview ? "Still got it! Reviewed." : "Solo! Stamped.");
     this.audio.playStamp();
     this.sheet.showStamp();
     const after = this.createEvent("DelayedCallbackEvent");
@@ -428,6 +549,20 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPageTurnComplete(): void {
     if (this.mode !== "finished") return;
+
+    // Spaced, shuffled review: before the next new character, bring back a
+    // stamped one that is due, to be written Solo with no demonstration. A
+    // review is never followed by another review, so new material keeps
+    // flowing.
+    if (!this.reviewing) {
+      const due = this.teacher.takeDueReview(this.currentChar);
+      if (due) {
+        this.reviewing = true;
+        this.beginCharacter(due, false, true);
+        return;
+      }
+    }
+    this.reviewing = false;
     this.openLesson(this.lessonIndex + 1);
   }
 
