@@ -582,6 +582,21 @@
     []
   Components:
     - !<own> e1031f7e-3474-489f-a529-282f7192f812
+- !<SceneObject/22bdd82e-fff2-4ec3-b00c-f378117a8264>
+  PrefabRemaps:
+    []
+  Name: LessonSource
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> ccecc6dd-db91-4517-9eea-04a0b2398090
 - !<SceneObject/23018601-1041-4785-a20e-9ad5ab722f95>
   PrefabRemaps:
     []
@@ -927,7 +942,11 @@
       guitarRoot: !<reference.SceneObject> 613765d3-bd12-41c0-82f0-ba712e5e567d
       guitarUI: !<MappingBased.AssignableType_10> eff714b8-2a38-4a04-8c9f-08cf73b0a767
       guitar: !<MappingBased.AssignableType_11> 6c243e8b-bc4a-4c15-8631-6848532a862c
-      audio: !<MappingBased.AssignableType_12> 31344314-8576-480c-a972-fbd63c3ecbe6
+      frontRoot: !<reference.SceneObject> e2bcd6f6-93fe-4444-942d-4faff8bfc3f1
+      frontUI: !<MappingBased.AssignableType_12> d1b6791f-b464-43b1-8a42-c0269bddd019
+      lessonSource: !<MappingBased.AssignableType_13> ccecc6dd-db91-4517-9eea-04a0b2398090
+      coach: !<MappingBased.AssignableType_14> 59563978-083f-486c-891e-d1f483058974
+      audio: !<MappingBased.AssignableType_15> 31344314-8576-480c-a972-fbd63c3ecbe6
       lessonSequence: いうえあお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
@@ -1200,6 +1219,21 @@
     - !<own> 8363e9a6-cd83-4889-abd4-6521e394f244
   Components:
     []
+- !<SceneObject/52f1549f-23a1-4779-9174-8fbdb7e70f3f>
+  PrefabRemaps:
+    []
+  Name: FrontPanel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> d1b6791f-b464-43b1-8a42-c0269bddd019
 - !<SceneObject/54130007-65c1-48d3-b9df-0866d8112e01>
   PrefabRemaps:
     []
@@ -1230,6 +1264,27 @@
     - !<own> bf2095b6-c6f8-48c8-b840-e0a6cec0dc99
   Components:
     []
+- !<ScriptComponent/59563978-083f-486c-891e-d1f483058974>
+  PrefabRemaps:
+    []
+  Name: GhostCoach
+  Enabled: true
+  ScriptAsset: !<reference> 1984685d-3a8b-412b-b866-9d286363d61a
+  ScriptInputsDefault:
+    bridgeUrl: true
+    useBridge: true
+    timeoutSec: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      internetModule: !<reference.InternetModule> 46241788-3794-4d79-b8b3-1684fe9f1e20
+      bridgeUrl: "http://127.0.0.1:8766/coach"
+      useBridge: true
+      timeoutSec: !<float> 6.000000
+  ScriptTypes:
+    "":
+      {}
 - !<ScriptComponent/5f153ad7-2baa-4fd9-a298-0dcfad86da3b>
   PrefabRemaps:
     []
@@ -1687,6 +1742,21 @@
     - !<own> 241be3d8-6f45-47d7-8b71-53778e375dc2
   Components:
     []
+- !<SceneObject/76d3821b-2bfc-438c-b42e-7219fbb5ff81>
+  PrefabRemaps:
+    []
+  Name: Coach
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 59563978-083f-486c-891e-d1f483058974
 - !<ScriptComponent/77472d5c-207a-40fb-82ef-5d9e9ddf7f3c>
   PrefabRemaps:
     []
@@ -2672,6 +2742,27 @@
     []
   Components:
     - !<own> eff714b8-2a38-4a04-8c9f-08cf73b0a767
+- !<ScriptComponent/ccecc6dd-db91-4517-9eea-04a0b2398090>
+  PrefabRemaps:
+    []
+  Name: GhostLessonSource
+  Enabled: true
+  ScriptAsset: !<reference> ab317213-a993-4594-a616-447658109f6b
+  ScriptInputsDefault:
+    bridgeUrl: true
+    useBridge: true
+    timeoutSec: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      internetModule: !<reference.InternetModule> 46241788-3794-4d79-b8b3-1684fe9f1e20
+      bridgeUrl: "http://127.0.0.1:8766/lesson"
+      useBridge: true
+      timeoutSec: !<float> 75.000000
+  ScriptTypes:
+    "":
+      {}
 - !<Skin/ccf4d3bc-d3c2-4580-b9c5-62f164ef7eef>
   PrefabRemaps:
     []
@@ -2772,6 +2863,31 @@
     - !<own> bb9036be-541f-49e7-9554-c297d354da21
   Components:
     []
+- !<ScriptComponent/d1b6791f-b464-43b1-8a42-c0269bddd019>
+  PrefabRemaps:
+    []
+  Name: GhostFrontDoorUI
+  Enabled: true
+  ScriptAsset: !<reference> 2c5bbe10-7b6d-4451-b9ad-fb3044f8d016
+  ScriptInputsDefault:
+    paperColor: true
+    inkColor: true
+    dimInkColor: true
+    hoverColor: true
+    sheetWidthCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      inkColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}
+      dimInkColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
+      hoverColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
+      sheetWidthCm: !<float> 19.000000
+      sheetHeightCm: !<float> 21.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/d343f1c3-771e-4811-935b-0c37960832c5>
   PrefabRemaps:
     []
@@ -2792,6 +2908,9 @@
     - !<own> 5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc
     - !<own> f7174067-8493-4310-9255-f3fe93f0f451
     - !<own> 613765d3-bd12-41c0-82f0-ba712e5e567d
+    - !<own> e2bcd6f6-93fe-4444-942d-4faff8bfc3f1
+    - !<own> 22bdd82e-fff2-4ec3-b00c-f378117a8264
+    - !<own> 76d3821b-2bfc-438c-b42e-7219fbb5ff81
   Components:
     - !<own> 3dd27e24-4b90-4977-9c02-d5621fc2dd8c
 - !<ScriptComponent/d3e2fbc5-8795-4913-9af6-c8626f8e6d9c>
@@ -2967,6 +3086,21 @@
     HasSegmentScaleCompensation: false
   Children:
     - !<own> 7e2075c6-0882-4275-8365-16a03da73298
+  Components:
+    []
+- !<SceneObject/e2bcd6f6-93fe-4444-942d-4faff8bfc3f1>
+  PrefabRemaps:
+    []
+  Name: FrontDoor
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 52f1549f-23a1-4779-9174-8fbdb7e70f3f
   Components:
     []
 - !<SceneObject/e42bbb9f-e951-4432-be2e-3cc712b1fc33>

@@ -36,13 +36,17 @@
     aslUI: false
     audio: false
     cleanRunsBeforeFade: false
+    coach: false
     debugColliders: false
     demo: false
+    frontRoot: false
+    frontUI: false
     guitar: false
     guitarRoot: false
     guitarUI: false
     lessonRoot: false
     lessonSequence: false
+    lessonSource: false
     pinchInput: false
     reanchorOnOpen: false
     sheet: false
@@ -76,7 +80,11 @@
       guitarRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       guitarUI: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
       guitar: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
-      audio: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
+      frontRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      frontUI: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
+      lessonSource: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
+      coach: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
+      audio: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
       lessonSequence: あいうえお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
@@ -107,7 +115,11 @@
     - "// @input SceneObject guitarRoot {\"hint\":\"Group root holding the guitar pack's fretboard and tabs.\"}"
     - "// @input AssignableType_10 guitarUI {\"hint\":\"The guitar lesson's chord name, progress and tabs.\"}"
     - '// @input AssignableType_11 guitar {"hint":"The fretboard lesson: the ghost places the chord, then the user does."}'
-    - '// @input AssignableType_12 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
+    - '// @input SceneObject frontRoot {"hint":"Group root holding the front door sheet."}'
+    - '// @input AssignableType_12 frontUI {"hint":"The front door: what do you want to learn?"}'
+    - '// @input AssignableType_13 lessonSource {"hint":"Plans a lesson, or falls back to a bundled one. Never fails."}'
+    - '// @input AssignableType_14 coach {"hint":"One short line after each attempt. Never blocks the lesson."}'
+    - '// @input AssignableType_15 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
