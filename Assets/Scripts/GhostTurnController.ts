@@ -28,13 +28,16 @@
 
 import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
 import { GlyphPath, Pt } from "./GhostKanaPath";
-import { InkRibbon, createQuads } from "./GhostInkRibbon";
+import { InkRibbon, createQuads, createRing } from "./GhostInkRibbon";
 import { checkStroke } from "./GhostStrokeCheck";
 import { Band, gradeBands, nearestGuidePoint, worstBand } from "./GhostStrokeFeedback";
 import { GhostSheet } from "./GhostSheet";
 import { GhostPinchInput } from "./GhostPinchInput";
 
 type Fading = { ribbon: InkRibbon; t: number; from: vec4 };
+
+/** Seconds for the success splash ring to bloom and vanish. */
+const SPLASH_SEC = 0.55;
 
 export type MissInfo = { index: number; reason: string };
 
@@ -160,6 +163,14 @@ export class GhostTurnController extends BaseScriptComponent {
   private live: InkRibbon[] = [];
   private livePoints: Pt[] = [];
   private smoothed: Pt | null = null;
+  /** The splash ring that blooms when a stroke is accepted. */
+  private splash: RenderMeshVisual | null = null;
+  private splashT = -1;
+  private splashAt: Pt = { x: 0, y: 0 };
+  /** Strokes shivering away after a miss, and how far through they are. */
+  private shiverT = -1;
+
+  private livePointsEnd: Pt = { x: 0, y: 0 };
   private lastBands: Band[] = [];
   /** True once the hand has travelled far enough that ink is being laid. */
   private drawing = false;
@@ -401,6 +412,9 @@ export class GhostTurnController extends BaseScriptComponent {
       this.startToleranceCm
     );
 
+    const endPt = this.livePoints[this.livePoints.length - 1];
+    this.livePointsEnd = { x: endPt.x, y: endPt.y };
+
     if (verdict.ok) {
       // Dries into place and stays. The feedback colours are dropped on the
       // way down: once a stroke is accepted its grade is history, and leaving
@@ -417,6 +431,9 @@ export class GhostTurnController extends BaseScriptComponent {
       this.smoothed = null;
       this.misses = 0;
       this.setPulse(false);
+
+      // Ink splash: a ring blooms out from where the stroke finished.
+      this.startSplash(this.livePointsEnd);
 
       const done = this.strokeIndex;
       this._onStrokeAccepted.invoke(done);
@@ -457,6 +474,46 @@ export class GhostTurnController extends BaseScriptComponent {
     }
   }
 
+  /**
+   * Bloom a ring out of the point where the stroke finished.
+   *
+   * A splash rather than a flash: on an additive display a brightness pop is
+   * indistinguishable from a glitch, whereas something that grows and thins
+   * reads as ink hitting wet paper. It is also the one moment in the loop that
+   * is purely a reward, so it is allowed to be the liveliest thing on screen.
+   */
+  private startSplash(at: Pt): void {
+    this.splashAt = { x: at.x, y: at.y };
+    this.splashT = 0;
+    if (!this.splash && this.sheet) {
+      this.splash = createRing(this.sheet.inkRoot, "InkSplash", 1, 0.22, this.onLineColor, 0.05, 30);
+    }
+    if (this.splash) {
+      const so = this.splash.getSceneObject();
+      so.enabled = true;
+      so.getTransform().setLocalPosition(new vec3(at.x, at.y, 0.05));
+    }
+  }
+
+  private updateSplash(dt: number): void {
+    if (this.splashT < 0 || !this.splash) return;
+    this.splashT += dt / SPLASH_SEC;
+    const so = this.splash.getSceneObject();
+    if (this.splashT >= 1) {
+      this.splashT = -1;
+      so.enabled = false;
+      return;
+    }
+    // Grows fast then eases, and thins out as it goes — a ripple, not a balloon.
+    const f = 1 - Math.pow(1 - this.splashT, 3);
+    const scale = 0.4 + f * 3.0;
+    so.getTransform().setLocalScale(new vec3(scale, scale, 1));
+    const k = 1 - this.splashT;
+    this.splash.mainMaterial.mainPass.baseColor = new vec4(
+      this.onLineColor.x * k, this.onLineColor.y * k, this.onLineColor.z * k, this.onLineColor.w
+    );
+  }
+
   private discardLive(): void {
     for (let i = 0; i < this.live.length; i++) this.live[i].sceneObject.destroy();
     this.live = [];
@@ -477,6 +534,7 @@ export class GhostTurnController extends BaseScriptComponent {
   private onUpdate(): void {
     const dt = getDeltaTime();
     this.elapsed += dt;
+    this.updateSplash(dt);
 
     // Rejected ink fades out. The display is additive, so fading toward black
     // IS fading toward invisible.
@@ -488,8 +546,13 @@ export class GhostTurnController extends BaseScriptComponent {
         this.fading.splice(i, 1);
         continue;
       }
+      // Shiver, then evaporate. The sideways tremor is what makes rejected ink
+      // read as drying away rather than as simply being switched off; it dies
+      // out as the ink does, so the last thing seen is a fade, not a twitch.
       const k = 1 - f.t;
       f.ribbon.setColor(new vec4(f.from.x * k, f.from.y * k, f.from.z * k, f.from.w));
+      const shake = Math.sin(this.elapsed * 46) * 0.085 * k;
+      f.ribbon.sceneObject.getTransform().setLocalPosition(new vec3(shake, 0, 0));
     }
 
     if (this.pulse && this.pulseOn) {
