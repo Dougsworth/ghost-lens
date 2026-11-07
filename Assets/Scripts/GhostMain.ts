@@ -1,8 +1,9 @@
 /**
  * GhostMain — the orchestrator for GHOST.
  *
- * Owns:  the lens state machine and every decision in it — shelf, lesson
- *        (ghost demo -> the user's turn -> stamp -> page turn), and Ask GHOST.
+ * Owns:  the lens state machine and every decision in it — shelf, the three
+ *        packs (Japanese paths, ASL poses, guitar chords), and Ask GHOST. Every
+ *        pack runs the same beat: ghost demo -> the user's turn -> stamp -> next.
  *        This is the ONLY script that talks to a UI module: data goes out
  *        through setters, user intent comes back through events, so the flow
  *        stays one-way and each other script stays testable on its own.
@@ -26,9 +27,19 @@ import { GhostAslUI } from "./GhostAslUI";
 import { GhostAslController } from "./GhostAslController";
 import { ASL_SIGNS } from "./GhostAslPack";
 import { INTRO_LINE, lessonFor, praiseFor, tipFor } from "./GhostKanaLesson";
+import { GhostGuitarUI } from "./GhostGuitarUI";
+import { GhostGuitarController } from "./GhostGuitarController";
+import { GUITAR_CHORDS } from "./GhostGuitarPack";
+import {
+  GUITAR_INTRO_LINE,
+  GUITAR_STRUM_LINE,
+  fingerName,
+  lineFor as guitarLineFor,
+  praiseFor as guitarPraiseFor,
+} from "./GhostGuitarLesson";
 
 /** What the sheet is currently doing. */
-type Mode = "shelf" | "demo" | "turn" | "finished" | "ask" | "asl";
+type Mode = "shelf" | "demo" | "turn" | "finished" | "ask" | "asl" | "guitar";
 
 @component
 export class GhostMain extends BaseScriptComponent {
@@ -90,6 +101,18 @@ export class GhostMain extends BaseScriptComponent {
   asl!: GhostAslController;
 
   @input
+  @hint("Group root holding the guitar pack's fretboard and tabs.")
+  guitarRoot!: SceneObject;
+
+  @input
+  @hint("The guitar lesson's chord name, progress and tabs.")
+  guitarUI!: GhostGuitarUI;
+
+  @input
+  @hint("The fretboard lesson: the ghost places the chord, then the user does.")
+  guitar!: GhostGuitarController;
+
+  @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
   audio!: GhostAudio;
   @ui.group_end
@@ -147,7 +170,8 @@ export class GhostMain extends BaseScriptComponent {
       !this.shelfRoot || !this.lessonRoot || !this.askRoot ||
       !this.shelfUI || !this.sheetUI || !this.askUI ||
       !this.sheet || !this.demo || !this.turn || !this.pinchInput || !this.audio ||
-      !this.aslRoot || !this.aslUI || !this.asl
+      !this.aslRoot || !this.aslUI || !this.asl ||
+      !this.guitarRoot || !this.guitarUI || !this.guitar
     ) {
       print("[GhostMain] ERROR: a required @input is not wired. Check the scene bootstrap's input-wiring pass.");
       return;
@@ -185,6 +209,14 @@ export class GhostMain extends BaseScriptComponent {
     this.aslUI.onPacks.add(() => this.onPacks());
     this.asl.onSignFinished.add(() => this.onSignFinished());
 
+    this.guitarUI.onReplay.add(() => this.onGuitarReplay());
+    this.guitarUI.onNext.add(() => this.onGuitarNext());
+    this.guitarUI.onPacks.add(() => this.onPacks());
+    this.guitar.onDemoFinished.add((id: string) => this.onChordDemoFinished(id));
+    this.guitar.onFingerPlaced.add((f: number) => this.onFingerPlaced(f));
+    this.guitar.onAllFingersPlaced.add(() => this.onAllFingersPlaced());
+    this.guitar.onChordPlayed.add((id: string) => this.onChordPlayed(id));
+
     if (this.debugColliders) this.setColliderDebugAll(this.sceneObject, true);
 
 
@@ -192,7 +224,7 @@ export class GhostMain extends BaseScriptComponent {
     // and a SceneObject disabled before OnStart never initialises at all. Wait a
     // beat so every control finishes building before hiding the unused halves.
     const ready = this.createEvent("DelayedCallbackEvent");
-    ready.bind(() => this.showShelf());
+    ready.bind(() => this.openGuitar(0)); // TEMP-CAPTURE
     ready.reset(0.1);
   }
 
@@ -209,9 +241,11 @@ export class GhostMain extends BaseScriptComponent {
     this.askCaption = "";
     this.asl.stop();
     this.asl.setVisible(false);
+    this.guitar.clear();
     this.lessonRoot.enabled = false;
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = false;
     this.shelfRoot.enabled = true;
   }
 
@@ -251,6 +285,7 @@ export class GhostMain extends BaseScriptComponent {
     this.shelfRoot.enabled = false;
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = false;
     this.lessonRoot.enabled = true;
 
     if (unroll) {
@@ -406,7 +441,11 @@ export class GhostMain extends BaseScriptComponent {
       this.openAsl(0);
       return;
     }
-    // Guitar Chords, Chinese and Knots are covers only — the brief's out-of-scope list.
+    if (id === "guitar") {
+      this.openGuitar(0);
+      return;
+    }
+    // Chinese and Knots are covers only — the brief's out-of-scope list.
     print("[GhostMain] pack '" + id + "' is a cover only in this build.");
   }
 
@@ -446,6 +485,8 @@ export class GhostMain extends BaseScriptComponent {
     this.aslRoot.enabled = false;
     this.asl.stop();
     this.asl.setVisible(false);
+    this.guitarRoot.enabled = false;
+    this.guitar.clear();
     this.askRoot.enabled = true;
     // Ask opens as its own surface, so it needs placing in front of the user
     // just like the shelf and the sheet do — otherwise it is left behind at
@@ -515,6 +556,8 @@ export class GhostMain extends BaseScriptComponent {
     this.shelfRoot.enabled = false;
     this.lessonRoot.enabled = false;
     this.askRoot.enabled = false;
+    this.guitarRoot.enabled = false;
+    this.guitar.clear();
     this.aslRoot.enabled = true;
     this.anchorInFrontOfUser();
 
@@ -541,6 +584,135 @@ export class GhostMain extends BaseScriptComponent {
   private onAslReplay(): void {
     this.audio.playTap();
     this.openAsl(this.aslIndex);
+  }
+
+  // ── Guitar pack ───────────────────────────────────────────────────────────
+  //
+  // The third pack on the same engine, and the second POSE pack: a chord is a
+  // sequence of fingertip placements, checked the same tiered way ASL's
+  // handshapes are. The shape of this section is deliberately the ASL section's
+  // — demonstrate, hand it over, satisfy the step, stamp, next — because that
+  // is the engine, and a pack that needed its own flow would mean the engine
+  // had not actually generalised.
+
+  private guitarIndex = 0;
+  private guitarIntroShown = false;
+  private guitarPraiseCount = 0;
+
+  /** Open the guitar notebook: the ghost places a chord on the fretboard. */
+  private openGuitar(index: number): void {
+    const n = GUITAR_CHORDS.length;
+    this.guitarIndex = ((index % n) + n) % n;
+    const chord = GUITAR_CHORDS[this.guitarIndex];
+
+    this.mode = "guitar";
+    this.turn.stop();
+    this.demo.stop();
+    this.sheet.hide();
+    this.asl.stop();
+    this.asl.setVisible(false);
+    this.shelfRoot.enabled = false;
+    this.lessonRoot.enabled = false;
+    this.askRoot.enabled = false;
+    this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = true;
+    this.anchorInFrontOfUser();
+
+    this.guitarUI.setChordName(chord.name);
+    this.guitarUI.setProgress(this.guitarIndex, n);
+    this.guitarUI.setLine(guitarLineFor(chord.id));
+    this.fretboardStamp(false);
+
+    this.audio.playUnroll();
+    this.guitar.playDemo(chord);
+  }
+
+  /**
+   * The ghost has laid the last fingertip and is about to brush the strings:
+   * sound the chord. The controller fires this at the top of its own strum
+   * animation, so the sound and the sweep start together — audio timing is
+   * GhostMain's job, which is why the controller asks rather than plays.
+   */
+  private onChordDemoFinished(id: string): void {
+    if (this.mode !== "guitar") return;
+    this.audio.playChord(id);
+
+    // A beat to let the chord ring, then it is the user's turn on a clean board.
+    const handOver = this.createEvent("DelayedCallbackEvent");
+    handOver.bind(() => {
+      if (this.mode !== "guitar") return;
+      const chord = GUITAR_CHORDS[this.guitarIndex];
+      this.guitar.beginTurn(chord);
+      if (!this.guitarIntroShown) {
+        this.guitarIntroShown = true;
+        this.guitarUI.setLine(GUITAR_INTRO_LINE);
+      } else {
+        this.guitarUI.setLine(guitarLineFor(chord.id));
+      }
+    });
+    handOver.reset(1.5);
+  }
+
+  /**
+   * One fingertip landed — the ghost's during the demo, or the user's during
+   * their turn. Both want the same small dry tick: the ink-dry sound the kana
+   * pack uses when a stroke sets, which is the same event in a different pack.
+   */
+  private onFingerPlaced(finger: number): void {
+    if (this.mode !== "guitar") return;
+    this.audio.playInkDry();
+    // Only talk during the user's turn. Narrating the ghost's own hand would be
+    // two things at once, and the brief shows one thing at a time.
+    if (this.guitar.isDemonstrating) return;
+    this.guitarUI.setLine(guitarPraiseFor(this.guitarPraiseCount));
+    this.guitarPraiseCount++;
+  }
+
+  /** Every dot is placed. Only the strum is left, so say so. */
+  private onAllFingersPlaced(): void {
+    if (this.mode !== "guitar") return;
+    if (this.guitar.isDemonstrating) return;
+    this.guitarUI.setLine(GUITAR_STRUM_LINE);
+  }
+
+  /** The user strummed: sound the chord, stamp it, move on. */
+  private onChordPlayed(id: string): void {
+    if (this.mode !== "guitar") return;
+    this.audio.playChord(id);
+    this.guitarUI.setLine("");
+
+    const stamp = this.createEvent("DelayedCallbackEvent");
+    stamp.bind(() => {
+      if (this.mode !== "guitar") return;
+      this.audio.playStamp();
+      this.fretboardStamp(true);
+      const next = this.createEvent("DelayedCallbackEvent");
+      next.bind(() => {
+        if (this.mode !== "guitar") return;
+        this.audio.playPageTurn();
+        this.openGuitar(this.guitarIndex + 1);
+      });
+      next.reset(this.stampHoldSec + 0.5);
+    });
+    stamp.reset(0.7);
+  }
+
+  private onGuitarReplay(): void {
+    this.audio.playTap();
+    this.openGuitar(this.guitarIndex);
+  }
+
+  private onGuitarNext(): void {
+    this.audio.playTap();
+    this.openGuitar(this.guitarIndex + 1);
+  }
+
+  /** The hanko on the board. Lives on the fretboard, so it goes through it. */
+  private fretboardStamp(on: boolean): void {
+    const board = this.guitar.board;
+    if (!board) return;
+    if (on) board.showStamp();
+    else board.hideStamp();
   }
 
   /**

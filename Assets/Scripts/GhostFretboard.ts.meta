@@ -1,0 +1,75 @@
+- !<AssetImportMetadata/b06fe9c5-8e15-4a64-8ad2-7574a82863b4>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 4301fbb6-72ef-48ad-a4b0-bab03175cdc7
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 4301fbb6-72ef-48ad-a4b0-bab03175cdc7
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> a7b7faa6-9d16-440b-b2f4-06fac7e5397b
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/a7b7faa6-9d16-440b-b2f4-06fac7e5397b>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: b9e47f4b-6a2c-4156-8a48-2e1c660bcf58
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    centreCm: false
+    dotRadiusCm: false
+    guideColor: false
+    inkColor: false
+    lengthCm: false
+    paperColor: false
+    stampColor: false
+    stringSpanCm: false
+    tiltDeg: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - inkColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      guideColor: !<Vec4> {x: 0.420000, y: 0.390000, z: 0.330000, w: 1.000000}
+      lengthCm: !<float> 30.000000
+      stringSpanCm: 7.500000
+      tiltDeg: !<float> 52.000000
+      centreCm: !<Vec3> {x: 0.000000, y: 0.000000, z: 0.000000}
+      dotRadiusCm: 1.050000
+      stampColor: !<Vec4> {x: 0.920000, y: 0.260000, z: 0.170000, w: 1.000000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostFretboard &ndash; 6 strings, 5 frets, paper and ink</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 inkColor = "{1.00,0.95,0.86,1}" {"hint":"Ink: the nut, the string lines and the finger dots. The same warm off-white the kana brush writes with.", "widget":"color"}'
+    - '// @input vec4 paperColor = "{0.26,0.23,0.17,1}" {"hint":"Paper: the board itself. Additive display, so this is a faint translucent cream and never dark.", "widget":"color"}'
+    - '// @input vec4 guideColor = "{0.42,0.39,0.33,1}" {"hint":"Dimmed ink: the fret hairlines and a dot the user has not reached yet.", "widget":"color"}'
+    - '// @input float lengthCm = 30 {"hint":"Nut to fifth fret, in cm. The brief asks for about 30; this runs up the view and away from the user, not across it.", "widget":"slider", "min":18, "max":40, "step":0.5}'
+    - '// @input float stringSpanCm = 7.5 {"hint":"Low E to high E across the board, in cm. This is the only thing spending the scarce 21.5 cm of view width.", "widget":"slider", "min":4, "max":12, "step":0.1}'
+    - '// @input float tiltDeg = 62 {"hint":"How far the board is pitched back from upright, in degrees. 0 faces the user flat on; 90 lies flat on a table. Higher values foreshorten the board into less apparent height, which is what buys the room for a 30 cm neck.", "widget":"slider", "min":20, "max":75, "step":1}'
+    - "// @input vec3 centreCm {\"hint\":\"Where the board's centre sits relative to this object, in cm. Chest height means below the eye line, so y is small and positive only because the pitch-back lifts the far end.\"}"
+    - '// @input float dotRadiusCm = 1.05 {"hint":"Radius of a finger dot, in cm. The pinch target around it is wider still.", "widget":"slider", "min":0.5, "max":2, "step":0.05}'
+    - '// @input vec4 stampColor = "{0.92,0.26,0.17,1}" {"hint":"The hanko stamp that lands when a chord is played. Additive display: this has to be an emitted vermilion, because a dark red would simply not appear.", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

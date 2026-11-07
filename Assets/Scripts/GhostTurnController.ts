@@ -87,6 +87,11 @@ export class GhostTurnController extends BaseScriptComponent {
   minDragSec: number = 0.25;
 
   @input
+  @hint("How far your hand must actually travel, in cm, before any ink appears. A pinch alone arms the stroke; it does not paint. Stops ink being laid while you are still getting into position, and makes a stray pinch harmless.")
+  @widget(new SliderWidget(0, 3, 0.1))
+  armDistanceCm: number = 0.6;
+
+  @input
   @hint("Misses on the same stroke before the ghost quietly demonstrates that one stroke again.")
   @widget(new SliderWidget(1, 6, 1))
   missesBeforeDemo: number = 3;
@@ -104,6 +109,8 @@ export class GhostTurnController extends BaseScriptComponent {
 
   private glyph: GlyphPath | null = null;
   private strokeBeganAt = 0;
+  /** Where the stroke will begin once the hand actually moves. */
+  private pendingStart: Pt | null = null;
   private strokeIndex = 0;
   private misses = 0;
   private active = false;
@@ -198,12 +205,30 @@ export class GhostTurnController extends BaseScriptComponent {
 
   // ── Drawing ───────────────────────────────────────────────────────────────
 
+  /**
+   * A pinch ARMS the stroke; it does not draw.
+   *
+   * Hand tracking reports a pinch the moment the fingers close, which is
+   * usually before the user has begun to move -- and with the bridge's relative
+   * mode the brush is already sitting on the stroke's start point, so ink would
+   * appear there while they were still settling. The ribbon is therefore not
+   * created until the hand has travelled `armDistanceCm`. A pinch that never
+   * moves leaves no ink at all, and endStroke treats it as nothing happened
+   * rather than as a miss.
+   */
   private beginStroke(p: Pt): void {
     if (!this.active || !this.glyph) return;
     this.discardLive();
+    this.pendingStart = { x: p.x, y: p.y };
     this.livePoints = [p];
     this.smoothed = { x: p.x, y: p.y };
     this.strokeBeganAt = getTime();
+    this.live = null;
+    this.setPulse(false);
+  }
+
+  /** Create the ribbon on first real movement, starting at the armed point. */
+  private armInk(): void {
     this.live = new InkRibbon(
       this.sheet.inkRoot,
       "UserStroke" + this.strokeIndex,
@@ -211,11 +236,11 @@ export class GhostTurnController extends BaseScriptComponent {
       this.inkWidthCm,
       0.004 * this.strokeIndex
     );
-    this.setPulse(false);
   }
 
   private extendStroke(p: Pt): void {
-    if (!this.active || !this.live) return;
+    if (!this.active) return;
+    if (!this.live && !this.pendingStart) return;
 
     // Low-pass the incoming path before it becomes geometry. Hand tracking and
     // a dragged mouse both arrive with frame-to-frame tremor, and feeding that
@@ -231,6 +256,16 @@ export class GhostTurnController extends BaseScriptComponent {
     };
     const q = this.smoothed;
 
+    // Not drawing yet: wait for real travel from the armed point.
+    if (!this.live) {
+      const s0 = this.pendingStart;
+      if (!s0) return;
+      const ax = q.x - s0.x;
+      const ay = q.y - s0.y;
+      if (Math.sqrt(ax * ax + ay * ay) < this.armDistanceCm) return;
+      this.armInk();
+    }
+
     const last = this.livePoints[this.livePoints.length - 1];
     const dx = q.x - last.x;
     const dy = q.y - last.y;
@@ -241,7 +276,12 @@ export class GhostTurnController extends BaseScriptComponent {
   }
 
   private endStroke(p: Pt): void {
-    if (!this.active || !this.live || !this.glyph) return;
+    if (!this.active || !this.glyph) return;
+    // Armed but never moved: no ink, no attempt, no miss.
+    if (!this.live) {
+      this.discardLive();
+      return;
+    }
     const last = this.livePoints[this.livePoints.length - 1];
     if (p.x !== last.x || p.y !== last.y) {
       this.livePoints.push(p);
@@ -310,6 +350,8 @@ export class GhostTurnController extends BaseScriptComponent {
       this.live = null;
     }
     this.livePoints = [];
+    this.pendingStart = null;
+    this.smoothed = null;
   }
 
   // ── Per-frame ─────────────────────────────────────────────────────────────

@@ -753,12 +753,14 @@
   ScriptInputsDefault:
     sfxVolume: true
     voiceVolume: true
+    chordVolume: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       sfxVolume: 0.650000
       voiceVolume: 0.900000
+      chordVolume: 0.450000
   ScriptTypes:
     "":
       {}
@@ -922,7 +924,10 @@
       aslRoot: !<reference.SceneObject> 5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc
       aslUI: !<MappingBased.AssignableType_8> 6816a09a-6447-418c-8d0e-4512706771d3
       asl: !<MappingBased.AssignableType_9> fbf21fa8-39b9-4b83-9b07-dc9e31b6360b
-      audio: !<MappingBased.AssignableType_10> 31344314-8576-480c-a972-fbd63c3ecbe6
+      guitarRoot: !<reference.SceneObject> 613765d3-bd12-41c0-82f0-ba712e5e567d
+      guitarUI: !<MappingBased.AssignableType_10> eff714b8-2a38-4a04-8c9f-08cf73b0a767
+      guitar: !<MappingBased.AssignableType_11> 6c243e8b-bc4a-4c15-8631-6848532a862c
+      audio: !<MappingBased.AssignableType_12> 31344314-8576-480c-a972-fbd63c3ecbe6
       lessonSequence: あいうえお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
@@ -1046,6 +1051,7 @@
     surfaceWidthCm: true
     surfaceHeightCm: true
     singleHandOnly: true
+    ownPinchDecision: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1062,6 +1068,9 @@
       surfaceWidthCm: !<float> 15.000000
       surfaceHeightCm: !<float> 15.000000
       singleHandOnly: true
+      ownPinchDecision: true
+      pinchOnRatio: 0.300000
+      pinchOffRatio: 0.550000
   ScriptTypes:
     "":
       {}
@@ -1256,6 +1265,23 @@
   Children:
     - !<own> b5e8aba5-e1be-47dc-8635-20fd53da7cf2
     - !<own> ec49891e-9104-4085-b33c-f0979cece4f8
+  Components:
+    []
+- !<SceneObject/613765d3-bd12-41c0-82f0-ba712e5e567d>
+  PrefabRemaps:
+    []
+  Name: Guitar
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 6ba5eac6-0b1d-471e-a3ee-118e931e09ca
+    - !<own> fe553dd2-f7be-4918-bc26-2470ad4c2a81
+    - !<own> cc8b3ee0-e217-46f9-896e-79a2b4108f80
   Components:
     []
 - !<ScriptComponent/628ee75e-6673-46a9-bee0-883918bafdc1>
@@ -1484,6 +1510,21 @@
     - !<own> ca40734c-262f-48d3-affa-9f99cd2940f7
   Components:
     []
+- !<SceneObject/6ba5eac6-0b1d-471e-a3ee-118e931e09ca>
+  PrefabRemaps:
+    []
+  Name: Fretboard
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 959c2bc8-0195-442b-b147-d28448f9ade8
 - !<SceneObject/6c1f70d7-86d0-4972-b203-29780f8798e6>
   PrefabRemaps:
     []
@@ -1499,6 +1540,37 @@
     - !<own> 0e778a10-bd57-4a2a-b20a-b6f4326e8058
   Components:
     []
+- !<ScriptComponent/6c243e8b-bc4a-4c15-8631-6848532a862c>
+  PrefabRemaps:
+    []
+  Name: GhostGuitarController
+  Enabled: true
+  ScriptAsset: !<reference> c699c345-68ef-47cf-a5a1-2f895020700f
+  ScriptInputsDefault:
+    handColor: true
+    handScale: true
+    handRollDeg: true
+    placeSec: true
+    settleSec: true
+    strumSec: true
+    strumStringsNeeded: true
+    fingertipReachCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      fretboard: !<MappingBased.AssignableType_1> 959c2bc8-0195-442b-b147-d28448f9ade8
+      handColor: !<Vec4> {x: 0.950000, y: 0.910000, z: 0.830000, w: 1.000000}
+      handScale: 0.450000
+      handRollDeg: !<float> -60.000000
+      placeSec: 0.550000
+      settleSec: 0.280000
+      strumSec: 0.400000
+      strumStringsNeeded: !<float> 4.000000
+      fingertipReachCm: 2.600000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/6d8247d2-e61c-45fd-b75c-8ec88e2e0a01>
   PrefabRemaps:
     []
@@ -1625,6 +1697,7 @@
     pulseColor: true
     startToleranceCm: true
     minDragSec: true
+    armDistanceCm: true
     missesBeforeDemo: true
     inkWidthCm: true
     inputSmoothing: true
@@ -1642,6 +1715,7 @@
       maxLengthRatio: !<float> 3.000000
       startToleranceCm: !<float> 3.000000
       minDragSec: 0.250000
+      armDistanceCm: 0.600000
       missesBeforeDemo: !<float> 3.000000
       inkWidthCm: 0.550000
       inputSmoothing: 0.500000
@@ -1991,6 +2065,37 @@
     - !<own> e9454e66-5d09-4a8a-bcd7-dea762326a48
   Components:
     []
+- !<ScriptComponent/959c2bc8-0195-442b-b147-d28448f9ade8>
+  PrefabRemaps:
+    []
+  Name: GhostFretboard
+  Enabled: true
+  ScriptAsset: !<reference> 4301fbb6-72ef-48ad-a4b0-bab03175cdc7
+  ScriptInputsDefault:
+    inkColor: true
+    paperColor: true
+    guideColor: true
+    lengthCm: true
+    stringSpanCm: true
+    tiltDeg: true
+    dotRadiusCm: true
+    stampColor: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      inkColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      guideColor: !<Vec4> {x: 0.420000, y: 0.390000, z: 0.330000, w: 1.000000}
+      lengthCm: !<float> 30.000000
+      stringSpanCm: 7.500000
+      tiltDeg: !<float> 52.000000
+      centreCm: !<Vec3> {x: 0.000000, y: 1.500000, z: 0.000000}
+      dotRadiusCm: 1.050000
+      stampColor: !<Vec4> {x: 0.920000, y: 0.260000, z: 0.170000, w: 1.000000}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/9640457f-2916-4175-9241-1c5d42c1f173>
   PrefabRemaps:
     []
@@ -2541,6 +2646,21 @@
   ScriptTypes:
     "":
       {}
+- !<SceneObject/cc8b3ee0-e217-46f9-896e-79a2b4108f80>
+  PrefabRemaps:
+    []
+  Name: GuitarPanel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.100000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> eff714b8-2a38-4a04-8c9f-08cf73b0a767
 - !<Skin/ccf4d3bc-d3c2-4580-b9c5-62f164ef7eef>
   PrefabRemaps:
     []
@@ -2660,6 +2780,7 @@
     - !<own> f3f216f6-47c6-4e3e-86d5-a8065bb4f578
     - !<own> 5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc
     - !<own> f7174067-8493-4310-9255-f3fe93f0f451
+    - !<own> 613765d3-bd12-41c0-82f0-ba712e5e567d
   Components:
     - !<own> 3dd27e24-4b90-4977-9c02-d5621fc2dd8c
 - !<ScriptComponent/d3e2fbc5-8795-4913-9af6-c8626f8e6d9c>
@@ -2976,6 +3097,32 @@
     []
   Components:
     - !<own> bf292640-859c-4fa9-8461-9bd5428e042a
+- !<ScriptComponent/eff714b8-2a38-4a04-8c9f-08cf73b0a767>
+  PrefabRemaps:
+    []
+  Name: GhostGuitarUI
+  Enabled: true
+  ScriptAsset: !<reference> 7165e8d8-46e3-42f0-bfdb-2c4c51c5878e
+  ScriptInputsDefault:
+    tabPaperColor: true
+    tabHighlightColor: true
+    typeColor: true
+    nameHeightCm: true
+    lineHeightCm: true
+    tabOffsetXCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      tabPaperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      nameHeightCm: 12.600000
+      lineHeightCm: -13.100000
+      tabOffsetXCm: 7.600000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/f0394c5d-4c44-4c65-a77c-e1c7e05ca905>
   PrefabRemaps:
     []
@@ -3264,6 +3411,21 @@
     - !<own> 2dae2a27-8ce6-466a-8bff-622195c1b3a8
   Components:
     []
+- !<SceneObject/fe553dd2-f7be-4918-bc26-2470ad4c2a81>
+  PrefabRemaps:
+    []
+  Name: ChordPlayer
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6c243e8b-bc4a-4c15-8631-6848532a862c
 - !<ScriptComponent/fe714917-12f3-40b6-b3fb-d989b12da602>
   PrefabRemaps:
     []

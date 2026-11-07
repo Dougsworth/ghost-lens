@@ -13,6 +13,7 @@
  *   ../GeneratedSFX/PaperUnroll.wav   the sheet unrolling
  *   ../GeneratedSFX/TabTap.wav        a bookmark tab pinched
  *   ../GeneratedSFX/VoiceA.wav        the spoken sound of あ
+ *   ../GeneratedSFX/Chord_<id>.wav    a nylon strum per guitar chord (Em Am C G D)
  *   ../Icons/sign_language.png        ASL notebook cover art
  *   ../Materials/GhostAdditive.mat    unlit additive source material
  *   ../Materials/ImageMaterial.mat    for Component.Image cover art
@@ -23,7 +24,11 @@ export interface PackEntry {
   id: string;
   /** Title printed along the bottom of the cover. */
   title: string;
-  /** Cover art: "あ" draws the kana, "hand" uses the sign-language icon, "" is bare. */
+  /**
+   * Cover art: "hand" uses the sign-language icon, "" is bare, and anything
+   * else is drawn as the cover's glyph in large type — "あ" for the kana pack,
+   * "Em" for the guitar pack. A pack's first lesson makes its own cover.
+   */
   cover: string;
   /** Open packs are pinchable; locked ones wear the "Coming soon" band. */
   open: boolean;
@@ -33,7 +38,7 @@ export interface PackEntry {
 export const SHELF_PACKS: PackEntry[] = [
   { id: "japanese", title: "Japanese", cover: "あ", open: true },
   { id: "asl", title: "ASL", cover: "hand", open: true },
-  { id: "guitar", title: "Guitar Chords", cover: "", open: false },
+  { id: "guitar", title: "Guitar Chords", cover: "Em", open: true },
   { id: "chinese", title: "Chinese", cover: "", open: false },
   { id: "knots", title: "Knots", cover: "", open: false },
 ];

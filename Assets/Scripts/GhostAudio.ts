@@ -22,6 +22,24 @@ const CLIP_STAMP = requireAsset("../GeneratedSFX/Stamp.wav") as AudioTrackAsset;
 const CLIP_PAGE = requireAsset("../GeneratedSFX/PageTurn.wav") as AudioTrackAsset;
 const CLIP_GOT_IT = requireAsset("../GeneratedSFX/GotIt.wav") as AudioTrackAsset;
 
+/**
+ * The guitar pack's chords. One pre-rendered nylon strum each, with the
+ * string-to-string stagger already baked in by the generator
+ * (tempAssetGen/gen_chords_guitar.js), so the user's own strum gesture does not
+ * have to be fast or even for the chord to sound like a chord.
+ *
+ * requireAsset only accepts string literals, so these are written out rather
+ * than built from GUITAR_CHORDS' ids — the one place the chord list is
+ * duplicated, and the reason the map below is keyed by exactly those ids.
+ */
+const CHORD_CLIPS: { [id: string]: AudioTrackAsset } = {
+  Em: requireAsset("../GeneratedSFX/Chord_Em.wav") as AudioTrackAsset,
+  Am: requireAsset("../GeneratedSFX/Chord_Am.wav") as AudioTrackAsset,
+  C: requireAsset("../GeneratedSFX/Chord_C.wav") as AudioTrackAsset,
+  G: requireAsset("../GeneratedSFX/Chord_G.wav") as AudioTrackAsset,
+  D: requireAsset("../GeneratedSFX/Chord_D.wav") as AudioTrackAsset,
+};
+
 @component
 export class GhostAudio extends BaseScriptComponent {
   @ui.label('<span style="color: #60A5FA;">GhostAudio &ndash; brush, paper, stamp and the spoken characters</span>')
@@ -38,6 +56,11 @@ export class GhostAudio extends BaseScriptComponent {
   @hint("Volume of the spoken character sounds.")
   @widget(new SliderWidget(0, 1, 0.05))
   voiceVolume: number = 0.9;
+
+  @input
+  @hint("Volume of the guitar pack's chord strums. Lower than the brush and the voice on purpose: a chord rings for nearly four seconds under a lesson.")
+  @widget(new SliderWidget(0, 1, 0.05))
+  chordVolume: number = 0.45;
   @ui.group_end
 
   private brush!: AudioComponent;
@@ -50,6 +73,8 @@ export class GhostAudio extends BaseScriptComponent {
   private gotIt!: AudioComponent;
   /** One reusable source whose track is swapped per character. */
   private voice!: AudioComponent;
+  /** One reusable source whose track is swapped per chord. */
+  private chord!: AudioComponent;
 
   onAwake(): void {
     // Cues the user is watching for, or that answer a pinch, take the
@@ -64,6 +89,9 @@ export class GhostAudio extends BaseScriptComponent {
     this.page = this.makeSource("SfxPageTurn", CLIP_PAGE, this.sfxVolume, true);
     this.gotIt = this.makeSource("SfxGotIt", CLIP_GOT_IT, this.sfxVolume, true);
     this.voice = this.makeSource("SfxVoice", null, this.voiceVolume, false);
+    // A chord answers the user's own strum, so it takes the low-latency path:
+    // a strum you hear late does not feel like the strum you just made.
+    this.chord = this.makeSource("SfxChord", null, this.chordVolume, true);
   }
 
   private makeSource(
@@ -106,6 +134,24 @@ export class GhostAudio extends BaseScriptComponent {
   }
   playGotIt(): void {
     if (this.gotIt) this.gotIt.play(1);
+  }
+
+  /**
+   * Strum a chord. `id` is a GhostGuitarPack chord id ("Em", "Am", "C", ...).
+   *
+   * Stopping any chord still ringing before starting the next one: two nylon
+   * strums overlapping for three seconds reads as a mistake, not as a chord.
+   */
+  playChord(id: string): void {
+    const clip = CHORD_CLIPS[id];
+    if (!clip || !this.chord) {
+      print("[GhostAudio] no chord clip for '" + id + "' - skipping.");
+      return;
+    }
+    this.chord.stop(false);
+    this.chord.audioTrack = clip;
+    this.chord.volume = this.chordVolume;
+    this.chord.play(1);
   }
 
   /** Speak a character. Covers all 46 basic hiragana; anything else is skipped. */

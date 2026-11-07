@@ -37,6 +37,9 @@
     audio: false
     debugColliders: false
     demo: false
+    guitar: false
+    guitarRoot: false
+    guitarUI: false
     lessonRoot: false
     lessonSequence: false
     pinchInput: false
@@ -69,7 +72,10 @@
       aslRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       aslUI: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
       asl: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
-      audio: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
+      guitarRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      guitarUI: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
+      guitar: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
+      audio: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
       lessonSequence: あいうえお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
@@ -96,7 +102,10 @@
     - "// @input SceneObject aslRoot {\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
     - "// @input AssignableType_8 aslUI {\"hint\":\"The ASL lesson's sign name, hint and Got it tab.\"}"
     - '// @input AssignableType_9 asl {"hint":"The ghost hands that demonstrate each ASL sign."}'
-    - '// @input AssignableType_10 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
+    - "// @input SceneObject guitarRoot {\"hint\":\"Group root holding the guitar pack's fretboard and tabs.\"}"
+    - "// @input AssignableType_10 guitarUI {\"hint\":\"The guitar lesson's chord name, progress and tabs.\"}"
+    - '// @input AssignableType_11 guitar {"hint":"The fretboard lesson: the ghost places the chord, then the user does."}'
+    - '// @input AssignableType_12 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'

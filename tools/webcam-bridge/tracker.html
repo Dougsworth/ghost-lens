@@ -20,7 +20,9 @@ canvas{position:absolute;left:0;top:16px}
 import {FilesetResolver, HandLandmarker} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 const v=document.getElementById('v'), c=document.getElementById('c'), g=c.getContext('2d'), stat=document.getElementById('stat');
 // Pinch is measured relative to hand size, so it works near or far from the camera.
-const PINCH_ON=0.38, PINCH_OFF=0.55;
+// Measured on this rig: open hand ~1.25, pinched 0.10-0.14 (gap as a fraction
+// of hand size). 0.30/0.55 sits well clear of both, with hysteresis between.
+const PINCH_ON=0.30, PINCH_OFF=0.55;
 // One Euro filter: smooth when the hand is slow, responsive when it moves fast.
 class OneEuro{constructor(minCut=0.5,beta=0.004,dCut=1.0){this.minCut=minCut;this.beta=beta;this.dCut=dCut;this.x=null;this.dx=0;this.t=null}
  a(c,dt){const r=2*Math.PI*c*dt;return r/(r+1)}
@@ -32,6 +34,7 @@ class OneEuro{constructor(minCut=0.5,beta=0.004,dCut=1.0){this.minCut=minCut;thi
 const filt={};
 function smooth(side,i,v,t){const k=side+i;if(!filt[k])filt[k]=new OneEuro();return filt[k].f(v,t)}
 let ws=null, open=false, pinching={}, cnt={}, lenses=0;
+const lastDbg=[null];
 function connect(){ ws=new WebSocket('ws://127.0.0.1:8765'); ws.onopen=()=>{open=true; ws.send('source')}; ws.onclose=()=>{open=false; setTimeout(connect,1000)}; ws.onerror=()=>{}; }
 connect();
 setInterval(async()=>{try{lenses=(await (await fetch('/status')).json()).lenses}catch(e){}},1000);
@@ -45,6 +48,7 @@ function loop(){
   if(v.currentTime!==lastT){ lastT=v.currentTime;
     const r=lm.detectForVideo(v,t); const hands=[];
     g.clearRect(0,0,c.width,c.height);
+    if(!(r.landmarks||[]).length) lastDbg[0]=null;
     (r.landmarks||[]).forEach((pts,i)=>{
       // video is shown mirrored, so mirror x to match the user
       let side=r.handednesses?.[i]?.[0]?.categoryName||'Right';
@@ -63,13 +67,18 @@ function loop(){
       const bx=(p[4][0]+p[8][0])/2, by=(p[4][1]+p[8][1])/2;
       p[8]=[+bx.toFixed(4),+by.toFixed(4),p[8][2]];
       hands.push({side,pinch:now,pinchDist:+d.toFixed(4),points:p});
+      if(i===0) lastDbg[0]={d,p:now,n:(r.landmarks||[]).length};
       g.fillStyle='#1c1b19'; pts.forEach(q=>{g.beginPath();g.arc(q.x*c.width,q.y*c.height,3,0,7);g.fill()});
       g.strokeStyle=now?'#b3261e':'#ffffff'; g.lineWidth=3; g.beginPath(); g.arc(pts[8].x*c.width,pts[8].y*c.height,10,0,7); g.stroke();
     });
     if(open) ws.send(JSON.stringify({t:Date.now()/1000,hands}));
     fps=0.9*fps+0.1*(1000/Math.max(1,t-last)); last=t;
   }
-  stat.textContent=`${fps.toFixed(0)} fps  ·  relay ${open?'connected':'connecting'}  ·  lenses ${lenses}`;
+  // Live pinch readout: the number is the thumb-to-index gap as a fraction of
+  // hand size. Watch it open vs pinched to choose thresholds from real values.
+  const dbg=lastDbg[0];
+  const pinchTxt=dbg?`  ·  pinch ${dbg.p?'DOWN':'up'} ${dbg.d.toFixed(3)}${dbg.n>1?`  ·  ${dbg.n} HANDS`:''}`:'  ·  no hand';
+  stat.textContent=`${fps.toFixed(0)} fps  ·  relay ${open?'connected':'connecting'}  ·  lenses ${lenses}${pinchTxt}`;
   requestAnimationFrame(loop);
 }
 loop();

@@ -37,3 +37,12 @@ tools/webcam-bridge/hand_landmarker.task
 # Added by Lens Studio (LEAF plugin)
 leaf_plugin_settings.json
 __pycache__/
+
+# GHOST: LLM credentials for the preview-time lesson planner. Keys are read
+# from the environment; these files exist only so a local shell can source
+# them. Never commit a key or a Remote Service Gateway token.
+tools/webcam-bridge/credentials.env
+tools/webcam-bridge/.env
+.env
+*.credentials.json
+rsg_token.txt

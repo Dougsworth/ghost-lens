@@ -28,6 +28,7 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    chordVolume: false
     sfxVolume: false
     voiceVolume: false
   ScriptTypesHidden:
@@ -41,6 +42,7 @@
   DefaultScriptInputs:
     - sfxVolume: 0.650000
       voiceVolume: 0.900000
+      chordVolume: 0.450000
   ScriptTypes:
     -
       {}
@@ -51,4 +53,5 @@
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float sfxVolume = 0.65 {"hint":"Volume of the brush, paper, ink and stamp sounds.", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @input float voiceVolume = 0.9 {"hint":"Volume of the spoken character sounds.", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - "// @input float chordVolume = 0.45 {\"hint\":\"Volume of the guitar pack's chord strums. Lower than the brush and the voice on purpose: a chord rings for nearly four seconds under a lesson.\", \"widget\":\"slider\", \"min\":0, \"max\":1, \"step\":0.05}"
     - '// @ui {"widget":"group_end"}'

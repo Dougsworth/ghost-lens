@@ -2,9 +2,9 @@
  * GhostShelfUI — the notebook shelf the lens opens on.
  *
  * Owns:  five notebook covers lying side by side where the practice sheet will
- *        later appear. Japanese (cover shows あ) and ASL (a simple hand line
- *        drawing) read as open and available; Guitar Chords, Chinese and Knots
- *        are wrapped in a "Coming soon" paper band and dimmed.
+ *        later appear. Japanese (cover shows あ), ASL (a hand line drawing) and
+ *        Guitar Chords (cover shows Em) read as open and available; Chinese and
+ *        Knots are wrapped in a "Coming soon" paper band and dimmed.
  *        Built from UIKit Buttons inside a FlexLayout row, so a cover is a real
  *        pinch target in Interactive Preview and on SPECS.
  * Must not: know what opening a pack does. It emits the pack id and GhostMain
@@ -151,20 +151,11 @@ export class GhostShelfUI extends BaseScriptComponent {
     const face = this.obj(cell, "CoverFace", new vec3(0, 0, COVER_CONTENT_Z));
     const dim = open ? 1 : this.lockedFade;
 
-    // Cover art: the Japanese notebook shows あ; ASL shows a hand line drawing.
-    if (cover === "あ") {
-      const artSO = this.obj(face, "CoverGlyph", new vec3(0, h * 0.12, 0));
-      const t = artSO.createComponent("Component.Text") as Text;
-      t.text = "あ";
-      t.depthTest = true;
-      applyTextRole(t, "Title1");
-      t.textFill.color = this.fade(this.typeColor, dim);
-      t.horizontalAlignment = HorizontalAlignment.Center;
-      t.verticalAlignment = VerticalAlignment.Center;
-      t.horizontalOverflow = HorizontalOverflow.Overflow;
-      t.verticalOverflow = VerticalOverflow.Overflow;
-      t.layoutRect = Rect.create(-w / 2, w / 2, -1.4, 1.4);
-    } else if (cover === "hand") {
+    // Cover art: ASL shows a hand line drawing; every other pack draws its own
+    // glyph in large type — あ for the kana pack, Em for the guitar pack. Driven
+    // by the manifest's `cover` string rather than a per-pack branch, so adding
+    // a pack is a data change here too.
+    if (cover === "hand") {
       const artSO = this.obj(face, "CoverIcon", new vec3(0, h * 0.12, 0));
       const img = artSO.createComponent("Component.Image") as Image;
       const mat = IMAGE_MATERIAL.clone() as Material;
@@ -175,6 +166,18 @@ export class GhostShelfUI extends BaseScriptComponent {
       img.clearMaterials();
       img.addMaterial(mat);
       artSO.getTransform().setLocalScale(new vec3(2.2, 2.2, 1));
+    } else if (cover !== "") {
+      const artSO = this.obj(face, "CoverGlyph", new vec3(0, h * 0.12, 0));
+      const t = artSO.createComponent("Component.Text") as Text;
+      t.text = cover;
+      t.depthTest = true;
+      applyTextRole(t, "Title1");
+      t.textFill.color = this.fade(this.typeColor, dim);
+      t.horizontalAlignment = HorizontalAlignment.Center;
+      t.verticalAlignment = VerticalAlignment.Center;
+      t.horizontalOverflow = HorizontalOverflow.Overflow;
+      t.verticalOverflow = VerticalOverflow.Overflow;
+      t.layoutRect = Rect.create(-w / 2, w / 2, -1.4, 1.4);
     }
 
     // Pack title along the bottom of the cover.

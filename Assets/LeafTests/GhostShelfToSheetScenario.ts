@@ -1,9 +1,14 @@
 /**
- * Criterion 1 — "The Lens opens on the notebook shelf: Japanese and ASL are
- * open, and Guitar Chords, Chinese and Knots are wrapped with 'Coming soon'.
+ * Criterion 1 — "The Lens opens on the notebook shelf: Japanese, ASL and Guitar
+ * Chords are open, and Chinese and Knots are wrapped with 'Coming soon'.
  * Pinching Japanese flips the notebook open into the 15 cm washi practice
  * sheet, with Replay, Slower, Next and Packs tabs on the right — all of it in
  * view without moving my head."
+ *
+ * (The brief wrote this criterion when Guitar Chords was a cover only. The
+ * guitar pose pack has since shipped, so Guitar Chords is now asserted as an
+ * OPEN pack. Nothing about the Japanese path this scenario actually exercises
+ * has changed.)
  *
  * The pinch on the Japanese cover is the assertion that matters: it is the one
  * link from shelf to lesson that was never verified by hand. Everything is
@@ -34,8 +39,12 @@ import {
 } from "./GhostLeafInteractor"
 import {GhostSheet} from "../Scripts/GhostSheet"
 
-const OPEN_PACKS = ["Japanese", "ASL"]
-const LOCKED_PACKS = ["Guitar Chords", "Chinese", "Knots"]
+// Guitar Chords moved from locked to open when the guitar pose pack shipped.
+// The criterion itself is unchanged — "the open packs are pinchable, the locked
+// ones wear a Coming soon band" — only which packs are in which list. Chinese
+// and Knots are still covers only.
+const OPEN_PACKS = ["Japanese", "ASL", "Guitar Chords"]
+const LOCKED_PACKS = ["Chinese", "Knots"]
 const TAB_LABELS = ["Replay", "Slower", "Next", "Packs"]
 
 @component

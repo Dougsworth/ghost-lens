@@ -1,0 +1,79 @@
+- !<AssetImportMetadata/425b5db7-71f2-4477-966f-80de3a543ce4>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> c699c345-68ef-47cf-a5a1-2f895020700f
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> c699c345-68ef-47cf-a5a1-2f895020700f
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 2086d54d-2477-4850-91e2-4aa27560d955
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/2086d54d-2477-4850-91e2-4aa27560d955>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 555ce2f2-98c9-4933-b8af-4ca32528ce89
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    fingertipReachCm: false
+    fretboard: false
+    handColor: false
+    handRollDeg: false
+    handScale: false
+    placeSec: false
+    settleSec: false
+    strumSec: false
+    strumStringsNeeded: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - fretboard: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      handColor: !<Vec4> {x: 0.950000, y: 0.910000, z: 0.830000, w: 1.000000}
+      handScale: 0.450000
+      handRollDeg: !<float> -60.000000
+      placeSec: 0.550000
+      settleSec: 0.280000
+      strumSec: 0.400000
+      strumStringsNeeded: !<float> 4.000000
+      fingertipReachCm: 2.600000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostGuitarController &ndash; the ghost places the chord, then you do</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input AssignableType_1 fretboard {"hint":"The fretboard. Every position in this script is asked of it, so the dots and the ghost hand can never disagree with the drawn frets."}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 handColor = "{0.95,0.91,0.83,1}" {"hint":"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.", "widget":"color"}'
+    - '// @input float handScale = 0.45 {"hint":"Size of the ghost hand, where 1 is roughly life-size. A life-size hand beside a 30 cm board does not fit the 21.5 cm view, so this is under 1 by necessity.", "widget":"slider", "min":0.25, "max":1.2, "step":0.05}'
+    - '// @input float handRollDeg = -60 {"hint":"How the ghost hand is turned on the board, in degrees. Negative reaches in from the lower left, like your own fretting hand seen from above.", "widget":"slider", "min":-90, "max":0, "step":1}'
+    - '// @input float placeSec = 0.55 {"hint":"Seconds the hand takes to travel to each fingertip.", "widget":"slider", "min":0.2, "max":1.5, "step":0.05}'
+    - '// @input float settleSec = 0.28 {"hint":"Seconds the hand rests on each dot before moving to the next finger.", "widget":"slider", "min":0.05, "max":1, "step":0.05}'
+    - "// @input float strumSec = 0.4 {\"hint\":\"Seconds the ghost's brush takes to cross the strings.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.2, \"step\":0.05}"
+    - '// @input float strumStringsNeeded = 4 {"hint":"How many strings a drag must cross before the chord sounds early. A release anywhere on the strum band always plays it, so this only decides when a real sweep gets rewarded mid-gesture.", "widget":"slider", "min":2, "max":6, "step":1}'
+    - '// @input float fingertipReachCm = 2.6 {"hint":"How close a real fingertip must come to a dot to count as placed, in cm. Only used on device and over the webcam bridge; a pinch needs no radius.", "widget":"slider", "min":1, "max":6, "step":0.1}'
+    - '// @ui {"widget":"group_end"}'

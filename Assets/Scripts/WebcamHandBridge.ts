@@ -41,6 +41,20 @@ export class WebcamHandBridge extends BaseScriptComponent {
   @hint("Use only the hand nearest the centre of the camera view, so a second person in frame cannot take over the brush.")
   singleHandOnly: boolean = true;
 
+  @input
+  @hint("Decide the pinch HERE from pinchDist, instead of trusting the tracker page's own pinch flag. The page latches that flag per hand side, and MediaPipe's handedness label is unreliable on a mirrored image, so with two hands in frame the flag can belong to the other hand.")
+  ownPinchDecision: boolean = true;
+
+  @input
+  @hint("Pinch STARTS below this thumb-to-index distance (as a fraction of hand size, so it is the same near or far).")
+  @widget(new SliderWidget(0.1, 0.9, 0.01))
+  pinchOnRatio: number = 0.30;
+
+  @input
+  @hint("Pinch ENDS above this. The gap between the two stops the pinch flickering on a borderline hold.")
+  @widget(new SliderWidget(0.1, 1.2, 0.01))
+  pinchOffRatio: number = 0.55;
+
   static instance: WebcamHandBridge;
 
   connected = false;
@@ -142,9 +156,10 @@ export class WebcamHandBridge extends BaseScriptComponent {
     this.fingertipWorld = this.smoothed;
 
     const p = this.smoothed;
-    if (this.hand.pinch && !this.isPinching) { this.isPinching = true; this.onPinchStart.forEach(f => f(p)); }
-    else if (this.hand.pinch && this.isPinching) { this.onPinchMove.forEach(f => f(p)); }
-    else if (!this.hand.pinch && this.isPinching) { this.isPinching = false; this.onPinchEnd.forEach(f => f(p)); }
+    const pinching = this.decidePinch(this.hand);
+    if (pinching && !this.isPinching) { this.isPinching = true; this.onPinchStart.forEach(f => f(p)); }
+    else if (pinching && this.isPinching) { this.onPinchMove.forEach(f => f(p)); }
+    else if (!pinching && this.isPinching) { this.isPinching = false; this.onPinchEnd.forEach(f => f(p)); }
   }
 
   /**
@@ -155,6 +170,27 @@ export class WebcamHandBridge extends BaseScriptComponent {
    * camera the one who paints, and it is stable frame to frame because the
    * writer naturally stays centred while a bystander does not.
    */
+
+  /**
+   * Is this hand pinching?
+   *
+   * The tracker page sends its own `pinch` boolean, but it latches that state
+   * per hand SIDE, and MediaPipe's handedness is unreliable on a mirrored
+   * image. With two hands in frame the boolean on the hand we picked can be the
+   * state of the OTHER hand -- which shows up as ink appearing with no pinch,
+   * and as a pinch flag that contradicts its own pinchDist.
+   *
+   * So we decide here, from the distance of the hand we actually chose, with
+   * our own hysteresis. pinchDist is already normalised by hand size upstream,
+   * so one pair of thresholds works near and far from the camera.
+   */
+  private decidePinch(h: BridgeHand): boolean {
+    if (!this.ownPinchDecision || typeof h.pinchDist !== "number") return !!h.pinch;
+    const on = Math.min(this.pinchOnRatio, this.pinchOffRatio);
+    const off = Math.max(this.pinchOnRatio, this.pinchOffRatio);
+    return this.isPinching ? h.pinchDist < off : h.pinchDist < on;
+  }
+
   private pickHand(hands: BridgeHand[]): BridgeHand | null {
     if (!hands || hands.length === 0) return null;
     if (!this.singleHandOnly) return hands[0];

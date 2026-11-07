@@ -4771,28 +4771,32 @@
               "type": "AssignableType_7",
               "uiInfo": "{\"hint\":\"Pinch source shared by the turn controller.\"}"
             },
-            "askRoot": {
+            "lessonRoot": {
               "isScriptInput": true,
               "value": {
-                "UUID": "648cf314-584c-4136-beef-61b5da787597",
-                "name": "Ask"
+                "UUID": "9364edab-e7ed-4f52-8eb4-a26ab7e9fd65",
+                "name": "Lesson"
               },
               "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the Ask GHOST word picker.\"}"
+              "uiInfo": "{\"hint\":\"Group root holding the practice sheet and its bookmark tabs.\"}"
             },
-            "anchorDistanceCm": {
+            "aslRoot": {
               "isScriptInput": true,
-              "value": 45,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}",
-              "defaultValue": "45"
+              "value": {
+                "UUID": "5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc",
+                "name": "Asl"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
             },
-            "lessonSequence": {
+            "guitarRoot": {
               "isScriptInput": true,
-              "value": "あいうえお",
-              "type": "string",
-              "uiInfo": "{\"hint\":\"Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.\"}",
-              "defaultValue": "あいうえお"
+              "value": {
+                "UUID": "613765d3-bd12-41c0-82f0-ba712e5e567d",
+                "name": "Guitar"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the guitar pack's fretboard and tabs.\"}"
             },
             "sheetUI": {
               "isScriptInput": true,
@@ -4840,7 +4844,7 @@
                 "UUID": "31344314-8576-480c-a972-fbd63c3ecbe6",
                 "name": "GhostAudio"
               },
-              "type": "AssignableType_10",
+              "type": "AssignableType_12",
               "uiInfo": "{\"hint\":\"Brush, paper, stamp and spoken-character sounds.\"}"
             },
             "demo": {
@@ -4870,23 +4874,46 @@
               "type": "AssignableType_3",
               "uiInfo": "{\"hint\":\"The Ask GHOST word picker.\"}"
             },
-            "aslRoot": {
+            "lessonSequence": {
               "isScriptInput": true,
-              "value": {
-                "UUID": "5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc",
-                "name": "Asl"
-              },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
+              "value": "あいうえお",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.\"}",
+              "defaultValue": "あいうえお"
             },
-            "lessonRoot": {
+            "anchorDistanceCm": {
+              "isScriptInput": true,
+              "value": 45,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}",
+              "defaultValue": "45"
+            },
+            "askRoot": {
               "isScriptInput": true,
               "value": {
-                "UUID": "9364edab-e7ed-4f52-8eb4-a26ab7e9fd65",
-                "name": "Lesson"
+                "UUID": "648cf314-584c-4136-beef-61b5da787597",
+                "name": "Ask"
               },
               "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the practice sheet and its bookmark tabs.\"}"
+              "uiInfo": "{\"hint\":\"Group root holding the Ask GHOST word picker.\"}"
+            },
+            "guitar": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "6c243e8b-bc4a-4c15-8631-6848532a862c",
+                "name": "GhostGuitarController"
+              },
+              "type": "AssignableType_11",
+              "uiInfo": "{\"hint\":\"The fretboard lesson: the ghost places the chord, then the user does.\"}"
+            },
+            "guitarUI": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "eff714b8-2a38-4a04-8c9f-08cf73b0a767",
+                "name": "GhostGuitarUI"
+              },
+              "type": "AssignableType_10",
+              "uiInfo": "{\"hint\":\"The guitar lesson's chord name, progress and tabs.\"}"
             },
             "asl": {
               "isScriptInput": true,
@@ -4907,16 +4934,19 @@
             "inputNames.6": "audio",
             "inputNames.7": "debugColliders",
             "inputNames.8": "demo",
-            "inputNames.9": "lessonRoot",
-            "inputNames.10": "lessonSequence",
-            "inputNames.11": "pinchInput",
-            "inputNames.12": "reanchorOnOpen",
-            "inputNames.13": "sheet",
-            "inputNames.14": "sheetUI",
-            "inputNames.15": "shelfRoot",
-            "inputNames.16": "shelfUI",
-            "inputNames.17": "stampHoldSec",
-            "inputNames.18": "turn",
+            "inputNames.9": "guitar",
+            "inputNames.10": "guitarRoot",
+            "inputNames.11": "guitarUI",
+            "inputNames.12": "lessonRoot",
+            "inputNames.13": "lessonSequence",
+            "inputNames.14": "pinchInput",
+            "inputNames.15": "reanchorOnOpen",
+            "inputNames.16": "sheet",
+            "inputNames.17": "sheetUI",
+            "inputNames.18": "shelfRoot",
+            "inputNames.19": "shelfUI",
+            "inputNames.20": "stampHoldSec",
+            "inputNames.21": "turn",
             "name": "GhostMain",
             "enabled": true,
             "sceneObject": "@sceneObject:GHOST",
@@ -4972,9 +5002,17 @@
               "uiInfo": "{\"hint\":\"Volume of the brush, paper, ink and stamp sounds.\", \"widget\":\"slider\", \"min\":0, \"max\":1, \"step\":0.05}",
               "defaultValue": "0.65"
             },
+            "chordVolume": {
+              "isScriptInput": true,
+              "value": 0.44999998807907104,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Volume of the guitar pack's chord strums. Lower than the brush and the voice on purpose: a chord rings for nearly four seconds under a lesson.\", \"widget\":\"slider\", \"min\":0, \"max\":1, \"step\":0.05}",
+              "defaultValue": "0.45"
+            },
             "scriptAsset": "@asset:Scripts/GhostAudio.ts",
-            "inputNames.0": "sfxVolume",
-            "inputNames.1": "voiceVolume",
+            "inputNames.0": "chordVolume",
+            "inputNames.1": "sfxVolume",
+            "inputNames.2": "voiceVolume",
             "name": "GhostAudio",
             "enabled": true,
             "sceneObject": "@sceneObject:Audio",
@@ -5554,13 +5592,6 @@
               "uiInfo": "{\"hint\":\"Colour of the pulsing marker that shows where to begin again after a miss.\", \"widget\":\"color\"}",
               "defaultValue": "{1,0.86,0.55,1}"
             },
-            "minDragSec": {
-              "isScriptInput": true,
-              "value": 0.25,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"A pinch shorter than this many seconds is ignored completely - not accepted, and NOT counted as a miss. Stops an accidental tap from burning one of the three tries before the ghost re-demonstrates.\", \"widget\":\"slider\", \"min\":0, \"max\":1, \"step\":0.05}",
-              "defaultValue": "0.25"
-            },
             "missesBeforeDemo": {
               "isScriptInput": true,
               "value": 3,
@@ -5568,19 +5599,12 @@
               "uiInfo": "{\"hint\":\"Misses on the same stroke before the ghost quietly demonstrates that one stroke again.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":1}",
               "defaultValue": "3"
             },
-            "toleranceCm": {
+            "minDragSec": {
               "isScriptInput": true,
-              "value": 2.4000000953674316,
+              "value": 0.25,
               "type": "float",
-              "uiInfo": "{\"hint\":\"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.\", \"widget\":\"slider\", \"min\":0.3, \"max\":5, \"step\":0.1}",
-              "defaultValue": "2.4"
-            },
-            "minLengthRatio": {
-              "isScriptInput": true,
-              "value": 0.30000001192092896,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}",
-              "defaultValue": "0.3"
+              "uiInfo": "{\"hint\":\"A pinch shorter than this many seconds is ignored completely - not accepted, and NOT counted as a miss. Stops an accidental tap from burning one of the three tries before the ghost re-demonstrates.\", \"widget\":\"slider\", \"min\":0, \"max\":1, \"step\":0.05}",
+              "defaultValue": "0.25"
             },
             "maxLengthRatio": {
               "isScriptInput": true,
@@ -5603,20 +5627,42 @@
               "uiInfo": "{\"hint\":\"Colour the user's ink dries to once a stroke is accepted. Stays on the sheet until the page turns.\", \"widget\":\"color\"}",
               "defaultValue": "{0.92,0.86,0.74,1}"
             },
+            "toleranceCm": {
+              "isScriptInput": true,
+              "value": 2.4000000953674316,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.\", \"widget\":\"slider\", \"min\":0.3, \"max\":5, \"step\":0.1}",
+              "defaultValue": "2.4"
+            },
+            "minLengthRatio": {
+              "isScriptInput": true,
+              "value": 0.30000001192092896,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}",
+              "defaultValue": "0.3"
+            },
+            "armDistanceCm": {
+              "isScriptInput": true,
+              "value": 0.6000000238418579,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far your hand must actually travel, in cm, before any ink appears. A pinch alone arms the stroke; it does not paint. Stops ink being laid while you are still getting into position, and makes a stray pinch harmless.\", \"widget\":\"slider\", \"min\":0, \"max\":3, \"step\":0.1}",
+              "defaultValue": "0.6"
+            },
             "scriptAsset": "@asset:Scripts/GhostTurnController.ts",
-            "inputNames.0": "driedInkColor",
-            "inputNames.1": "inkWidthCm",
-            "inputNames.2": "inputSmoothing",
-            "inputNames.3": "maxLengthRatio",
-            "inputNames.4": "minDragSec",
-            "inputNames.5": "minLengthRatio",
-            "inputNames.6": "missesBeforeDemo",
-            "inputNames.7": "pinchInput",
-            "inputNames.8": "pulseColor",
-            "inputNames.9": "sheet",
-            "inputNames.10": "startToleranceCm",
-            "inputNames.11": "toleranceCm",
-            "inputNames.12": "wetInkColor",
+            "inputNames.0": "armDistanceCm",
+            "inputNames.1": "driedInkColor",
+            "inputNames.2": "inkWidthCm",
+            "inputNames.3": "inputSmoothing",
+            "inputNames.4": "maxLengthRatio",
+            "inputNames.5": "minDragSec",
+            "inputNames.6": "minLengthRatio",
+            "inputNames.7": "missesBeforeDemo",
+            "inputNames.8": "pinchInput",
+            "inputNames.9": "pulseColor",
+            "inputNames.10": "sheet",
+            "inputNames.11": "startToleranceCm",
+            "inputNames.12": "toleranceCm",
+            "inputNames.13": "wetInkColor",
             "name": "GhostTurnController",
             "enabled": true,
             "sceneObject": "@sceneObject:TurnController",
@@ -6029,29 +6075,6 @@
           "name": "WebcamHandBridge",
           "enabled": true,
           "properties": {
-            "internetModule": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "46241788-3794-4d79-b8b3-1684fe9f1e20"
-              },
-              "type": "Asset.InternetModule"
-            },
-            "surfaceHeightCm": {
-              "isScriptInput": true,
-              "value": 15,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"Height of the mapped area on the surface, in cm. Match the sheet (15 cm).\"}",
-              "defaultValue": "15"
-            },
-            "surface": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "efa4b451-bc04-4023-97c8-aad948d25b12",
-                "name": "PracticeSheet"
-              },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"The practice sheet. The webcam frame is mapped onto THIS surface, so the middle of the camera view is the middle of the sheet and a hand sweep crosses the paper. Leave empty to fall back to a plane in front of the camera.\"}"
-            },
             "singleHandOnly": {
               "isScriptInput": true,
               "value": true,
@@ -6078,6 +6101,20 @@
               "type": "float",
               "defaultValue": "22"
             },
+            "pinchOnRatio": {
+              "isScriptInput": true,
+              "value": 0.30000001192092896,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Pinch STARTS below this thumb-to-index distance (as a fraction of hand size, so it is the same near or far).\", \"widget\":\"slider\", \"min\":0.1, \"max\":0.9, \"step\":0.01}",
+              "defaultValue": "0.3"
+            },
+            "ownPinchDecision": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Decide the pinch HERE from pinchDist, instead of trusting the tracker page's own pinch flag. The page latches that flag per hand side, and MediaPipe's handedness label is unreliable on a mirrored image, so with two hands in frame the flag can belong to the other hand.\"}",
+              "defaultValue": "true"
+            },
             "smoothing": {
               "isScriptInput": true,
               "value": 0.5,
@@ -6102,6 +6139,36 @@
               "type": "bool",
               "defaultValue": "true"
             },
+            "pinchOffRatio": {
+              "isScriptInput": true,
+              "value": 0.550000011920929,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Pinch ENDS above this. The gap between the two stops the pinch flickering on a borderline hold.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1.2, \"step\":0.01}",
+              "defaultValue": "0.55"
+            },
+            "surfaceHeightCm": {
+              "isScriptInput": true,
+              "value": 15,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Height of the mapped area on the surface, in cm. Match the sheet (15 cm).\"}",
+              "defaultValue": "15"
+            },
+            "surface": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "efa4b451-bc04-4023-97c8-aad948d25b12",
+                "name": "PracticeSheet"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"The practice sheet. The webcam frame is mapped onto THIS surface, so the middle of the camera view is the middle of the sheet and a hand sweep crosses the paper. Leave empty to fall back to a plane in front of the camera.\"}"
+            },
+            "internetModule": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "46241788-3794-4d79-b8b3-1684fe9f1e20"
+              },
+              "type": "Asset.InternetModule"
+            },
             "camera": {
               "isScriptInput": true,
               "value": {
@@ -6114,15 +6181,18 @@
             "inputNames.0": "camera",
             "inputNames.1": "enabledInPreview",
             "inputNames.2": "internetModule",
-            "inputNames.3": "planeDistance",
-            "inputNames.4": "planeHeight",
-            "inputNames.5": "planeWidth",
-            "inputNames.6": "singleHandOnly",
-            "inputNames.7": "smoothing",
-            "inputNames.8": "surface",
-            "inputNames.9": "surfaceHeightCm",
-            "inputNames.10": "surfaceWidthCm",
-            "inputNames.11": "url",
+            "inputNames.3": "ownPinchDecision",
+            "inputNames.4": "pinchOffRatio",
+            "inputNames.5": "pinchOnRatio",
+            "inputNames.6": "planeDistance",
+            "inputNames.7": "planeHeight",
+            "inputNames.8": "planeWidth",
+            "inputNames.9": "singleHandOnly",
+            "inputNames.10": "smoothing",
+            "inputNames.11": "surface",
+            "inputNames.12": "surfaceHeightCm",
+            "inputNames.13": "surfaceWidthCm",
+            "inputNames.14": "url",
             "name": "WebcamHandBridge",
             "enabled": true,
             "sceneObject": "@sceneObject:WebcamHandBridge",
@@ -6197,6 +6267,350 @@
             "isPrefabInstanceRoot": false,
             "hasPrefabChanges": false,
             "id": "45c6d739-38a7-41ec-9b62-295e012872dd",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "613765d3-bd12-41c0-82f0-ba712e5e567d",
+      "name": "Guitar",
+      "enabled": true,
+      "parentId": "d343f1c3-771e-4811-935b-0c37960832c5",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": []
+    },
+    {
+      "id": "6ba5eac6-0b1d-471e-a3ee-118e931e09ca",
+      "name": "Fretboard",
+      "enabled": true,
+      "parentId": "613765d3-bd12-41c0-82f0-ba712e5e567d",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "959c2bc8-0195-442b-b147-d28448f9ade8",
+          "type": "ScriptComponent",
+          "name": "GhostFretboard",
+          "enabled": true,
+          "properties": {
+            "stampColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.92, y: 0.26, z: 0.17, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"The hanko stamp that lands when a chord is played. Additive display: this has to be an emitted vermilion, because a dark red would simply not appear.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.92,0.26,0.17,1}"
+            },
+            "tiltDeg": {
+              "isScriptInput": true,
+              "value": 52,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far the board is pitched back from upright, in degrees. 0 faces the user flat on; 90 lies flat on a table. Higher values foreshorten the board into less apparent height, which is what buys the room for a 30 cm neck.\", \"widget\":\"slider\", \"min\":20, \"max\":75, \"step\":1}",
+              "defaultValue": "62"
+            },
+            "paperColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.26, y: 0.23, z: 0.17, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Paper: the board itself. Additive display, so this is a faint translucent cream and never dark.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.26,0.23,0.17,1}"
+            },
+            "dotRadiusCm": {
+              "isScriptInput": true,
+              "value": 1.0499999523162842,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Radius of a finger dot, in cm. The pinch target around it is wider still.\", \"widget\":\"slider\", \"min\":0.5, \"max\":2, \"step\":0.05}",
+              "defaultValue": "1.05"
+            },
+            "lengthCm": {
+              "isScriptInput": true,
+              "value": 30,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Nut to fifth fret, in cm. The brief asks for about 30; this runs up the view and away from the user, not across it.\", \"widget\":\"slider\", \"min\":18, \"max\":40, \"step\":0.5}",
+              "defaultValue": "30"
+            },
+            "inkColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Ink: the nut, the string lines and the finger dots. The same warm off-white the kana brush writes with.\", \"widget\":\"color\"}",
+              "defaultValue": "{1.00,0.95,0.86,1}"
+            },
+            "stringSpanCm": {
+              "isScriptInput": true,
+              "value": 7.5,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Low E to high E across the board, in cm. This is the only thing spending the scarce 21.5 cm of view width.\", \"widget\":\"slider\", \"min\":4, \"max\":12, \"step\":0.1}",
+              "defaultValue": "7.5"
+            },
+            "guideColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.42, y: 0.39, z: 0.33, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Dimmed ink: the fret hairlines and a dot the user has not reached yet.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.42,0.39,0.33,1}"
+            },
+            "centreCm": {
+              "isScriptInput": true,
+              "value": "{x: 0, y: 1.5, z: 0}",
+              "type": "vec3",
+              "uiInfo": "{\"hint\":\"Where the board's centre sits relative to this object, in cm. Chest height means below the eye line, so y is small and positive only because the pitch-back lifts the far end.\"}"
+            },
+            "scriptAsset": "@asset:Scripts/GhostFretboard.ts",
+            "inputNames.0": "centreCm",
+            "inputNames.1": "dotRadiusCm",
+            "inputNames.2": "guideColor",
+            "inputNames.3": "inkColor",
+            "inputNames.4": "lengthCm",
+            "inputNames.5": "paperColor",
+            "inputNames.6": "stampColor",
+            "inputNames.7": "stringSpanCm",
+            "inputNames.8": "tiltDeg",
+            "name": "GhostFretboard",
+            "enabled": true,
+            "sceneObject": "@sceneObject:Fretboard",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "959c2bc8-0195-442b-b147-d28448f9ade8",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fe553dd2-f7be-4918-bc26-2470ad4c2a81",
+      "name": "ChordPlayer",
+      "enabled": true,
+      "parentId": "613765d3-bd12-41c0-82f0-ba712e5e567d",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "6c243e8b-bc4a-4c15-8631-6848532a862c",
+          "type": "ScriptComponent",
+          "name": "GhostGuitarController",
+          "enabled": true,
+          "properties": {
+            "strumStringsNeeded": {
+              "isScriptInput": true,
+              "value": 4,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How many strings a drag must cross before the chord sounds early. A release anywhere on the strum band always plays it, so this only decides when a real sweep gets rewarded mid-gesture.\", \"widget\":\"slider\", \"min\":2, \"max\":6, \"step\":1}",
+              "defaultValue": "4"
+            },
+            "strumSec": {
+              "isScriptInput": true,
+              "value": 0.4000000059604645,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds the ghost's brush takes to cross the strings.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.2, \"step\":0.05}",
+              "defaultValue": "0.4"
+            },
+            "settleSec": {
+              "isScriptInput": true,
+              "value": 0.2800000011920929,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds the hand rests on each dot before moving to the next finger.\", \"widget\":\"slider\", \"min\":0.05, \"max\":1, \"step\":0.05}",
+              "defaultValue": "0.28"
+            },
+            "handRollDeg": {
+              "isScriptInput": true,
+              "value": -60,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How the ghost hand is turned on the board, in degrees. Negative reaches in from the lower left, like your own fretting hand seen from above.\", \"widget\":\"slider\", \"min\":-90, \"max\":0, \"step\":1}",
+              "defaultValue": "-60"
+            },
+            "handScale": {
+              "isScriptInput": true,
+              "value": 0.44999998807907104,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Size of the ghost hand, where 1 is roughly life-size. A life-size hand beside a 30 cm board does not fit the 21.5 cm view, so this is under 1 by necessity.\", \"widget\":\"slider\", \"min\":0.25, \"max\":1.2, \"step\":0.05}",
+              "defaultValue": "0.45"
+            },
+            "handColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.95, y: 0.91, z: 0.83, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.95,0.91,0.83,1}"
+            },
+            "fretboard": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "959c2bc8-0195-442b-b147-d28448f9ade8",
+                "name": "GhostFretboard"
+              },
+              "type": "AssignableType_1",
+              "uiInfo": "{\"hint\":\"The fretboard. Every position in this script is asked of it, so the dots and the ghost hand can never disagree with the drawn frets.\"}"
+            },
+            "placeSec": {
+              "isScriptInput": true,
+              "value": 0.550000011920929,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds the hand takes to travel to each fingertip.\", \"widget\":\"slider\", \"min\":0.2, \"max\":1.5, \"step\":0.05}",
+              "defaultValue": "0.55"
+            },
+            "fingertipReachCm": {
+              "isScriptInput": true,
+              "value": 2.5999999046325684,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How close a real fingertip must come to a dot to count as placed, in cm. Only used on device and over the webcam bridge; a pinch needs no radius.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":0.1}",
+              "defaultValue": "2.6"
+            },
+            "scriptAsset": "@asset:Scripts/GhostGuitarController.ts",
+            "inputNames.0": "fingertipReachCm",
+            "inputNames.1": "fretboard",
+            "inputNames.2": "handColor",
+            "inputNames.3": "handRollDeg",
+            "inputNames.4": "handScale",
+            "inputNames.5": "placeSec",
+            "inputNames.6": "settleSec",
+            "inputNames.7": "strumSec",
+            "inputNames.8": "strumStringsNeeded",
+            "name": "GhostGuitarController",
+            "enabled": true,
+            "sceneObject": "@sceneObject:ChordPlayer",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "6c243e8b-bc4a-4c15-8631-6848532a862c",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cc8b3ee0-e217-46f9-896e-79a2b4108f80",
+      "name": "GuitarPanel",
+      "enabled": true,
+      "parentId": "613765d3-bd12-41c0-82f0-ba712e5e567d",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0.10000000149011612
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "eff714b8-2a38-4a04-8c9f-08cf73b0a767",
+          "type": "ScriptComponent",
+          "name": "GhostGuitarUI",
+          "enabled": true,
+          "properties": {
+            "tabOffsetXCm": {
+              "isScriptInput": true,
+              "value": 7.599999904632568,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far right of centre the tab stack sits, in cm. The board is only 9.6 cm wide, so the right margin is free.\", \"widget\":\"slider\", \"min\":4, \"max\":9.2, \"step\":0.1}",
+              "defaultValue": "7.6"
+            },
+            "typeColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.8, y: 0.76, z: 0.68, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the chord name, the line and the tab labels.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.80,0.76,0.68,1}"
+            },
+            "tabHighlightColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Tab colour when the user aims at it.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.46,0.41,0.31,1}"
+            },
+            "tabPaperColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.26, y: 0.23, z: 0.17, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Tab paper colour — the same washi as the kana and ASL packs' bookmarks.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.26,0.23,0.17,1}"
+            },
+            "nameHeightCm": {
+              "isScriptInput": true,
+              "value": 12.600000381469727,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Height of the chord name above centre, in cm. The board's far end reaches about 11 cm, so this clears it.\", \"widget\":\"slider\", \"min\":8, \"max\":14, \"step\":0.1}",
+              "defaultValue": "12.6"
+            },
+            "lineHeightCm": {
+              "isScriptInput": true,
+              "value": -13.100000381469727,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Height of the explanation line, in cm. Negative: it sits below the board's near end.\", \"widget\":\"slider\", \"min\":-14.2, \"max\":-8, \"step\":0.1}",
+              "defaultValue": "-13.1"
+            },
+            "scriptAsset": "@asset:Scripts/GhostGuitarUI.ts",
+            "inputNames.0": "lineHeightCm",
+            "inputNames.1": "nameHeightCm",
+            "inputNames.2": "tabHighlightColor",
+            "inputNames.3": "tabOffsetXCm",
+            "inputNames.4": "tabPaperColor",
+            "inputNames.5": "typeColor",
+            "name": "GhostGuitarUI",
+            "enabled": true,
+            "sceneObject": "@sceneObject:GuitarPanel",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "eff714b8-2a38-4a04-8c9f-08cf73b0a767",
             "type": "ScriptComponent"
           }
         }
