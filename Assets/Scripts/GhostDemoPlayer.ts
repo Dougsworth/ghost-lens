@@ -80,6 +80,8 @@ export class GhostDemoPlayer extends BaseScriptComponent {
 
   private glyph: GlyphPath | null = null;
   private ribbons: InkRibbon[] = [];
+  /** 1 = the full guide outline, 0 = no guide at all. Set by GhostMain. */
+  private guideStrength = 1;
   private brush: SceneObject | null = null;
   private phase: Phase = "idle";
   private strokeIndex = 0;
@@ -164,7 +166,7 @@ export class GhostDemoPlayer extends BaseScriptComponent {
     this.speed = slow ? Math.max(0.05, this.slowerSpeedMultiplier) : 1;
 
     for (let i = 0; i < this.ribbons.length; i++) {
-      this.ribbons[i].setColor(this.guideColor);
+      this.ribbons[i].setColor(this.fadedGuide());
       this.ribbons[i].setProgress(1);
     }
     this.ribbons[index].setColor(this.inkColor);
@@ -187,30 +189,52 @@ export class GhostDemoPlayer extends BaseScriptComponent {
   showGuideOnly(): void {
     this.stop();
     for (let i = 0; i < this.ribbons.length; i++) {
-      this.ribbons[i].setColor(this.guideColor);
+      this.ribbons[i].setColor(this.fadedGuide());
       this.ribbons[i].setProgress(1);
     }
     this.parkBrush();
   }
 
   /**
-   * The help dial for the user's turn: how strongly the guide shows.
-   * 1 = the full pale outline, 0 = gone. The display is additive, so dimming
-   * the colour toward black IS fading toward invisible.
+   * How much guide to leave behind: 1 the full outline, 0 none at all.
    *
-   * @param only if >= 0, show just that one stroke at `strength` and hide the
-   *             rest — the "hint only when stuck" level, which by the research
-   *             shows the current target rather than the whole path.
+   * This is the brief's fading guidance. A learner who keeps tracing a visible
+   * outline is practising tracing, not writing — so the outline is withdrawn as
+   * they stop needing it, and comes back the moment they struggle. Additive
+   * display, so scaling the colour toward black IS fading toward invisible;
+   * there is no alpha to animate.
    */
-  setGuideStrength(strength: number, only: number = -1): void {
-    const k = Math.max(0, Math.min(1, strength));
+  setGuideStrength(k: number): void {
+    this.guideStrength = Math.max(0, Math.min(1, k));
     for (let i = 0; i < this.ribbons.length; i++) {
-      const s = only >= 0 && i !== only ? 0 : k;
-      this.ribbons[i].setProgress(1);
-      this.ribbons[i].setColor(
-        new vec4(this.guideColor.x * s, this.guideColor.y * s, this.guideColor.z * s, this.guideColor.w)
-      );
+      this.ribbons[i].setColor(this.fadedGuide());
     }
+  }
+
+  get currentGuideStrength(): number {
+    return this.guideStrength;
+  }
+
+  /**
+   * Hint only when stuck: show ONE stroke of the guide at `strength`, leaving
+   * the earned guide strength untouched so the next stroke starts unaided
+   * again. The research rule is to show the current target, not the whole
+   * path. Undo with setGuideStrength(currentGuideStrength).
+   */
+  showHint(index: number, strength: number): void {
+    if (index < 0 || index >= this.ribbons.length) return;
+    const k = Math.max(this.guideStrength, Math.max(0, Math.min(1, strength)));
+    this.ribbons[index].setProgress(1);
+    this.ribbons[index].setColor(
+      new vec4(this.guideColor.x * k, this.guideColor.y * k, this.guideColor.z * k, this.guideColor.w)
+    );
+  }
+
+  private fadedGuide(): vec4 {
+    const k = this.guideStrength;
+    return new vec4(
+      this.guideColor.x * k, this.guideColor.y * k, this.guideColor.z * k, this.guideColor.w
+    );
   }
 
   private beginStroke(index: number): void {
@@ -255,13 +279,15 @@ export class GhostDemoPlayer extends BaseScriptComponent {
       return;
     }
 
-    // fade: wet ink settles into the pale guide the user will trace
+    // fade: wet ink settles into the pale guide the user will trace — down to
+    // whatever guide strength the lesson has earned, which may be none at all.
     const f = Math.min(1, this.phaseT / Math.max(0.05, this.fadeSeconds));
+    const g = this.fadedGuide();
     const c = new vec4(
-      this.inkColor.x + (this.guideColor.x - this.inkColor.x) * f,
-      this.inkColor.y + (this.guideColor.y - this.inkColor.y) * f,
-      this.inkColor.z + (this.guideColor.z - this.inkColor.z) * f,
-      this.inkColor.w + (this.guideColor.w - this.inkColor.w) * f
+      this.inkColor.x + (g.x - this.inkColor.x) * f,
+      this.inkColor.y + (g.y - this.inkColor.y) * f,
+      this.inkColor.z + (g.z - this.inkColor.z) * f,
+      this.inkColor.w + (g.w - this.inkColor.w) * f
     );
     for (let k = 0; k < this.fadeTargets.length; k++) {
       this.ribbons[this.fadeTargets[k]].setColor(c);
@@ -284,8 +310,8 @@ export class GhostDemoPlayer extends BaseScriptComponent {
     // a brush that does not match the stroke it lays down reads as wrong.
     this.brush = createBrush(
       this.sheet.brushRoot,
-      this.inkWidthCm * 4.0,
-      this.inkWidthCm * 1.5,
+      this.inkWidthCm * 2.6,
+      this.inkWidthCm * 1.05,
       this.inkColor,
       0
     );

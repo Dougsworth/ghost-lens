@@ -28,3 +28,7 @@ Use the fast bridge: tools/webcam-bridge/run_fast.sh (tracking in Chrome on the 
 
 ## UX rules (from NEXT_UX_OVERHAUL.md, apply to all new work)
 Watch, Try, Fix loop; per joint or per segment colour feedback (green, amber, red); target hand superimposed on the real hand; one learning card; palm up hand menu instead of side tabs; fading guidance; simplest items first. Deadline Monday Nov 9, 5pm ET; scope freeze Sunday night.
+
+## Current direction: NEXT_AI_FIRST.md (AI first; overrides older priorities where they conflict)
+Design spec for the front door and lesson UI: DESIGN_FRONT_DOOR.md (follow it for all UI).
+- Multiplayer plan: NEXT_STUDY_TOGETHER.md (after front door and AI coach).

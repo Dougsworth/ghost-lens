@@ -10,10 +10,15 @@ Each pass validates; an invalid pass is retried ONCE with the validator's own
 complaints fed back, then gives up and the caller falls back to a bundled
 lesson. A lesson must never fail to exist.
 
-Provider is chosen from whichever key is in the environment — ANTHROPIC_API_KEY
-or OPENAI_API_KEY. Deliberately stdlib-only (urllib): this file is imported by
-the webcam bridge, which the user runs from a tiny venv, so it must not drag an
-SDK into that environment.
+Provider is chosen from whichever key is in the environment, in this order:
+GEMINI_API_KEY, then ANTHROPIC_API_KEY, then OPENAI_API_KEY. If none is set the
+caller falls back to GHOST's bundled lessons, so a missing key is never fatal.
+Gemini is the default because it is the cheapest of the three to run a two-pass
+plan-and-review on, and this planner makes at least two calls per lesson.
+
+Deliberately stdlib-only (urllib): this file is imported by the webcam bridge,
+which the user runs from a tiny venv, so it must not drag an SDK into that
+environment.
 
 NOTHING here reads or writes a credentials file that is committed. Keys come
 from the environment only.
@@ -24,6 +29,13 @@ import re
 import urllib.error
 import urllib.request
 
+GEMINI_MODEL = "gemini-flash-latest"
+#: Gemini thinking budgets, in tokens. Planning and review are the two calls
+#: that have to get a strict schema right first time, so they get a small
+#: budget; a coach tip is one sentence the learner is waiting on mid-stroke, so
+#: it gets none at all and comes back as fast as the network allows.
+GEMINI_PLAN_THINKING = 512
+GEMINI_COACH_THINKING = 0
 ANTHROPIC_MODEL = "claude-opus-5-5"
 OPENAI_MODEL = "gpt-5"
 TIMEOUT_S = 90
@@ -252,7 +264,39 @@ def _post(url, headers, payload):
         return json.loads(r.read().decode("utf-8"))
 
 
-def _anthropic(system, user, key):
+def _gemini(system, user, key, json_mode=True, thinking_budget=None):
+    """Gemini via the REST endpoint. The key goes in a header, never the URL —
+    query strings end up in proxy logs and shell history."""
+    cfg = {"temperature": 0.4}
+    if thinking_budget is not None:
+        # 0 disables thinking entirely. Checked against None, not falsiness,
+        # because 0 is exactly the value the coach path wants to send.
+        cfg["thinkingConfig"] = {"thinkingBudget": int(thinking_budget)}
+    if json_mode:
+        # Gemini's JSON mode: the model is constrained to emit a single JSON
+        # value, which removes the markdown-fence guessing _parse otherwise has
+        # to do. Not used for coach tips, which are one plain sentence.
+        cfg["responseMimeType"] = "application/json"
+    body = _post(
+        "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
+        % GEMINI_MODEL,
+        {"content-type": "application/json", "x-goog-api-key": key},
+        {"systemInstruction": {"parts": [{"text": system}]},
+         "contents": [{"role": "user", "parts": [{"text": user}]}],
+         "generationConfig": cfg},
+    )
+    cands = body.get("candidates") or []
+    if not cands:
+        # A blocked prompt comes back with no candidate and a reason; surfacing
+        # it beats "list index out of range".
+        fb = (body.get("promptFeedback") or {}).get("blockReason")
+        raise RuntimeError("gemini returned no candidates%s"
+                           % (" (%s)" % fb if fb else ""))
+    parts = (cands[0].get("content") or {}).get("parts") or []
+    return "".join(p.get("text", "") for p in parts)
+
+
+def _anthropic(system, user, key, json_mode=True, thinking_budget=None):
     body = _post(
         "https://api.anthropic.com/v1/messages",
         {"content-type": "application/json",
@@ -267,36 +311,62 @@ def _anthropic(system, user, key):
                    if b.get("type") == "text")
 
 
-def _openai(system, user, key):
+def _openai(system, user, key, json_mode=True, thinking_budget=None):
+    payload = {"model": OPENAI_MODEL,
+               "messages": [{"role": "system", "content": system},
+                            {"role": "user", "content": user}]}
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
     body = _post(
         "https://api.openai.com/v1/chat/completions",
         {"content-type": "application/json", "authorization": "Bearer " + key},
-        {"model": OPENAI_MODEL,
-         "response_format": {"type": "json_object"},
-         "messages": [{"role": "system", "content": system},
-                      {"role": "user", "content": user}]},
+        payload,
     )
     return body["choices"][0]["message"]["content"]
 
 
+#: Tried in order. First key present in the environment wins.
+PROVIDER_ORDER = (
+    ("gemini", "GEMINI_API_KEY"),
+    ("anthropic", "ANTHROPIC_API_KEY"),
+    ("openai", "OPENAI_API_KEY"),
+)
+
+_BACKENDS = {"gemini": _gemini, "anthropic": _anthropic, "openai": _openai}
+
+
 def provider():
-    """(name, key) for whichever key is present. Anthropic wins if both are."""
-    k = os.environ.get("ANTHROPIC_API_KEY")
-    if k:
-        return "anthropic", k
-    k = os.environ.get("OPENAI_API_KEY")
-    if k:
-        return "openai", k
+    """(name, key) for the first key present, or (None, None) for none.
+
+    Gemini first, then Anthropic, then OpenAI. Keys are read from the
+    environment ONLY — nothing here opens a credentials file, so there is no
+    path by which a key reaches a committed artefact.
+    """
+    for name, env in PROVIDER_ORDER:
+        k = os.environ.get(env)
+        if k and k.strip():
+            return name, k.strip()
     return None, None
 
 
-def _call(system, user):
+def model_name():
+    """The model id the current provider will use, for /status. Never a key."""
+    name, _ = provider()
+    return {"gemini": GEMINI_MODEL,
+            "anthropic": ANTHROPIC_MODEL,
+            "openai": OPENAI_MODEL}.get(name)
+
+
+def _call(system, user, json_mode=True, thinking_budget=None):
     name, key = provider()
     if not name:
         raise RuntimeError(
-            "No LLM key. Export ANTHROPIC_API_KEY or OPENAI_API_KEY before "
-            "starting the bridge. GHOST falls back to its bundled lessons.")
-    return (_anthropic if name == "anthropic" else _openai)(system, user, key)
+            "No LLM key. Export GEMINI_API_KEY (or ANTHROPIC_API_KEY, or "
+            "OPENAI_API_KEY) before starting the bridge. GHOST falls back to "
+            "its bundled lessons.")
+    # thinking_budget is Gemini-only; the other backends accept and ignore it
+    # so the caller never has to know which provider is live.
+    return _BACKENDS[name](system, user, key, json_mode, thinking_budget)
 
 
 def _parse(text):
@@ -332,7 +402,7 @@ REVIEW_SYSTEM = (
 
 def _attempt(system, user):
     """One call plus at most one repair round, fed the validator's complaints."""
-    raw = _call(system, user)
+    raw = _call(system, user, thinking_budget=GEMINI_PLAN_THINKING)
     try:
         return validate(_parse(raw))
     except (LessonInvalid, json.JSONDecodeError, KeyError) as e:
@@ -343,7 +413,61 @@ def _attempt(system, user):
             + "\n- ".join(str(x) for x in problems)
             + "\n\nYour previous reply was:\n" + (raw or "")[:12000]
         )
-        return validate(_parse(_call(system, repair)))
+        return validate(_parse(_call(system, repair,
+                                     thinking_budget=GEMINI_PLAN_THINKING)))
+
+
+# ── Coach ────────────────────────────────────────────────────────────────────
+
+COACH_SYSTEM = (
+    "You are a calm, encouraging coach watching someone practise a physical "
+    "skill in an AR headset. They have just made one attempt.\n"
+    "Reply with ONE short sentence, under 12 words, in plain language.\n"
+    "Say what to change NEXT TIME, about the MOVEMENT — not the shape, not "
+    "the theory. Never shame, never exclaim, never use the word 'just'.\n"
+    "If the attempt was good, say so plainly and briefly.\n"
+    "Return the sentence only: no quotes, no markdown, no preamble."
+)
+
+#: Said when there is no LLM, or the call fails. Keyed by the same reason codes
+#: GhostStrokeCheck emits, so the fallback is specific rather than generic — a
+#: coach that always says "try again" is worse than no coach.
+COACH_FALLBACK = {
+    "off": "Start on the dot and follow the grey line.",
+    "reversed": "Right shape — now draw it the other way.",
+    "short": "Keep going to the end of the stroke.",
+    "ok": "That is the one. Same again.",
+}
+COACH_DEFAULT = "Take it slowly and follow the line."
+
+
+def coach_tip(skill, step, reason, detail=None):
+    """One short spoken line after an attempt.
+
+    Uses the SAME provider as the planner, so a single key configures the whole
+    experience. Never raises: a coach that can break the lesson is worse than a
+    coach that repeats itself, so any failure returns the reason-specific
+    fallback instead.
+    """
+    reason = (reason or "").strip().lower()
+    try:
+        user = (
+            "Skill: %s\nThe step they are on: %s\nWhat went wrong: %s"
+            % (skill or "this skill", step or "this step", reason or "unclear")
+        )
+        if detail:
+            user += "\nExtra detail: %s" % detail
+        # Plain text, not JSON: this is one sentence, and forcing JSON mode
+        # here would only make the model wrap it in an object to unwrap again.
+        text = (_call(COACH_SYSTEM, user, json_mode=False,
+                      thinking_budget=GEMINI_COACH_THINKING) or "").strip()
+        text = text.strip('"').strip()
+        # A model that ignores "one sentence" should not get to fill the HUD.
+        if text and len(text) <= 160:
+            return text.split("\n")[0].strip()
+    except Exception as e:
+        print("coach tip failed (%s); using the bundled line" % e)
+    return COACH_FALLBACK.get(reason, COACH_DEFAULT)
 
 
 def build_lesson(skill):

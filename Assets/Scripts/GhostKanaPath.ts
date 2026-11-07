@@ -21,8 +21,49 @@ export interface Pt {
 }
 
 /** Arc-length step used to densify source points, in cm. Small enough that the
- *  ink ribbon's miter normals stay stable around tight kana curves. */
-const RESAMPLE_CM = 0.18;
+ *  ink ribbon's miter normals stay stable around tight kana curves, and small
+ *  enough that no corner of a kana curve reads as a facet at arm's length. */
+const RESAMPLE_CM = 0.07;
+
+/** Spline samples inserted between each pair of source points before resampling. */
+const SPLINE_STEPS = 8;
+
+/**
+ * Catmull-Rom through the source points.
+ *
+ * KanjiVG stores a kana stroke as a handful of control points, and joining
+ * them with straight lines is what made the ghost's curves read as a chain of
+ * flat facets. Catmull-Rom passes exactly THROUGH its control points, so the
+ * stroke still goes where the data says — it just stops cutting the corners
+ * between them. Endpoints are duplicated so the curve starts and ends exactly
+ * on the first and last point rather than overshooting.
+ */
+function catmullRom(pts: Pt[], perSegment: number): Pt[] {
+  const n = pts.length;
+  if (n < 3) return pts.slice();
+  const out: Pt[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i > 0 ? i - 1 : 0];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < n ? i + 2 : n - 1];
+    for (let j = 0; j < perSegment; j++) {
+      const t = j / perSegment;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      out.push({
+        x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t +
+          (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+          (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+        y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t +
+          (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+          (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+      });
+    }
+  }
+  out.push(pts[n - 1]);
+  return out;
+}
 
 /**
  * One stroke, in sheet-local cm (origin = sheet centre, +x right, +y up).
@@ -85,18 +126,29 @@ export class StrokePath {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  /** Resample a polyline to a uniform step, always keeping the first and last point. */
+  /**
+   * Smooth, then resample to a uniform step, always keeping the first and last
+   * point.
+   *
+   * Order matters: spline FIRST, then uniform resampling. Resampling a
+   * straight-line polyline can only ever give you more points on the same
+   * facets; running the spline first is what actually removes the corners, and
+   * resampling afterwards is what gives the brush a constant speed along the
+   * smoothed curve.
+   */
   private static densify(src: Pt[], stepCm: number): Pt[] {
-    const clean: Pt[] = [];
+    const dedup: Pt[] = [];
     for (let i = 0; i < src.length; i++) {
-      if (clean.length === 0 || StrokePath.dist(src[i], clean[clean.length - 1]) > 1e-5) {
-        clean.push({ x: src[i].x, y: src[i].y });
+      if (dedup.length === 0 || StrokePath.dist(src[i], dedup[dedup.length - 1]) > 1e-5) {
+        dedup.push({ x: src[i].x, y: src[i].y });
       }
     }
-    if (clean.length === 0) return [{ x: 0, y: 0 }, { x: 0, y: 0 }];
-    if (clean.length === 1) {
-      return [clean[0], { x: clean[0].x + 1e-3, y: clean[0].y }];
+    if (dedup.length === 0) return [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+    if (dedup.length === 1) {
+      return [dedup[0], { x: dedup[0].x + 1e-3, y: dedup[0].y }];
     }
+
+    const clean = dedup.length >= 3 ? catmullRom(dedup, SPLINE_STEPS) : dedup;
 
     const out: Pt[] = [clean[0]];
     let carry = 0;

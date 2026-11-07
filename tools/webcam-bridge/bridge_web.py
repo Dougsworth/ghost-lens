@@ -4,6 +4,15 @@ Tracking runs in Chrome (GPU MediaPipe, smooth 30 fps camera). This script
 serves that page and relays its hand data to the Lens.
   Page:  http://127.0.0.1:8766   (open in Chrome, allow camera)
   Lens:  ws://127.0.0.1:8765     (same message format as bridge.py)
+
+It also serves the preview-time AI routes:
+  GET  /status   {"lenses", "llm", "model"}  -- provider name only, never a key
+  POST /lesson   {"skill"}                   -- a validated lesson
+  POST /coach    {"skill","step","reason"}   -- one short line after an attempt
+
+The LLM provider is chosen by lesson_llm from the environment: GEMINI_API_KEY,
+then ANTHROPIC_API_KEY, then OPENAI_API_KEY, then GHOST's bundled lessons.
+Copy credentials.env.example to credentials.env (gitignored) and source it.
 """
 import asyncio, http.server, json, os, threading, webbrowser
 import websockets
@@ -54,8 +63,14 @@ def serve_http():
         def do_GET(self):
             if self.path in ("/", ""): self.path = "/tracker.html"
             if self.path == "/status":
+                # "llm" is the provider NAME only -- never the key, and never
+                # anything derived from it.
                 name, _ = lesson_llm.provider()
-                return self._json(200, {"lenses": len(lenses), "llm": name or "none"})
+                return self._json(200, {
+                    "lenses": len(lenses),
+                    "llm": name or "none",
+                    "model": lesson_llm.model_name() if name else None,
+                })
             return super().do_GET()
 
         def do_OPTIONS(self):
@@ -70,7 +85,29 @@ def serve_http():
             # The Lens calls this over the localhost connection it already has.
             # On failure it returns an error and GHOST falls back to a bundled
             # lesson, so a dead key or no network never blocks the learner.
-            if self.path.rstrip("/") != "/lesson":
+            route = self.path.rstrip("/")
+
+            # POST /coach  {"skill","step","reason","detail"}  ->  {"tip": "..."}
+            # One short line after an attempt, from the same provider the
+            # planner uses. coach_tip never raises: with no key, or a dead one,
+            # it returns a reason-specific bundled line, so the lesson carries
+            # on either way and this route always answers 200.
+            if route == "/coach":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    req = json.loads(self.rfile.read(n) or b"{}")
+                except Exception as e:
+                    return self._json(400, {"error": "bad request body: %s" % e})
+                tip = lesson_llm.coach_tip(
+                    (req.get("skill") or "")[:200],
+                    (req.get("step") or "")[:200],
+                    (req.get("reason") or "")[:60],
+                    (req.get("detail") or "")[:200] or None,
+                )
+                print("coach tip (%s): %s" % (req.get("reason") or "?", tip))
+                return self._json(200, {"tip": tip})
+
+            if route != "/lesson":
                 return self._json(404, {"error": "not found"})
             try:
                 n = int(self.headers.get("Content-Length") or 0)

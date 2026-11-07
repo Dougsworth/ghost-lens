@@ -9,8 +9,18 @@
  * Must not: touch the UI, play audio, or advance the character. It emits and
  *        GhostMain decides — same one-way flow the demo player uses.
  *
- * The brief's feedback rule is carried literally: no harsh error, no red X.
- * A miss is a gentle fade plus a pulse at the place to begin again.
+ * ── Watch, Try, Fix ─────────────────────────────────────────────────────────
+ * TRY: the live ink is coloured AS IT IS DRAWN, in bands — on the line, close,
+ * or off — so the correction happens during the stroke rather than after it.
+ * A range is accepted: "close" still passes, because the brief's rule is that
+ * only the rough shape and direction need to match.
+ *
+ * FIX: a miss does not say "start again". The band that actually went wrong is
+ * the only thing that pulses, and it pulses at the point on the GUIDE where the
+ * ink should have been, so the user is shown the fix rather than the failure.
+ *
+ * Throughout: no harsh error and no red X. "Off" is a warm red-orange that
+ * reads as ink, the miss fades gently, and nothing flashes.
  *
  * User ink lives in the sheet's inkRoot, which sits IN FRONT of the guide layer
  * the ghost left behind — so the user writes over the outline, not under it.
@@ -18,15 +28,18 @@
 
 import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
 import { GlyphPath, Pt } from "./GhostKanaPath";
-import { InkRibbon, createQuads } from "./GhostInkRibbon";
-import { checkStroke, STROKE_PARTS } from "./GhostStrokeCheck";
+import { InkRibbon, createQuads, createRing } from "./GhostInkRibbon";
+import { checkStroke } from "./GhostStrokeCheck";
+import { Band, gradeBands, nearestGuidePoint, worstBand } from "./GhostStrokeFeedback";
 import { GhostSheet } from "./GhostSheet";
 import { GhostPinchInput } from "./GhostPinchInput";
 
 type Fading = { ribbon: InkRibbon; t: number; from: vec4 };
 
-/** A missed stroke: which one, why, and which part of it was furthest off. */
-export type MissInfo = { index: number; reason: string; worstPart: number; parts: number };
+/** Seconds for the success splash ring to bloom and vanish. */
+const SPLASH_SEC = 0.55;
+
+export type MissInfo = { index: number; reason: string };
 
 @component
 export class GhostTurnController extends BaseScriptComponent {
@@ -58,9 +71,39 @@ export class GhostTurnController extends BaseScriptComponent {
   driedInkColor: vec4;
 
   @input("vec4", "{1,0.86,0.55,1}")
-  @hint("Colour of the pulsing marker that shows where to begin again after a miss.")
+  @hint("Colour of the pulsing marker that shows which part of the stroke to fix.")
   @widget(new ColorWidget())
   pulseColor: vec4;
+
+  @input("vec4", "{0.46,1,0.60,1}")
+  @hint("Live ink where the stroke is ON the guide. Additive display: an emitted green, bright enough to read against the warm paper.")
+  @widget(new ColorWidget())
+  onLineColor: vec4;
+
+  @input("vec4", "{1,0.80,0.36,1}")
+  @hint("Live ink where the stroke is CLOSE. This still passes — it is a nudge, not a failure.")
+  @widget(new ColorWidget())
+  closeColor: vec4;
+
+  @input("vec4", "{1,0.46,0.38,1}")
+  @hint("Live ink where the stroke is OFF. A warm red-orange rather than a signal red: the brief rules out a harsh error, so this has to read as ink that drifted, not as an alarm.")
+  @widget(new ColorWidget())
+  offColor: vec4;
+
+  @input
+  @hint("Distance from the guide, in cm, within which the ink reads as ON the line.")
+  @widget(new SliderWidget(0.2, 3, 0.1))
+  onLineCm: number = 0.9;
+
+  @input
+  @hint("And within which it reads as CLOSE. Past this it reads as off. Both are display thresholds only — whether the stroke actually passes is still the mean test below.")
+  @widget(new SliderWidget(0.5, 5, 0.1))
+  closeCm: number = 2.2;
+
+  @input
+  @hint("How many coloured bands one stroke is split into. More bands localise a mistake more precisely; fewer read more calmly.")
+  @widget(new SliderWidget(2, 10, 1))
+  feedbackBands: number = 6;
 
   @input
   @hint("How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.")
@@ -116,15 +159,27 @@ export class GhostTurnController extends BaseScriptComponent {
   private misses = 0;
   private active = false;
 
-  private live: InkRibbon | null = null;
+  /** The stroke being drawn, rendered as one ribbon per coloured band. */
+  private live: InkRibbon[] = [];
   private livePoints: Pt[] = [];
   private smoothed: Pt | null = null;
+  /** The splash ring that blooms when a stroke is accepted. */
+  private splash: RenderMeshVisual | null = null;
+  private splashT = -1;
+  private splashAt: Pt = { x: 0, y: 0 };
+  /** Strokes shivering away after a miss, and how far through they are. */
+  private shiverT = -1;
+
+  private livePointsEnd: Pt = { x: 0, y: 0 };
+  private lastBands: Band[] = [];
+  /** True once the hand has travelled far enough that ink is being laid. */
+  private drawing = false;
   private dried: InkRibbon[] = [];
+  /** Where the fix pulse sits: the point on the GUIDE the worst band missed. */
+  private pulseAt: Pt | null = null;
   private fading: Fading[] = [];
   private pulse: RenderMeshVisual | null = null;
   private pulseOn = false;
-  /** The guide piece the last miss was furthest from, lit up until the next try. */
-  private worstGlow: InkRibbon | null = null;
   private elapsed = 0;
   /** When the user last did anything (turn began, pinched, released). */
   private lastActivity = 0;
@@ -154,12 +209,12 @@ export class GhostTurnController extends BaseScriptComponent {
   }
 
   /**
-   * Seconds since the user last did anything during their turn, 0 while a
-   * pinch is in progress or the turn is not active. The "hint only" help level
-   * shows the guide when this passes a threshold — help when stuck, not before.
+   * Seconds since the user last did anything during their turn; 0 while a
+   * pinch is in progress or the turn is not active. Lets the lesson give a
+   * hint only when the learner is stuck, never before.
    */
   get idleSeconds(): number {
-    if (!this.active || this.live || this.pendingStart) return 0;
+    if (!this.active || this.pendingStart || this.drawing) return 0;
     return getTime() - this.lastActivity;
   }
 
@@ -200,7 +255,6 @@ export class GhostTurnController extends BaseScriptComponent {
     this.publishStrokeStart();
     this.discardLive();
     this.setPulse(false);
-    this.clearWorstGlow();
   }
 
   /** Resume after the ghost re-demonstrated a stroke. */
@@ -218,7 +272,6 @@ export class GhostTurnController extends BaseScriptComponent {
     for (let i = 0; i < this.fading.length; i++) this.fading[i].ribbon.sceneObject.destroy();
     this.fading = [];
     this.setPulse(false);
-    this.clearWorstGlow();
   }
 
   // ── Drawing ───────────────────────────────────────────────────────────────
@@ -242,25 +295,72 @@ export class GhostTurnController extends BaseScriptComponent {
     this.smoothed = { x: p.x, y: p.y };
     this.strokeBeganAt = getTime();
     this.lastActivity = this.strokeBeganAt;
-    this.live = null;
+    this.drawing = false;
+    this.lastBands = [];
+    this.hideLive();
     this.setPulse(false);
-    this.clearWorstGlow();
   }
 
-  /** Create the ribbon on first real movement, starting at the armed point. */
-  private armInk(): void {
-    this.live = new InkRibbon(
-      this.sheet.inkRoot,
-      "UserStroke" + this.strokeIndex,
-      this.wetInkColor,
-      this.inkWidthCm,
-      0.004 * this.strokeIndex
+  /** Colour for a band's level. 0 on the line, 1 close, 2 off. */
+  private colorForLevel(level: number): vec4 {
+    if (level === 0) return this.onLineColor;
+    if (level === 1) return this.closeColor;
+    return this.offColor;
+  }
+
+  /** One ribbon per band, created on demand and reused as the stroke grows. */
+  private ribbonForBand(i: number): InkRibbon {
+    while (this.live.length <= i) {
+      const r = new InkRibbon(
+        this.sheet.inkRoot,
+        "UserStroke" + this.strokeIndex + "_b" + this.live.length,
+        this.wetInkColor,
+        this.inkWidthCm,
+        0.004 * this.strokeIndex
+      );
+      // End-to-end pieces of ONE stroke, so no per-piece taper.
+      r.setUniformWidth(true);
+      this.live.push(r);
+    }
+    return this.live[i];
+  }
+
+  /**
+   * Redraw the live stroke as coloured bands.
+   *
+   * Every band is rebuilt each time rather than only the last: a band's grade
+   * is a mean over its own points, and appending a point to the end of the
+   * stroke can change which band the boundary falls in, so a partial update
+   * would leave earlier bands showing a grade they no longer have.
+   */
+  private renderLive(): void {
+    if (!this.glyph || this.livePoints.length < 2) return;
+    const guide = this.glyph.strokes[this.strokeIndex];
+    const bands = gradeBands(
+      this.livePoints, guide, this.feedbackBands, this.onLineCm, this.closeCm
     );
+    this.lastBands = bands;
+
+    for (let i = 0; i < bands.length; i++) {
+      const b = bands[i];
+      const slice: Pt[] = [];
+      for (let k = b.from; k <= b.to; k++) slice.push(this.livePoints[k]);
+      const r = this.ribbonForBand(i);
+      r.setColor(this.colorForLevel(b.level));
+      r.setRawPoints(slice);
+      r.enabled = true;
+    }
+    // Bands that existed a moment ago but do not now (the stroke got shorter
+    // after a discard) are hidden rather than destroyed, so the next stroke
+    // reuses them instead of churning scene objects mid-drag.
+    for (let i = bands.length; i < this.live.length; i++) {
+      this.live[i].enabled = false;
+    }
   }
 
   private extendStroke(p: Pt): void {
     if (!this.active) return;
-    if (!this.live && !this.pendingStart) return;
+    if (!this.drawing && !this.pendingStart) return;
 
     // Low-pass the incoming path before it becomes geometry. Hand tracking and
     // a dragged mouse both arrive with frame-to-frame tremor, and feeding that
@@ -277,13 +377,13 @@ export class GhostTurnController extends BaseScriptComponent {
     const q = this.smoothed;
 
     // Not drawing yet: wait for real travel from the armed point.
-    if (!this.live) {
+    if (!this.drawing) {
       const s0 = this.pendingStart;
       if (!s0) return;
       const ax = q.x - s0.x;
       const ay = q.y - s0.y;
       if (Math.sqrt(ax * ax + ay * ay) < this.armDistanceCm) return;
-      this.armInk();
+      this.drawing = true;
     }
 
     const last = this.livePoints[this.livePoints.length - 1];
@@ -292,21 +392,21 @@ export class GhostTurnController extends BaseScriptComponent {
     // Drop sub-millimetre jitter so the ribbon's normals stay stable.
     if (dx * dx + dy * dy < 0.0225) return;
     this.livePoints.push({ x: q.x, y: q.y });
-    this.live.setRawPoints(this.livePoints);
+    this.renderLive();
   }
 
   private endStroke(p: Pt): void {
     if (!this.active || !this.glyph) return;
     this.lastActivity = getTime();
     // Armed but never moved: no ink, no attempt, no miss.
-    if (!this.live) {
+    if (!this.drawing) {
       this.discardLive();
       return;
     }
     const last = this.livePoints[this.livePoints.length - 1];
     if (p.x !== last.x || p.y !== last.y) {
       this.livePoints.push(p);
-      this.live.setRawPoints(this.livePoints);
+      this.renderLive();
     }
 
     // Too brief to be a drag at all: throw the ink away and say nothing. A
@@ -327,16 +427,28 @@ export class GhostTurnController extends BaseScriptComponent {
       this.startToleranceCm
     );
 
+    const endPt = this.livePoints[this.livePoints.length - 1];
+    this.livePointsEnd = { x: endPt.x, y: endPt.y };
+
     if (verdict.ok) {
-      // Dries into place and stays.
-      this.live.setColor(this.driedInkColor);
-      this.dried.push(this.live);
-      this.live = null;
+      // Dries into place and stays. The feedback colours are dropped on the
+      // way down: once a stroke is accepted its grade is history, and leaving
+      // a green-and-amber stroke on the page would keep drawing the eye to a
+      // judgement the user has already passed.
+      for (let i = 0; i < this.live.length; i++) {
+        if (!this.live[i].enabledState) continue;
+        this.live[i].setColor(this.driedInkColor);
+        this.dried.push(this.live[i]);
+      }
+      this.live = [];
+      this.drawing = false;
       this.livePoints = [];
       this.smoothed = null;
       this.misses = 0;
       this.setPulse(false);
-      this.clearWorstGlow();
+
+      // Ink splash: a ring blooms out from where the stroke finished.
+      this.startSplash(this.livePointsEnd);
 
       const done = this.strokeIndex;
       this._onStrokeAccepted.invoke(done);
@@ -350,22 +462,24 @@ export class GhostTurnController extends BaseScriptComponent {
       return;
     }
 
-    // Miss: fade the ink away gently and pulse where to begin again.
-    this.fading.push({ ribbon: this.live, t: 0, from: this.wetInkColor });
-    this.live = null;
+    // Miss: fade the ink away gently, and point at the part that went wrong.
+    const worst = worstBand(this.lastBands);
+    this.pulseAt = worst
+      ? nearestGuidePoint(this.livePoints[Math.floor((worst.from + worst.to) / 2)], target)
+      : null;
+    for (let i = 0; i < this.live.length; i++) {
+      if (!this.live[i].enabledState) {
+        this.live[i].sceneObject.destroy();
+        continue;
+      }
+      this.fading.push({ ribbon: this.live[i], t: 0, from: this.live[i].currentColor });
+    }
+    this.live = [];
+    this.drawing = false;
     this.livePoints = [];
     this.misses++;
     this.setPulse(true);
-    // Light up only the piece that was furthest off — "just this part", not
-    // the whole stroke. A reversed or too-short drag has no meaningful worst
-    // piece, so the start-point pulse alone carries those.
-    if (verdict.reason === "off") this.showWorstGlow(verdict.worstPoints);
-    this._onStrokeMissed.invoke({
-      index: this.strokeIndex,
-      reason: verdict.reason,
-      worstPart: verdict.worstPart,
-      parts: STROKE_PARTS,
-    });
+    this._onStrokeMissed.invoke({ index: this.strokeIndex, reason: verdict.reason });
 
     if (this.misses >= this.missesBeforeDemo) {
       this.misses = 0;
@@ -375,14 +489,59 @@ export class GhostTurnController extends BaseScriptComponent {
     }
   }
 
-  private discardLive(): void {
-    if (this.live) {
-      this.live.sceneObject.destroy();
-      this.live = null;
+  /**
+   * Bloom a ring out of the point where the stroke finished.
+   *
+   * A splash rather than a flash: on an additive display a brightness pop is
+   * indistinguishable from a glitch, whereas something that grows and thins
+   * reads as ink hitting wet paper. It is also the one moment in the loop that
+   * is purely a reward, so it is allowed to be the liveliest thing on screen.
+   */
+  private startSplash(at: Pt): void {
+    this.splashAt = { x: at.x, y: at.y };
+    this.splashT = 0;
+    if (!this.splash && this.sheet) {
+      this.splash = createRing(this.sheet.inkRoot, "InkSplash", 1, 0.22, this.onLineColor, 0.05, 30);
     }
+    if (this.splash) {
+      const so = this.splash.getSceneObject();
+      so.enabled = true;
+      so.getTransform().setLocalPosition(new vec3(at.x, at.y, 0.05));
+    }
+  }
+
+  private updateSplash(dt: number): void {
+    if (this.splashT < 0 || !this.splash) return;
+    this.splashT += dt / SPLASH_SEC;
+    const so = this.splash.getSceneObject();
+    if (this.splashT >= 1) {
+      this.splashT = -1;
+      so.enabled = false;
+      return;
+    }
+    // Grows fast then eases, and thins out as it goes — a ripple, not a balloon.
+    const f = 1 - Math.pow(1 - this.splashT, 3);
+    const scale = 0.4 + f * 3.0;
+    so.getTransform().setLocalScale(new vec3(scale, scale, 1));
+    const k = 1 - this.splashT;
+    this.splash.mainMaterial.mainPass.baseColor = new vec4(
+      this.onLineColor.x * k, this.onLineColor.y * k, this.onLineColor.z * k, this.onLineColor.w
+    );
+  }
+
+  private discardLive(): void {
+    for (let i = 0; i < this.live.length; i++) this.live[i].sceneObject.destroy();
+    this.live = [];
+    this.drawing = false;
+    this.lastBands = [];
     this.livePoints = [];
     this.pendingStart = null;
     this.smoothed = null;
+  }
+
+  /** Hide the band ribbons without destroying them, ready for the next stroke. */
+  private hideLive(): void {
+    for (let i = 0; i < this.live.length; i++) this.live[i].enabled = false;
   }
 
   // ── Per-frame ─────────────────────────────────────────────────────────────
@@ -390,6 +549,7 @@ export class GhostTurnController extends BaseScriptComponent {
   private onUpdate(): void {
     const dt = getDeltaTime();
     this.elapsed += dt;
+    this.updateSplash(dt);
 
     // Rejected ink fades out. The display is additive, so fading toward black
     // IS fading toward invisible.
@@ -401,15 +561,23 @@ export class GhostTurnController extends BaseScriptComponent {
         this.fading.splice(i, 1);
         continue;
       }
+      // Shiver, then evaporate. The sideways tremor is what makes rejected ink
+      // read as drying away rather than as simply being switched off; it dies
+      // out as the ink does, so the last thing seen is a fade, not a twitch.
       const k = 1 - f.t;
       f.ribbon.setColor(new vec4(f.from.x * k, f.from.y * k, f.from.z * k, f.from.w));
+      const shake = Math.sin(this.elapsed * 46) * 0.085 * k;
+      f.ribbon.sceneObject.getTransform().setLocalPosition(new vec3(shake, 0, 0));
     }
 
-    if (this.pulseOn) {
+    if (this.pulse && this.pulseOn) {
       const k = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this.elapsed * 6.0));
-      const c = new vec4(this.pulseColor.x * k, this.pulseColor.y * k, this.pulseColor.z * k, this.pulseColor.w);
-      if (this.pulse) this.pulse.mainMaterial.mainPass.baseColor = c;
-      if (this.worstGlow) this.worstGlow.setColor(c);
+      this.pulse.mainMaterial.mainPass.baseColor = new vec4(
+        this.pulseColor.x * k,
+        this.pulseColor.y * k,
+        this.pulseColor.z * k,
+        this.pulseColor.w
+      );
     }
   }
 
@@ -432,28 +600,18 @@ export class GhostTurnController extends BaseScriptComponent {
     this.pinchInput.strokeStart = { x: st.x, y: st.y };
   }
 
-  private showWorstGlow(points: Pt[]): void {
-    this.clearWorstGlow();
-    if (!this.sheet || points.length < 2) return;
-    this.worstGlow = new InkRibbon(this.sheet.inkRoot, "WorstPart", this.pulseColor, this.inkWidthCm * 1.4, 0.03);
-    this.worstGlow.setRawPoints(points);
-  }
-
-  private clearWorstGlow(): void {
-    if (this.worstGlow) {
-      this.worstGlow.sceneObject.destroy();
-      this.worstGlow = null;
-    }
-  }
-
   private setPulse(on: boolean): void {
     this.pulseOn = on;
     if (!on) {
+      this.pulseAt = null;
       if (this.pulse) this.pulse.getSceneObject().enabled = false;
       return;
     }
     if (!this.glyph || !this.sheet) return;
-    const start = this.glyph.strokes[this.strokeIndex].start;
+    // The Fix step points at the part that went wrong, falling back to the
+    // stroke's start only when there is no band to blame (a stroke too short
+    // to grade). "This bit, here" beats "begin again".
+    const start = this.pulseAt || this.glyph.strokes[this.strokeIndex].start;
     if (!this.pulse) {
       const w = 0.22;
       const r = 0.75;

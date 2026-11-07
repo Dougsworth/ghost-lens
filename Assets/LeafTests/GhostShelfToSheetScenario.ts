@@ -149,7 +149,13 @@ export class GhostShelfToSheetScenario extends Scenario {
     )
 
     // ── Replay / Slower / Next / Packs tabs on the right edge ───────────────
-    const tabs = interactor.tabs(true)
+    // Presence is checked against EVERY tab in the stack, not just the enabled
+    // ones. The UX overhaul hides tabs that are not useful in the current
+    // moment (none during the ghost's WATCH phase, a reduced set during the
+    // user's turn), so "which tabs are showing" is now a function of timing.
+    // What criterion 1 actually requires is that the sheet HAS these controls,
+    // which is a structural fact and is what this asserts.
+    const tabs = interactor.tabs()
     const labels = tabs.map((tab) => interactor.tabLabel(tab))
     // Not an exact count: the brief varies the stack per pack -- "in the Japanese
     // pack a mic tab (Ask GHOST) joins the stack", and ASL adds "Got it". What
@@ -175,17 +181,18 @@ export class GhostShelfToSheetScenario extends Scenario {
     // ── "all of it in view without moving my head" ──────────────────────────
     // Checked last on purpose: a framing problem is a real finding but must not
     // shadow the shelf-to-sheet transition asserted above.
+    const shownTabs = interactor.tabs(true)
     const tabsInView = getInteractables({
       sceneObjectName: "Item",
       ancestorName: TAB_STACK,
       enabledInHierarchy: true,
       inFoV: true,
     })
-    // "all of it in view" means every tab that is showing, whatever the pack
-    // puts in the stack -- not a fixed number of them.
+    // "all of it in view" means every tab that is SHOWING right now, whatever
+    // the pack and the current phase put in the stack -- not a fixed number.
     expect(
       tabsInView.length,
-      `bookmark tabs inside the camera field of view (of ${tabs.length} enabled; labels [${labels.join(", ")}])`,
-    ).toBe(tabs.length)
+      `bookmark tabs inside the camera field of view (of ${shownTabs.length} showing; stack labels [${labels.join(", ")}])`,
+    ).toBe(shownTabs.length)
   }
 }

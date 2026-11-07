@@ -1,0 +1,66 @@
+- !<AssetImportMetadata/6be2ca45-1fee-47a5-be94-df22c3eb2e71>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 2c5bbe10-7b6d-4451-b9ad-fb3044f8d016
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 2c5bbe10-7b6d-4451-b9ad-fb3044f8d016
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 11de8df2-24c0-4ee7-8033-ae7ae5252892
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/11de8df2-24c0-4ee7-8033-ae7ae5252892>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 871c9a7b-e0e0-494d-abcf-bc38c68c2155
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    dimInkColor: false
+    hoverColor: false
+    inkColor: false
+    paperColor: false
+    sheetHeightCm: false
+    sheetWidthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      inkColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}
+      dimInkColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
+      hoverColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
+      sheetWidthCm: !<float> 19.000000
+      sheetHeightCm: !<float> 23.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostFrontDoorUI &ndash; what do you want to learn?</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 paperColor = "{0.26,0.23,0.17,1}" {"hint":"Paper. Additive display, so this is a faint warm cream and never dark.", "widget":"color"}'
+    - '// @input vec4 inkColor = "{0.96,0.93,0.86,1}" {"hint":"Ink: the title, the mic glyph and the suggestion lines. Near-white, because dim type does not survive on glass.", "widget":"color"}'
+    - '// @input vec4 dimInkColor = "{0.62,0.58,0.50,1}" {"hint":"Quieter ink: the notebook row and the honest waiting line.", "widget":"color"}'
+    - '// @input vec4 hoverColor = "{0.46,0.41,0.31,1}" {"hint":"The wash that appears under a suggestion when you aim at it. No glow, no border — the paper simply darkens like wet ink.", "widget":"color"}'
+    - '// @input float sheetWidthCm = 19 {"hint":"Width of the front sheet, in cm.", "widget":"slider", "min":12, "max":26, "step":0.5}'
+    - '// @input float sheetHeightCm = 21 {"hint":"Height of the front sheet, in cm. The kana pack measured content past about 11 cm from centre falling outside the SPECS frame at 45 cm, so a sheet much taller than 21 puts its own bottom row out of view.", "widget":"slider", "min":14, "max":24, "step":0.5}'
+    - '// @ui {"widget":"group_end"}'

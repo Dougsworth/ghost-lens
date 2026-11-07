@@ -26,12 +26,18 @@ import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/
 import { GhostAslUI } from "./GhostAslUI";
 import { GhostAslController } from "./GhostAslController";
 import { ASL_SIGNS } from "./GhostAslPack";
-import { INTRO_LINE, lessonFor, praiseFor, tipFor } from "./GhostKanaLesson";
-import { Help, HELP_NAMES, SkillTeacher } from "./GhostTeacher";
-import { pathPartName } from "./GhostSkillCheck";
+import {
+  SAY_MISS, SAY_WATCH, SAY_YOUR_TURN, lessonFor, praiseFor, strokeOf, tipFor,
+} from "./GhostKanaLesson";
 import { GhostGuitarUI } from "./GhostGuitarUI";
 import { GhostGuitarController } from "./GhostGuitarController";
 import { GUITAR_CHORDS } from "./GhostGuitarPack";
+import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
+import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
+import { GhostCoach } from "./GhostCoach";
+import { Lesson } from "./GhostLessonSchema";
+import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
+import { Help, SkillTeacher } from "./GhostTeacher";
 import {
   GUITAR_LEGEND,
   GUITAR_STRUM_LINE,
@@ -41,7 +47,7 @@ import {
 } from "./GhostGuitarLesson";
 
 /** What the sheet is currently doing. */
-type Mode = "shelf" | "demo" | "turn" | "finished" | "ask" | "asl" | "guitar";
+type Mode = "front" | "shelf" | "demo" | "turn" | "finished" | "ask" | "asl" | "guitar";
 
 @component
 export class GhostMain extends BaseScriptComponent {
@@ -115,6 +121,22 @@ export class GhostMain extends BaseScriptComponent {
   guitar!: GhostGuitarController;
 
   @input
+  @hint("Group root holding the front door sheet.")
+  frontRoot!: SceneObject;
+
+  @input
+  @hint("The front door: what do you want to learn?")
+  frontUI!: GhostFrontDoorUI;
+
+  @input
+  @hint("Plans a lesson, or falls back to a bundled one. Never fails.")
+  lessonSource!: GhostLessonSource;
+
+  @input
+  @hint("One short line after each attempt. Never blocks the lesson.")
+  coach!: GhostCoach;
+
+  @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
   audio!: GhostAudio;
   @ui.group_end
@@ -123,8 +145,8 @@ export class GhostMain extends BaseScriptComponent {
   @ui.label('<span style="color: #60A5FA;">Settings</span>')
   @ui.group_start("Settings")
   @input
-  @hint("Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.")
-  lessonSequence: string = "あいうえお";
+  @hint("Characters taught by the Japanese pack, in order. SIMPLEST FIRST: い う え are two strokes, あ お are three. Starting on the easiest shape and adding a stroke later is what lets the guide outline be withdrawn without the lesson falling over. The engine can read any of KanaStrokes' 168 kana.")
+  lessonSequence: string = "いうえあお";
 
   @input
   @hint("Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin.")
@@ -136,24 +158,24 @@ export class GhostMain extends BaseScriptComponent {
   anchorDistanceCm: number = 45;
 
   @input
-  @hint("Seconds the finished sheet rests with its stamp before the page turns.")
-  @widget(new SliderWidget(0.2, 3, 0.1))
-  stampHoldSec: number = 1.1;
+  @hint("Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.")
+  @widget(new SliderWidget(1, 6, 1))
+  cleanRunsBeforeFade: number = 1;
 
   @input
-  @hint("Help ladder: how bright the guide shows at the 'Faded guide' level, 0..1 of the full outline.")
-  @widget(new SliderWidget(0.1, 0.9, 0.05))
-  fadedGuideStrength: number = 0.4;
-
-  @input
-  @hint("Help ladder: at the 'Hint only' level the guide stays hidden until the user has been idle this many seconds, then shows just the current stroke.")
+  @hint("Once the guide has faded away completely, show just the current stroke as a hint after the user has been idle this many seconds. Help when stuck, never before.")
   @widget(new SliderWidget(0.5, 8, 0.5))
   hintAfterSec: number = 2.5;
 
   @input
-  @hint("Help ladder: brightness of that one-stroke hint, 0..1 of the full outline.")
+  @hint("Brightness of that one-stroke hint, 0..1 of the full outline.")
   @widget(new SliderWidget(0.1, 1, 0.05))
   hintGuideStrength: number = 0.5;
+
+  @input
+  @hint("Seconds the finished sheet rests with its stamp before the page turns.")
+  @widget(new SliderWidget(0.2, 3, 0.1))
+  stampHoldSec: number = 1.1;
 
   @input
   @hint("Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart.")
@@ -161,7 +183,24 @@ export class GhostMain extends BaseScriptComponent {
   @ui.group_end
 
   private characters: string[] = [];
-  private introShown = false;
+  /** Characters finished with no miss, in a row. Drives the guide fade. */
+  private cleanRun = 0;
+  /** True while the character on the sheet has not been missed once. */
+  private cleanCharacter = true;
+
+  /**
+   * The shared coach (GhostTeacher), used here for spaced, shuffled review:
+   * every finished character is "stamped", and comes back later — after the
+   * next stamp, then three after that — to be written with no demonstration
+   * and no guide. The guide fade itself stays the cleanRun ladder above, which
+   * keeps one stamp per character as the brief asks. Items start at Solo so
+   * each completion counts as the stamp.
+   */
+  private teacher = new SkillTeacher({ firstTryLevel: Help.Solo, floorLevel: Help.Solo, reviewGaps: [1, 3] });
+  /** True while the sheet holds a review of an already-finished character. */
+  private reviewing = false;
+  /** True once the stuck-hint has been shown for the current stroke. */
+  private hintShown = false;
   private praiseCount = 0;
   private currentChar = "";
   private lessonIndex = 0;
@@ -170,38 +209,36 @@ export class GhostMain extends BaseScriptComponent {
   /** >= 0 while the ghost is re-showing one stroke after repeated misses. */
   private redemoIndex = -1;
 
-  /**
-   * The shared coach: per-character help level, stamps, shuffled reviews. The
-   * Japanese pack is the first to run on it; it knows nothing about kana.
-   */
-  private teacher = new SkillTeacher();
-  /** True once the 'Hint only' level has shown its one-stroke hint this stroke. */
-  private hintShown = false;
-  /** True while the sheet holds a review of an already-stamped character. */
-  private reviewing = false;
-  /** Bumped every time a character is put on the sheet, so a delayed rewrite can tell it is stale. */
-  private pageSerial = 0;
-
   // Ask GHOST writes a whole word, one character at a time.
   private askChars: string[] = [];
   private askPos = 0;
   private askCaption = "";
 
+  /**
+   * Per frame, one job: hint only when stuck. Once the guide has faded to
+   * nothing, a learner who sits still for hintAfterSec gets just the stroke
+   * they are on, faintly — the current target, not the whole path.
+   */
+  private onUpdate(): void {
+    if (this.mode !== "turn" || this.hintShown || !this.glyph || !this.turn || !this.demo) return;
+    if (this.demo.currentGuideStrength > 0.01) return;
+    if (this.turn.idleSeconds < this.hintAfterSec) return;
+    this.hintShown = true;
+    this.demo.showHint(this.turn.currentStroke, this.hintGuideStrength);
+  }
+
+  /** Put the guide back to its earned strength and re-arm the stuck timer. */
+  private clearHint(): void {
+    if (this.hintShown && this.demo) this.demo.setGuideStrength(this.demo.currentGuideStrength);
+    this.hintShown = false;
+  }
+
   onAwake(): void {
+    this.createEvent("UpdateEvent").bind(() => this.onUpdate());
     // Cross-component access is NOT safe in onAwake: a ScriptComponent reached
     // through an @input has not run its own onAwake yet, so its Event fields do
     // not exist. Lens Studio runs every onAwake before any onStart.
     this.createEvent("OnStartEvent").bind(() => this.onStart());
-    this.createEvent("UpdateEvent").bind(() => this.onUpdate());
-  }
-
-  /** Per frame: only the 'Hint only' help level needs watching (help when stuck). */
-  private onUpdate(): void {
-    if (this.mode !== "turn" || this.hintShown || !this.glyph || !this.turn) return;
-    if (this.teacher.level(this.currentChar) !== Help.Hint) return;
-    if (this.turn.idleSeconds < this.hintAfterSec) return;
-    this.hintShown = true;
-    this.demo.setGuideStrength(this.hintGuideStrength, this.turn.currentStroke);
   }
 
   private onStart(): void {
@@ -210,7 +247,8 @@ export class GhostMain extends BaseScriptComponent {
       !this.shelfUI || !this.sheetUI || !this.askUI ||
       !this.sheet || !this.demo || !this.turn || !this.pinchInput || !this.audio ||
       !this.aslRoot || !this.aslUI || !this.asl ||
-      !this.guitarRoot || !this.guitarUI || !this.guitar
+      !this.guitarRoot || !this.guitarUI || !this.guitar ||
+      !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach
     ) {
       print("[GhostMain] ERROR: a required @input is not wired. Check the scene bootstrap's input-wiring pass.");
       return;
@@ -248,6 +286,11 @@ export class GhostMain extends BaseScriptComponent {
     this.aslUI.onPacks.add(() => this.onPacks());
     this.asl.onSignFinished.add(() => this.onSignFinished());
 
+    this.frontUI.onSkillPicked.add((skill: string) => this.onSkillPicked(skill));
+    this.frontUI.onMicPressed.add(() => this.onMicPressed());
+    this.frontUI.onNotebookPicked.add((id: string) => this.onPackSelected(id));
+    this.coach.onTip.add((tip: string) => this.onCoachTip(tip));
+
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
     this.guitarUI.onNext.add(() => this.onGuitarNext());
     this.guitarUI.onPacks.add(() => this.onPacks());
@@ -264,7 +307,7 @@ export class GhostMain extends BaseScriptComponent {
     // and a SceneObject disabled before OnStart never initialises at all. Wait a
     // beat so every control finishes building before hiding the unused halves.
     const ready = this.createEvent("DelayedCallbackEvent");
-    ready.bind(() => this.showShelf());
+    ready.bind(() => this.showFrontDoor());
     ready.reset(0.1);
   }
 
@@ -286,6 +329,7 @@ export class GhostMain extends BaseScriptComponent {
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.shelfRoot.enabled = true;
   }
 
@@ -303,11 +347,11 @@ export class GhostMain extends BaseScriptComponent {
 
   /**
    * Shared by the lesson and by Ask GHOST: put one character on a fresh sheet.
-   * `review` skips the demonstration: a stamped character coming back for a
-   * quick unaided check, so the ghost must not write it first.
+   * `review` is a finished character coming back for spaced review: no
+   * demonstration and no guide, just the sheet and the start marker — the
+   * "can you still do it alone?" check the research puts the learning in.
    */
   private beginCharacter(character: string, unroll: boolean, review: boolean = false): void {
-    this.pageSerial++;
     this.glyph = buildGlyphPath(character, this.demo.glyphUnitCm, true);
     if (!this.glyph) {
       print("[GhostMain] ERROR: no stroke data for '" + character + "'.");
@@ -326,19 +370,28 @@ export class GhostMain extends BaseScriptComponent {
     this.sheetUI.setRomaji(lesson ? lesson.romaji : "");
     this.sheetUI.setHook(lesson ? lesson.hook : "");
     this.sheetUI.setProgress(this.characters.length, this.lessonIndex, this.lessonIndex);
-    this.sheetUI.setLine("");
+    this.sheetUI.clearSay();
+
+    this.cleanCharacter = true;
+    this.demo.setGuideStrength(this.guideStrengthNow());
 
     this.shelfRoot.enabled = false;
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.lessonRoot.enabled = true;
 
     if (review) {
+      // Straight to the user's turn on a bare sheet. The earned fade (cleanRun)
+      // is left alone; only this sheet is guide-free. A miss still hands the
+      // outline back, exactly as in a normal turn.
       this.anchorInFrontOfUser();
       this.sheet.showImmediate();
       this.sheet.hideStamp();
+      this.demo.setGuideStrength(0);
       this.demo.showGuideOnly();
+      this.sheetUI.setCaption("REVIEW");
       this.beginUserTurn();
       return;
     }
@@ -357,6 +410,12 @@ export class GhostMain extends BaseScriptComponent {
   private startDemo(slow: boolean): void {
     if (!this.glyph) return;
     this.mode = "demo";
+    // The ghost is showing the stroke; its own brush is the marker.
+    this.sheetUI.clearTurnMarkers();
+    this.demo.setBrushVisible(true);
+    // Nothing to do during WATCH, so nothing to reach for.
+    this.sheetUI.setTabsVisible([]);
+    this.sheetUI.say(SAY_WATCH, 1.4);
     this.redemoIndex = -1;
     this.turn.stop();
     this.sheetUI.clearStrokeNumbers();
@@ -369,51 +428,90 @@ export class GhostMain extends BaseScriptComponent {
   private beginUserTurn(): void {
     if (!this.glyph) return;
     this.mode = "turn";
+    this.hintShown = false;
     this.sheetUI.setStrokeCounter(1, this.glyph.strokeCount);
-    this.demo.parkBrushAt(0);
+    // The ghost's own furniture comes down as the sheet is handed over: its
+    // scattered stroke numbers, and its brush. Both are replaced by the single
+    // numbered start marker below, which says the same thing for the one
+    // stroke that matters and nothing for the others.
+    this.sheetUI.clearStrokeNumbers();
+    this.demo.setBrushVisible(false);
     this.turn.begin(this.glyph);
-    // The demonstration has been seen: the coach starts this character at full
-    // help (Trace) the first time, or wherever it got to on earlier tries.
-    this.teacher.watched(this.currentChar);
-    this.applyHelp("");
+    this.showTurnMarkers(0);
+    // Only what is useful mid-stroke. The brief asks for Replay and Next
+    // alone; Packs stays until rule 4's palm-up menu exists to carry it,
+    // because without it there is no way out of a lesson at all.
+    this.sheetUI.setTabsVisible(["Replay", "Next", "Packs"]);
+    this.sayTurnSequence(0);
 
-    // First lesson only: say what to do, once, then get out of the way. After
-    // that the line carries the per-stroke tip instead.
-    if (!this.introShown) {
-      this.introShown = true;
-      this.sheetUI.setLine(INTRO_LINE);
-      const clear = this.createEvent("DelayedCallbackEvent");
-      clear.bind(() => this.showStrokeTip(0));
-      clear.reset(3.0);
-      return;
-    }
-    this.showStrokeTip(0);
   }
 
   /**
-   * Make the sheet show the help level the coach has for this character:
-   *   Trace       -> the full pale outline
-   *   Faded guide -> a faint outline
-   *   Hint only   -> nothing, until the user is stuck (see onUpdate)
-   *   Solo        -> nothing at all
-   * The caption under the sheet says where they are on the ladder, prefixed by
-   * `lead` (what just happened) when there is something to say.
+   * The three big words that open a stroke: YOUR TURN, which stroke it is, and
+   * how to move. One at a time, each replacing the last, so there is never a
+   * second line on screen.
    */
-  private applyHelp(lead: string): void {
-    const level = this.teacher.level(this.currentChar);
-    this.hintShown = false;
-    if (level <= Help.Shadow) this.demo.setGuideStrength(1);
-    else if (level === Help.Faded) this.demo.setGuideStrength(this.fadedGuideStrength);
-    else this.demo.setGuideStrength(0);
+  private sayTurnSequence(strokeIndex: number): void {
+    if (!this.glyph) return;
+    this.sheetUI.say(SAY_YOUR_TURN, 1.1);
 
-    const step = Math.max(1, level) + " of " + Help.Solo;
-    const where = (this.reviewing ? "Review · " : "") + HELP_NAMES[level] + " (" + step + ")";
-    this.sheetUI.setCaption(lead.length > 0 ? lead + " · " + where : where);
+    const n = this.glyph.strokeCount;
+    const which = this.createEvent("DelayedCallbackEvent");
+    which.bind(() => {
+      if (this.mode !== "turn") return;
+      this.sheetUI.say(strokeOf(strokeIndex, n), 1.1);
+      const how = this.createEvent("DelayedCallbackEvent");
+      how.bind(() => {
+        if (this.mode !== "turn") return;
+        this.showStrokeTip(strokeIndex);
+      });
+      how.reset(1.5);
+    });
+    which.reset(1.5);
+  }
+
+  /**
+   * How much guide outline this character gets: the full outline, then a
+   * ghost of it, then none.
+   *
+   * The ladder is earned per CHARACTER rather than per stroke, because one
+   * lucky stroke is not evidence and withdrawing the outline mid-character
+   * would change the task halfway through it.
+   */
+  private guideStrengthNow(): number {
+    const n = Math.max(1, this.cleanRunsBeforeFade);
+    if (this.cleanRun < n) return 1;
+    if (this.cleanRun < n * 2) return 0.45;
+    return 0;
+  }
+
+  /**
+   * Put the start dot, the direction arrow and the end dot on ONE stroke: the
+   * one the user is about to draw. Clears them when there is no such stroke.
+   */
+  private showTurnMarkers(strokeIndex: number): void {
+    if (!this.glyph || strokeIndex < 0 || strokeIndex >= this.glyph.strokeCount) {
+      this.sheetUI.clearTurnMarkers();
+      return;
+    }
+    const s = this.glyph.strokes[strokeIndex];
+    // The heading is taken a little way along the stroke rather than from the
+    // very next point: adjacent points are a fraction of a millimetre apart
+    // after the spline densification, and their direction is noise.
+    const headAt = Math.min(s.points.length - 1, Math.max(1, Math.floor(s.points.length * 0.12)));
+    this.sheetUI.showTurnMarkers(strokeIndex + 1, s.start, s.points[headAt], s.end);
   }
 
   /** The one line above the sheet: how to move for the stroke about to be drawn. */
   private showStrokeTip(strokeIndex: number): void {
-    this.sheetUI.setLine(tipFor(this.currentChar, strokeIndex));
+    // A planned lesson carries its own tip per STEP; the kana pack has one per
+    // stroke. Both end up in the same single line.
+    const tip = this.playingPlanned
+      ? this.plannedTip
+      : tipFor(this.currentChar, strokeIndex);
+    // Hold 0: the instruction for the stroke you are about to draw stays up
+    // until something replaces it, unlike the transient WATCH / NICE words.
+    this.sheetUI.say(tip, 0);
   }
 
 
@@ -441,9 +539,11 @@ export class GhostMain extends BaseScriptComponent {
 
     // Re-showed one stroke after misses: give the sheet straight back.
     if (this.redemoIndex >= 0) {
+      const back = this.redemoIndex;
       this.redemoIndex = -1;
       this.mode = "turn";
       this.turn.resume();
+      this.showTurnMarkers(back);
       return;
     }
 
@@ -459,49 +559,57 @@ export class GhostMain extends BaseScriptComponent {
 
   private onStrokeAccepted(index: number): void {
     if (!this.glyph) return;
+    // The stuck-hint was for the stroke just finished; the next starts unaided.
+    this.clearHint();
     this.audio.playInkDry();
-    // The brush hops to the start of the next stroke.
-    const next = Math.min(index + 1, this.glyph.strokeCount - 1);
-    this.demo.parkBrushAt(next);
+    // The marker hops to the start of the next stroke. The ghost's brush used
+    // to do this, but it is hidden during the user's turn now — parkBrushAt
+    // re-enables it as a side effect, so calling it here would bring it back.
+    this.showTurnMarkers(index + 1 < this.glyph.strokeCount ? index + 1 : -1);
     this.sheetUI.setStrokeCounter(Math.min(index + 2, this.glyph.strokeCount), this.glyph.strokeCount);
 
     // A word, then the next instruction. Praise alone would leave the user
     // without a next step; the tip alone would feel like silence after effort.
-    // 'Hint only': the one-stroke hint was for the stroke just finished. Hide it
-    // again so the next stroke starts unaided, and re-arm the stuck timer.
-    if (this.teacher.level(this.currentChar) === Help.Hint) {
-      this.demo.setGuideStrength(0);
-      this.hintShown = false;
-    }
-
     const last = index >= this.glyph.strokeCount - 1;
-    this.sheetUI.setLine(praiseFor(this.praiseCount));
+    this.sheetUI.say(praiseFor(this.praiseCount), 0.9);
+    if (this.playingPlanned && last) this.askCoach(index, "ok");
     this.praiseCount++;
     if (!last) {
       const then = this.createEvent("DelayedCallbackEvent");
-      then.bind(() => this.showStrokeTip(index + 1));
-      then.reset(1.1);
+      then.bind(() => {
+        if (this.mode !== "turn") return;
+        this.sheetUI.say(strokeOf(index + 1, this.glyph ? this.glyph.strokeCount : 0), 1.0);
+        const how = this.createEvent("DelayedCallbackEvent");
+        how.bind(() => {
+          if (this.mode === "turn") this.showStrokeTip(index + 1);
+        });
+        how.reset(1.4);
+      });
+      then.reset(1.3);
     }
   }
 
   private onStrokeMissed(info: MissInfo): void {
-    // No harsh error and no red X — a soft sound, and the start point pulses.
+    // No harsh error and no red X — a soft sound, and the missed part pulses.
     this.audio.playMiss();
-    // Re-show the movement for THIS stroke. Saying nothing after a miss reads
-    // as a dead end; repeating the tip is the quietest useful answer.
-    this.showStrokeTip(info.index);
-
-    // The coach: a miss means one level MORE help, shown straight away. The
-    // feedback leads with what went right, then names the single worst part
-    // (the turn controller is already lighting that part up on the sheet).
-    if (!this.glyph) return;
-    this.teacher.recordMiss(this.currentChar);
-    const before = info.index > 0 ? "Strokes 1–" + info.index + " good" : "Good start";
-    let fix = "";
-    if (info.reason === "reversed") fix = "stroke " + (info.index + 1) + " goes the other way";
-    else if (info.reason === "short") fix = "draw all of stroke " + (info.index + 1);
-    else fix = pathPartName(info.worstPart, info.parts) + " of stroke " + (info.index + 1) + " drifted — follow the glow";
-    this.applyHelp(before + "; " + fix);
+    // Struggling: give the outline straight back, at full strength, and start
+    // earning the fade again. Guidance that only ever goes away is a trap.
+    this.cleanCharacter = false;
+    this.cleanRun = 0;
+    this.hintShown = false;
+    this.demo.setGuideStrength(1);
+    this.sheetUI.say(SAY_MISS, 1.0);
+    // The coach answers after TRY AGAIN has had its moment. It always answers,
+    // so there is no branch here for "no planner" — see GhostCoach.
+    this.askCoach(info.index, info.reason);
+    // Re-show the movement for THIS stroke once TRY AGAIN has had its moment.
+    // Saying nothing after a miss reads as a dead end; repeating the tip is
+    // the quietest useful answer.
+    const again = this.createEvent("DelayedCallbackEvent");
+    again.bind(() => {
+      if (this.mode === "turn") this.showStrokeTip(info.index);
+    });
+    again.reset(1.3);
   }
 
   private onNeedsDemo(index: number): void {
@@ -513,30 +621,17 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private onCharacterComplete(): void {
-    if (!this.glyph) return;
-    const outcome = this.teacher.recordPass(this.currentChar);
-
-    // Not Solo yet: the character is written, so take one level of help away
-    // and write it again on a clean sheet — the practice-paper progression of
-    // dark model, faded tracing, then empty boxes.
-    if (!outcome.stamped) {
-      this.mode = "finished";
-      this.audio.playInkDry();
-      this.sheetUI.setCaption("Well done! Less help now: " + HELP_NAMES[outcome.level]);
-      const page = this.pageSerial;
-      const again = this.createEvent("DelayedCallbackEvent");
-      again.bind(() => {
-        if (this.mode !== "finished" || !this.glyph || page !== this.pageSerial) return;
-        this.turn.clearAll();
-        this.beginUserTurn();
-      });
-      again.reset(this.stampHoldSec + 0.4);
-      return;
-    }
-
-    // Solo pass: the stamp is earned — only ever for an unaided attempt.
     this.mode = "finished";
-    this.sheetUI.setCaption(outcome.wasReview ? "Still got it! Reviewed." : "Solo! Stamped.");
+    this.sheetUI.clearTurnMarkers();
+    this.sheetUI.showAllTabs();
+    if (this.cleanCharacter) this.cleanRun++;
+    // Tell the coach this built-in character is done, so it can schedule its
+    // spaced reviews. Planned "teach me anything" steps are one-off drawings,
+    // not a set to revisit, so they stay out of it.
+    if (!this.playingPlanned && this.currentChar.length > 0) {
+      this.teacher.watched(this.currentChar);
+      this.teacher.recordPass(this.currentChar);
+    }
     this.audio.playStamp();
     this.sheet.showStamp();
     const after = this.createEvent("DelayedCallbackEvent");
@@ -549,11 +644,13 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPageTurnComplete(): void {
     if (this.mode !== "finished") return;
-
-    // Spaced, shuffled review: before the next new character, bring back a
-    // stamped one that is due, to be written Solo with no demonstration. A
-    // review is never followed by another review, so new material keeps
-    // flowing.
+    if (this.playingPlanned) {
+      this.beginPlannedStep(this.lessonPos + 1);
+      return;
+    }
+    // Spaced, shuffled review before the next new character: bring back a
+    // finished one that is due, picked at random among those due. A review is
+    // never followed by another review, so new material keeps flowing.
     if (!this.reviewing) {
       const due = this.teacher.takeDueReview(this.currentChar);
       if (due) {
@@ -563,7 +660,25 @@ export class GhostMain extends BaseScriptComponent {
       }
     }
     this.reviewing = false;
+    this.sheetUI.setCaption("");
     this.openLesson(this.lessonIndex + 1);
+  }
+
+  /**
+   * Ask the coach about the attempt just made.
+   *
+   * Only during a planned lesson: the kana pack already has hand-written tips
+   * per stroke, and a model's line would be competing with writing that was
+   * tuned for the character rather than generated for it.
+   */
+  private askCoach(strokeIndex: number, reason: string): void {
+    if (!this.playingPlanned || !this.glyph) return;
+    this.coach.ask({
+      skill: this.lessonSkill,
+      step: "stroke " + (strokeIndex + 1) + " of " + this.glyph.strokeCount,
+      reason: reason,
+      detail: this.plannedTip,
+    });
   }
 
 
@@ -608,7 +723,8 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPacks(): void {
     this.audio.playTap();
-    this.showShelf();
+    // The front door is the home now; the shelf is only reachable from it.
+    this.showFrontDoor();
   }
 
   private onAsk(): void {
@@ -622,6 +738,7 @@ export class GhostMain extends BaseScriptComponent {
     this.asl.stop();
     this.asl.setVisible(false);
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.guitar.clear();
     this.askRoot.enabled = true;
     // Ask opens as its own surface, so it needs placing in front of the user
@@ -693,6 +810,7 @@ export class GhostMain extends BaseScriptComponent {
     this.lessonRoot.enabled = false;
     this.askRoot.enabled = false;
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.guitar.clear();
     this.aslRoot.enabled = true;
     this.anchorInFrontOfUser();
@@ -720,6 +838,192 @@ export class GhostMain extends BaseScriptComponent {
   private onAslReplay(): void {
     this.audio.playTap();
     this.openAsl(this.aslIndex);
+  }
+
+  // ── Front door ────────────────────────────────────────────────────────────
+  //
+  // The hero. The Lens opens here, not on the shelf: the question comes first
+  // and the built-in packs are a small row underneath it, because "teach me
+  // anything" is the product and the three packs are examples of it.
+
+  /** The planned lesson being taught, and where we are in it. */
+  private lesson: Lesson | null = null;
+  private lessonSkill = "";
+  private lessonSteps: number[] = [];
+  private lessonPos = 0;
+  private pending: { cancel: () => void } | null = null;
+  /** Rotates the three suggestions so each launch offers something different. */
+  private suggestionSeed = 0;
+
+  private showFrontDoor(): void {
+    this.mode = "front";
+    this.anchorInFrontOfUser();
+    this.demo.stop();
+    this.turn.stop();
+    this.turn.clearAll();
+    this.sheet.hide();
+    this.asl.stop();
+    this.asl.setVisible(false);
+    this.guitar.clear();
+    this.lesson = null;
+    this.lessonSteps = [];
+    if (this.pending) {
+      this.pending.cancel();
+      this.pending = null;
+    }
+
+    this.shelfRoot.enabled = false;
+    this.lessonRoot.enabled = false;
+    this.askRoot.enabled = false;
+    this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = true;
+
+    this.frontUI.setSuggestions(this.pickSuggestions());
+    this.frontUI.showPicker();
+  }
+
+  /**
+   * Three lines, rotated per launch so the front door does not feel static.
+   * Drawn from the bundled bank, which is also exactly the set that still
+   * works with no planner — so a suggestion can never lead to a dead end.
+   */
+  private pickSuggestions(): string[] {
+    const all = this.lessonSource.offlineSkills();
+    if (all.length <= 3) return all.slice();
+    const out: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      out.push(all[(this.suggestionSeed + i) % all.length]);
+    }
+    this.suggestionSeed = (this.suggestionSeed + 1) % all.length;
+    return out;
+  }
+
+  /**
+   * The mic. VoiceML is not wired in this build, so rather than pretend to
+   * listen the mic offers the typed list — which is the brief's own stand-in
+   * rule, and leaves the flow after it identical either way.
+   */
+  private onMicPressed(): void {
+    this.audio.playTap();
+    this.frontUI.setSuggestions(this.pickSuggestions());
+    this.frontUI.setWaiting("Speech is off in the preview — pick one of these.");
+  }
+
+  /** A suggestion was pinched. Plan the lesson, sketching it in as it lands. */
+  private onSkillPicked(skill: string): void {
+    this.audio.playTap();
+    this.lessonSkill = skill;
+    this.frontUI.beginOutline(skill);
+    // No spinner, and no fake progress: one honest line, replaced by the real
+    // step titles the moment they exist.
+    this.frontUI.setWaiting("Writing your lesson...");
+    this.audio.playUnroll();
+
+    this.pending = this.lessonSource.request(skill, (r: LessonResult) => {
+      this.pending = null;
+      if (this.mode !== "front") return;
+      this.onLessonReady(r);
+    });
+  }
+
+  /** The lesson exists. Ink its title lines on, then begin. */
+  private onLessonReady(r: LessonResult): void {
+    this.lesson = r.lesson;
+    this.lessonSteps = traceableSteps(r.lesson);
+    this.lessonPos = 0;
+    this.frontUI.setWaiting(r.origin === "bank" ? r.note : "");
+
+    // The outline is brushed on one line at a time rather than appearing whole,
+    // which is the spec's "ghost sketches the lesson as it arrives".
+    const steps = r.lesson.steps || [];
+    const inkOne = (i: number) => {
+      if (this.mode !== "front") return;
+      if (i >= steps.length) {
+        const go = this.createEvent("DelayedCallbackEvent");
+        go.bind(() => this.startPlannedLesson());
+        go.reset(1.2);
+        return;
+      }
+      this.frontUI.addOutlineLine(steps[i].title);
+      this.audio.playBrush();
+      const next = this.createEvent("DelayedCallbackEvent");
+      next.bind(() => inkOne(i + 1));
+      next.reset(0.45);
+    };
+    inkOne(0);
+  }
+
+  /**
+   * Teach the planned lesson on the practice sheet.
+   *
+   * Only the path steps are taught here: they are the ones the engine can
+   * actually check. A lesson with none of them has nothing this build can
+   * grade, so it returns to the front door rather than opening an empty sheet.
+   */
+  private startPlannedLesson(): void {
+    if (!this.lesson || this.lessonSteps.length === 0) {
+      this.frontUI.setWaiting("That one needs hands, which this build cannot check yet.");
+      return;
+    }
+    this.frontRoot.enabled = false;
+    this.beginPlannedStep(0);
+  }
+
+  private beginPlannedStep(pos: number): void {
+    if (!this.lesson) return;
+    if (pos >= this.lessonSteps.length) {
+      this.showFrontDoor();
+      return;
+    }
+    this.lessonPos = pos;
+    const step = this.lesson.steps[this.lessonSteps[pos]];
+    const glyph = glyphFromStep(step, this.lessonSkill, this.demo.glyphUnitCm);
+    if (!glyph) {
+      this.beginPlannedStep(pos + 1);
+      return;
+    }
+
+    this.glyph = glyph;
+    this.currentChar = "";
+    this.plannedTip = step.tip;
+
+    this.turn.stop();
+    this.turn.clearAll();
+    this.demo.setGlyph(glyph);
+    this.sheetUI.clearStrokeNumbers();
+    this.sheetUI.clearTurnMarkers();
+    this.sheetUI.setStrokeCounter(1, glyph.strokeCount);
+    this.sheetUI.setRomaji("");
+    this.sheetUI.setHook("");
+    this.sheetUI.setProgress(this.lessonSteps.length, pos, pos);
+    this.sheetUI.setCaption(step.title);
+
+    this.shelfRoot.enabled = false;
+    this.askRoot.enabled = false;
+    this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
+    this.lessonRoot.enabled = true;
+
+    this.cleanCharacter = true;
+    this.demo.setGuideStrength(this.guideStrengthNow());
+    this.anchorInFrontOfUser();
+    this.sheet.showUnroll();
+    this.audio.playUnroll();
+  }
+
+  /** The planned step's own tip, used instead of the kana table's. */
+  private plannedTip = "";
+
+  /** True while a planned lesson, not a built-in pack, is on the sheet. */
+  private get playingPlanned(): boolean {
+    return this.lesson !== null && this.lessonSteps.length > 0;
+  }
+
+  private onCoachTip(tip: string): void {
+    if (this.mode !== "turn") return;
+    this.sheetUI.say(tip, 2.2);
   }
 
   // ── Guitar pack ───────────────────────────────────────────────────────────

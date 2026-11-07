@@ -4755,13 +4755,6 @@
               "type": "AssignableType_1",
               "uiInfo": "{\"hint\":\"The notebook shelf UI module.\"}"
             },
-            "reanchorOnOpen": {
-              "isScriptInput": true,
-              "value": true,
-              "type": "bool",
-              "uiInfo": "{\"hint\":\"Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin.\"}",
-              "defaultValue": "true"
-            },
             "pinchInput": {
               "isScriptInput": true,
               "value": {
@@ -4770,6 +4763,36 @@
               },
               "type": "AssignableType_7",
               "uiInfo": "{\"hint\":\"Pinch source shared by the turn controller.\"}"
+            },
+            "stampHoldSec": {
+              "isScriptInput": true,
+              "value": 1.100000023841858,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds the finished sheet rests with its stamp before the page turns.\", \"widget\":\"slider\", \"min\":0.2, \"max\":3, \"step\":0.1}",
+              "defaultValue": "1.1"
+            },
+            "lessonSequence": {
+              "isScriptInput": true,
+              "value": "いうえあお",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"Characters taught by the Japanese pack, in order. SIMPLEST FIRST: い う え are two strokes, あ お are three. Starting on the easiest shape and adding a stroke later is what lets the guide outline be withdrawn without the lesson falling over. The engine can read any of KanaStrokes' 168 kana.\"}",
+              "defaultValue": "いうえあお"
+            },
+            "lessonSource": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "ccecc6dd-db91-4517-9eea-04a0b2398090",
+                "name": "GhostLessonSource"
+              },
+              "type": "AssignableType_13",
+              "uiInfo": "{\"hint\":\"Plans a lesson, or falls back to a bundled one. Never fails.\"}"
+            },
+            "anchorDistanceCm": {
+              "isScriptInput": true,
+              "value": 45,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}",
+              "defaultValue": "45"
             },
             "lessonRoot": {
               "isScriptInput": true,
@@ -4780,14 +4803,14 @@
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the practice sheet and its bookmark tabs.\"}"
             },
-            "aslRoot": {
+            "guitar": {
               "isScriptInput": true,
               "value": {
-                "UUID": "5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc",
-                "name": "Asl"
+                "UUID": "6c243e8b-bc4a-4c15-8631-6848532a862c",
+                "name": "GhostGuitarController"
               },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
+              "type": "AssignableType_11",
+              "uiInfo": "{\"hint\":\"The fretboard lesson: the ghost places the chord, then the user does.\"}"
             },
             "guitarRoot": {
               "isScriptInput": true,
@@ -4797,6 +4820,40 @@
               },
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the guitar pack's fretboard and tabs.\"}"
+            },
+            "reanchorOnOpen": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin.\"}",
+              "defaultValue": "true"
+            },
+            "frontUI": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "d1b6791f-b464-43b1-8a42-c0269bddd019",
+                "name": "GhostFrontDoorUI"
+              },
+              "type": "AssignableType_12",
+              "uiInfo": "{\"hint\":\"The front door: what do you want to learn?\"}"
+            },
+            "frontRoot": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "e2bcd6f6-93fe-4444-942d-4faff8bfc3f1",
+                "name": "FrontDoor"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the front door sheet.\"}"
+            },
+            "shelfRoot": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "9640457f-2916-4175-9241-1c5d42c1f173",
+                "name": "Shelf"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the notebook shelf.\"}"
             },
             "sheetUI": {
               "isScriptInput": true,
@@ -4813,12 +4870,30 @@
               "type": "bool",
               "uiInfo": "{\"hint\":\"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart.\"}"
             },
-            "stampHoldSec": {
+            "aslRoot": {
               "isScriptInput": true,
-              "value": 1.100000023841858,
+              "value": {
+                "UUID": "5fe423f7-d8bb-4c33-a91d-fa8c0cae37dc",
+                "name": "Asl"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
+            },
+            "coach": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "59563978-083f-486c-891e-d1f483058974",
+                "name": "GhostCoach"
+              },
+              "type": "AssignableType_14",
+              "uiInfo": "{\"hint\":\"One short line after each attempt. Never blocks the lesson.\"}"
+            },
+            "cleanRunsBeforeFade": {
+              "isScriptInput": true,
+              "value": 1,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Seconds the finished sheet rests with its stamp before the page turns.\", \"widget\":\"slider\", \"min\":0.2, \"max\":3, \"step\":0.1}",
-              "defaultValue": "1.1"
+              "uiInfo": "{\"hint\":\"Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":1}",
+              "defaultValue": "1"
             },
             "aslUI": {
               "isScriptInput": true,
@@ -4829,22 +4904,13 @@
               "type": "AssignableType_8",
               "uiInfo": "{\"hint\":\"The ASL lesson's sign name, hint and Got it tab.\"}"
             },
-            "shelfRoot": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "9640457f-2916-4175-9241-1c5d42c1f173",
-                "name": "Shelf"
-              },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the notebook shelf.\"}"
-            },
             "audio": {
               "isScriptInput": true,
               "value": {
                 "UUID": "31344314-8576-480c-a972-fbd63c3ecbe6",
                 "name": "GhostAudio"
               },
-              "type": "AssignableType_12",
+              "type": "AssignableType_15",
               "uiInfo": "{\"hint\":\"Brush, paper, stamp and spoken-character sounds.\"}"
             },
             "demo": {
@@ -4874,19 +4940,14 @@
               "type": "AssignableType_3",
               "uiInfo": "{\"hint\":\"The Ask GHOST word picker.\"}"
             },
-            "lessonSequence": {
+            "asl": {
               "isScriptInput": true,
-              "value": "あいうえお",
-              "type": "string",
-              "uiInfo": "{\"hint\":\"Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.\"}",
-              "defaultValue": "あいうえお"
-            },
-            "anchorDistanceCm": {
-              "isScriptInput": true,
-              "value": 45,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}",
-              "defaultValue": "45"
+              "value": {
+                "UUID": "fbf21fa8-39b9-4b83-9b07-dc9e31b6360b",
+                "name": "GhostAslController"
+              },
+              "type": "AssignableType_9",
+              "uiInfo": "{\"hint\":\"The ghost hands that demonstrate each ASL sign.\"}"
             },
             "askRoot": {
               "isScriptInput": true,
@@ -4897,15 +4958,6 @@
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the Ask GHOST word picker.\"}"
             },
-            "guitar": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "6c243e8b-bc4a-4c15-8631-6848532a862c",
-                "name": "GhostGuitarController"
-              },
-              "type": "AssignableType_11",
-              "uiInfo": "{\"hint\":\"The fretboard lesson: the ghost places the chord, then the user does.\"}"
-            },
             "guitarUI": {
               "isScriptInput": true,
               "value": {
@@ -4915,15 +4967,6 @@
               "type": "AssignableType_10",
               "uiInfo": "{\"hint\":\"The guitar lesson's chord name, progress and tabs.\"}"
             },
-            "asl": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "fbf21fa8-39b9-4b83-9b07-dc9e31b6360b",
-                "name": "GhostAslController"
-              },
-              "type": "AssignableType_9",
-              "uiInfo": "{\"hint\":\"The ghost hands that demonstrate each ASL sign.\"}"
-            },
             "scriptAsset": "@asset:Scripts/GhostMain.ts",
             "inputNames.0": "anchorDistanceCm",
             "inputNames.1": "askRoot",
@@ -4932,21 +4975,26 @@
             "inputNames.4": "aslRoot",
             "inputNames.5": "aslUI",
             "inputNames.6": "audio",
-            "inputNames.7": "debugColliders",
-            "inputNames.8": "demo",
-            "inputNames.9": "guitar",
-            "inputNames.10": "guitarRoot",
-            "inputNames.11": "guitarUI",
-            "inputNames.12": "lessonRoot",
-            "inputNames.13": "lessonSequence",
-            "inputNames.14": "pinchInput",
-            "inputNames.15": "reanchorOnOpen",
-            "inputNames.16": "sheet",
-            "inputNames.17": "sheetUI",
-            "inputNames.18": "shelfRoot",
-            "inputNames.19": "shelfUI",
-            "inputNames.20": "stampHoldSec",
-            "inputNames.21": "turn",
+            "inputNames.7": "cleanRunsBeforeFade",
+            "inputNames.8": "coach",
+            "inputNames.9": "debugColliders",
+            "inputNames.10": "demo",
+            "inputNames.11": "frontRoot",
+            "inputNames.12": "frontUI",
+            "inputNames.13": "guitar",
+            "inputNames.14": "guitarRoot",
+            "inputNames.15": "guitarUI",
+            "inputNames.16": "lessonRoot",
+            "inputNames.17": "lessonSequence",
+            "inputNames.18": "lessonSource",
+            "inputNames.19": "pinchInput",
+            "inputNames.20": "reanchorOnOpen",
+            "inputNames.21": "sheet",
+            "inputNames.22": "sheetUI",
+            "inputNames.23": "shelfRoot",
+            "inputNames.24": "shelfUI",
+            "inputNames.25": "stampHoldSec",
+            "inputNames.26": "turn",
             "name": "GhostMain",
             "enabled": true,
             "sceneObject": "@sceneObject:GHOST",
@@ -5422,13 +5470,6 @@
               "uiInfo": "{\"hint\":\"Width of each bookmark tab, in cm.\", \"widget\":\"slider\", \"min\":2, \"max\":8, \"step\":0.1}",
               "defaultValue": "3"
             },
-            "tabOffsetXCm": {
-              "isScriptInput": true,
-              "value": 8,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.\", \"widget\":\"slider\", \"min\":6, \"max\":16, \"step\":0.1}",
-              "defaultValue": "8.4"
-            },
             "tabHighlightColor": {
               "isScriptInput": true,
               "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
@@ -5450,13 +5491,6 @@
               "uiInfo": "{\"hint\":\"Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.\", \"widget\":\"color\"}",
               "defaultValue": "{0.26,0.23,0.17,1}"
             },
-            "progressDotRadiusCm": {
-              "isScriptInput": true,
-              "value": 0.20000000298023224,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"Radius of each progress dot, in cm.\", \"widget\":\"slider\", \"min\":0.08, \"max\":0.6, \"step\":0.02}",
-              "defaultValue": "0.2"
-            },
             "progressDoneColor": {
               "isScriptInput": true,
               "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
@@ -5464,12 +5498,33 @@
               "uiInfo": "{\"hint\":\"A progress dot for a character already finished.\", \"widget\":\"color\"}",
               "defaultValue": "{1.0,0.95,0.86,1}"
             },
+            "progressDotRadiusCm": {
+              "isScriptInput": true,
+              "value": 0.20000000298023224,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Radius of each progress dot, in cm.\", \"widget\":\"slider\", \"min\":0.08, \"max\":0.6, \"step\":0.02}",
+              "defaultValue": "0.2"
+            },
             "progressDimColor": {
               "isScriptInput": true,
               "value": "{x: 0.3, y: 0.28, z: 0.24, w: 1}",
               "type": "vec4",
               "uiInfo": "{\"hint\":\"A dot for a character not reached yet. Dim, never dark: on the additive display an 'empty' dot can only be dim.\", \"widget\":\"color\"}",
               "defaultValue": "{0.30,0.28,0.24,1}"
+            },
+            "tabOffsetXCm": {
+              "isScriptInput": true,
+              "value": 8,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.\", \"widget\":\"slider\", \"min\":6, \"max\":16, \"step\":0.1}",
+              "defaultValue": "8.4"
+            },
+            "markerColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.86, z: 0.55, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the turn markers: the numbered start dot, the direction arrow and the faint end dot. Warm amber so they read as guidance rather than as ink.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.86,0.55,1}"
             },
             "tabHeightCm": {
               "isScriptInput": true,
@@ -5494,17 +5549,18 @@
             },
             "scriptAsset": "@asset:Scripts/GhostSheetUI.ts",
             "inputNames.0": "counterOffsetCm",
-            "inputNames.1": "progressCurrentColor",
-            "inputNames.2": "progressDimColor",
-            "inputNames.3": "progressDoneColor",
-            "inputNames.4": "progressDotRadiusCm",
-            "inputNames.5": "tabGapCm",
-            "inputNames.6": "tabHeightCm",
-            "inputNames.7": "tabHighlightColor",
-            "inputNames.8": "tabOffsetXCm",
-            "inputNames.9": "tabPaperColor",
-            "inputNames.10": "tabWidthCm",
-            "inputNames.11": "typeColor",
+            "inputNames.1": "markerColor",
+            "inputNames.2": "progressCurrentColor",
+            "inputNames.3": "progressDimColor",
+            "inputNames.4": "progressDoneColor",
+            "inputNames.5": "progressDotRadiusCm",
+            "inputNames.6": "tabGapCm",
+            "inputNames.7": "tabHeightCm",
+            "inputNames.8": "tabHighlightColor",
+            "inputNames.9": "tabOffsetXCm",
+            "inputNames.10": "tabPaperColor",
+            "inputNames.11": "tabWidthCm",
+            "inputNames.12": "typeColor",
             "name": "GhostSheetUI",
             "enabled": true,
             "sceneObject": "@sceneObject:SheetFurniture",
@@ -5562,35 +5618,19 @@
               "type": "AssignableType_1",
               "uiInfo": "{\"hint\":\"The practice sheet. User ink is drawn into its inkRoot, in front of the ghost's guide.\"}"
             },
-            "wetInkColor": {
+            "onLineColor": {
               "isScriptInput": true,
-              "value": "{x: 1, y: 0.97, z: 0.9, w: 1}",
+              "value": "{x: 0.46, y: 1, z: 0.6, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}",
-              "defaultValue": "{1,0.97,0.90,1}"
+              "uiInfo": "{\"hint\":\"Live ink where the stroke is ON the guide. Additive display: an emitted green, bright enough to read against the warm paper.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.46,1,0.60,1}"
             },
-            "inputSmoothing": {
+            "onLineCm": {
               "isScriptInput": true,
-              "value": 0.5,
+              "value": 0.8999999761581421,
               "type": "float",
-              "uiInfo": "{\"hint\":\"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.\", \"widget\":\"slider\", \"min\":0, \"max\":0.9, \"step\":0.05}",
-              "defaultValue": "0.5"
-            },
-            "pinchInput": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "81890501-22b4-4d6f-9127-2579d6587b04",
-                "name": "GhostPinchInput"
-              },
-              "type": "AssignableType_2",
-              "uiInfo": "{\"hint\":\"Pinch source: SIK hand or mouse, plus the webcam bridge when connected.\"}"
-            },
-            "pulseColor": {
-              "isScriptInput": true,
-              "value": "{x: 1, y: 0.86, z: 0.55, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Colour of the pulsing marker that shows where to begin again after a miss.\", \"widget\":\"color\"}",
-              "defaultValue": "{1,0.86,0.55,1}"
+              "uiInfo": "{\"hint\":\"Distance from the guide, in cm, within which the ink reads as ON the line.\", \"widget\":\"slider\", \"min\":0.2, \"max\":3, \"step\":0.1}",
+              "defaultValue": "0.9"
             },
             "missesBeforeDemo": {
               "isScriptInput": true,
@@ -5613,12 +5653,49 @@
               "uiInfo": "{\"hint\":\"And at most this multiple of it, so scribbling cannot pass.\", \"widget\":\"slider\", \"min\":1, \"max\":5, \"step\":0.1}",
               "defaultValue": "3"
             },
-            "inkWidthCm": {
+            "wetInkColor": {
               "isScriptInput": true,
-              "value": 0.550000011920929,
+              "value": "{x: 1, y: 0.97, z: 0.9, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.97,0.90,1}"
+            },
+            "pulseColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.86, z: 0.55, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the pulsing marker that shows which part of the stroke to fix.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.86,0.55,1}"
+            },
+            "pinchInput": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "81890501-22b4-4d6f-9127-2579d6587b04",
+                "name": "GhostPinchInput"
+              },
+              "type": "AssignableType_2",
+              "uiInfo": "{\"hint\":\"Pinch source: SIK hand or mouse, plus the webcam bridge when connected.\"}"
+            },
+            "inputSmoothing": {
+              "isScriptInput": true,
+              "value": 0.5,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}",
-              "defaultValue": "0.55"
+              "uiInfo": "{\"hint\":\"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.\", \"widget\":\"slider\", \"min\":0, \"max\":0.9, \"step\":0.05}",
+              "defaultValue": "0.5"
+            },
+            "offColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.46, z: 0.38, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Live ink where the stroke is OFF. A warm red-orange rather than a signal red: the brief rules out a harsh error, so this has to read as ink that drifted, not as an alarm.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.46,0.38,1}"
+            },
+            "feedbackBands": {
+              "isScriptInput": true,
+              "value": 6,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How many coloured bands one stroke is split into. More bands localise a mistake more precisely; fewer read more calmly.\", \"widget\":\"slider\", \"min\":2, \"max\":10, \"step\":1}",
+              "defaultValue": "6"
             },
             "driedInkColor": {
               "isScriptInput": true,
@@ -5626,6 +5703,20 @@
               "type": "vec4",
               "uiInfo": "{\"hint\":\"Colour the user's ink dries to once a stroke is accepted. Stays on the sheet until the page turns.\", \"widget\":\"color\"}",
               "defaultValue": "{0.92,0.86,0.74,1}"
+            },
+            "inkWidthCm": {
+              "isScriptInput": true,
+              "value": 0.550000011920929,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}",
+              "defaultValue": "0.55"
+            },
+            "closeCm": {
+              "isScriptInput": true,
+              "value": 2.200000047683716,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"And within which it reads as CLOSE. Past this it reads as off. Both are display thresholds only — whether the stroke actually passes is still the mean test below.\", \"widget\":\"slider\", \"min\":0.5, \"max\":5, \"step\":0.1}",
+              "defaultValue": "2.2"
             },
             "toleranceCm": {
               "isScriptInput": true,
@@ -5641,6 +5732,13 @@
               "uiInfo": "{\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}",
               "defaultValue": "0.3"
             },
+            "closeColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.8, z: 0.36, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Live ink where the stroke is CLOSE. This still passes — it is a nudge, not a failure.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.80,0.36,1}"
+            },
             "armDistanceCm": {
               "isScriptInput": true,
               "value": 0.6000000238418579,
@@ -5650,19 +5748,25 @@
             },
             "scriptAsset": "@asset:Scripts/GhostTurnController.ts",
             "inputNames.0": "armDistanceCm",
-            "inputNames.1": "driedInkColor",
-            "inputNames.2": "inkWidthCm",
-            "inputNames.3": "inputSmoothing",
-            "inputNames.4": "maxLengthRatio",
-            "inputNames.5": "minDragSec",
-            "inputNames.6": "minLengthRatio",
-            "inputNames.7": "missesBeforeDemo",
-            "inputNames.8": "pinchInput",
-            "inputNames.9": "pulseColor",
-            "inputNames.10": "sheet",
-            "inputNames.11": "startToleranceCm",
-            "inputNames.12": "toleranceCm",
-            "inputNames.13": "wetInkColor",
+            "inputNames.1": "closeCm",
+            "inputNames.2": "closeColor",
+            "inputNames.3": "driedInkColor",
+            "inputNames.4": "feedbackBands",
+            "inputNames.5": "inkWidthCm",
+            "inputNames.6": "inputSmoothing",
+            "inputNames.7": "maxLengthRatio",
+            "inputNames.8": "minDragSec",
+            "inputNames.9": "minLengthRatio",
+            "inputNames.10": "missesBeforeDemo",
+            "inputNames.11": "offColor",
+            "inputNames.12": "onLineCm",
+            "inputNames.13": "onLineColor",
+            "inputNames.14": "pinchInput",
+            "inputNames.15": "pulseColor",
+            "inputNames.16": "sheet",
+            "inputNames.17": "startToleranceCm",
+            "inputNames.18": "toleranceCm",
+            "inputNames.19": "wetInkColor",
             "name": "GhostTurnController",
             "enabled": true,
             "sceneObject": "@sceneObject:TurnController",
@@ -6507,8 +6611,8 @@
               "isScriptInput": true,
               "value": "{x: 0.4, y: 0.38, z: 0.33, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.95,0.91,0.83,1}"
+              "uiInfo": "{\"hint\":\"Ghost hand colour, and the only thing that makes it TRANSLUCENT. The display is additive, so a surface is see-through exactly to the degree that it is dim: at the ASL pack's bright off-white the hand renders as a solid white slab covering the strings and the circles underneath it. Dim is what makes it a ghost.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.40,0.38,0.33,1}"
             },
             "chordBoxSizeCm": {
               "isScriptInput": true,
@@ -6640,6 +6744,271 @@
             "isPrefabInstanceRoot": false,
             "hasPrefabChanges": false,
             "id": "eff714b8-2a38-4a04-8c9f-08cf73b0a767",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "e2bcd6f6-93fe-4444-942d-4faff8bfc3f1",
+      "name": "FrontDoor",
+      "enabled": true,
+      "parentId": "d343f1c3-771e-4811-935b-0c37960832c5",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": []
+    },
+    {
+      "id": "52f1549f-23a1-4779-9174-8fbdb7e70f3f",
+      "name": "FrontPanel",
+      "enabled": true,
+      "parentId": "e2bcd6f6-93fe-4444-942d-4faff8bfc3f1",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "d1b6791f-b464-43b1-8a42-c0269bddd019",
+          "type": "ScriptComponent",
+          "name": "GhostFrontDoorUI",
+          "enabled": true,
+          "properties": {
+            "sheetWidthCm": {
+              "isScriptInput": true,
+              "value": 19,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Width of the front sheet, in cm.\", \"widget\":\"slider\", \"min\":12, \"max\":26, \"step\":0.5}",
+              "defaultValue": "19"
+            },
+            "sheetHeightCm": {
+              "isScriptInput": true,
+              "value": 21,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Height of the front sheet, in cm. The kana pack measured content past about 11 cm from centre falling outside the SPECS frame at 45 cm, so a sheet much taller than 21 puts its own bottom row out of view.\", \"widget\":\"slider\", \"min\":14, \"max\":24, \"step\":0.5}",
+              "defaultValue": "21"
+            },
+            "inkColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.96, y: 0.93, z: 0.86, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Ink: the title, the mic glyph and the suggestion lines. Near-white, because dim type does not survive on glass.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.96,0.93,0.86,1}"
+            },
+            "paperColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.26, y: 0.23, z: 0.17, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Paper. Additive display, so this is a faint warm cream and never dark.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.26,0.23,0.17,1}"
+            },
+            "hoverColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"The wash that appears under a suggestion when you aim at it. No glow, no border — the paper simply darkens like wet ink.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.46,0.41,0.31,1}"
+            },
+            "dimInkColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.62, y: 0.58, z: 0.5, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Quieter ink: the notebook row and the honest waiting line.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.62,0.58,0.50,1}"
+            },
+            "scriptAsset": "@asset:Scripts/GhostFrontDoorUI.ts",
+            "inputNames.0": "dimInkColor",
+            "inputNames.1": "hoverColor",
+            "inputNames.2": "inkColor",
+            "inputNames.3": "paperColor",
+            "inputNames.4": "sheetHeightCm",
+            "inputNames.5": "sheetWidthCm",
+            "name": "GhostFrontDoorUI",
+            "enabled": true,
+            "sceneObject": "@sceneObject:FrontPanel",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "d1b6791f-b464-43b1-8a42-c0269bddd019",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "22bdd82e-fff2-4ec3-b00c-f378117a8264",
+      "name": "LessonSource",
+      "enabled": true,
+      "parentId": "d343f1c3-771e-4811-935b-0c37960832c5",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "ccecc6dd-db91-4517-9eea-04a0b2398090",
+          "type": "ScriptComponent",
+          "name": "GhostLessonSource",
+          "enabled": true,
+          "properties": {
+            "useBridge": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Ask the bridge to plan a lesson when the gateway is unavailable. Turn off to force the bundled lessons.\"}",
+              "defaultValue": "true"
+            },
+            "timeoutSec": {
+              "isScriptInput": true,
+              "value": 75,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds to wait for a planned lesson before falling back to a bundled one. Two LLM calls take a while; too short and every lesson is offline.\", \"widget\":\"slider\", \"min\":5, \"max\":120, \"step\":5}",
+              "defaultValue": "75"
+            },
+            "internetModule": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "46241788-3794-4d79-b8b3-1684fe9f1e20"
+              },
+              "type": "Asset.InternetModule",
+              "uiInfo": "{\"hint\":\"Internet Module. Without it only the bundled lessons are available, which is a working state, not an error.\"}"
+            },
+            "bridgeUrl": {
+              "isScriptInput": true,
+              "value": "http://127.0.0.1:8766/lesson",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"The webcam bridge's lesson endpoint, used in the Lens Studio preview. Needs Experimental API enabled for a plain http:// URL, the same setting the hand bridge needs.\"}",
+              "defaultValue": "http://127.0.0.1:8766/lesson"
+            },
+            "scriptAsset": "@asset:Scripts/GhostLessonSource.ts",
+            "inputNames.0": "bridgeUrl",
+            "inputNames.1": "internetModule",
+            "inputNames.2": "timeoutSec",
+            "inputNames.3": "useBridge",
+            "name": "GhostLessonSource",
+            "enabled": true,
+            "sceneObject": "@sceneObject:LessonSource",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "ccecc6dd-db91-4517-9eea-04a0b2398090",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "76d3821b-2bfc-438c-b42e-7219fbb5ff81",
+      "name": "Coach",
+      "enabled": true,
+      "parentId": "d343f1c3-771e-4811-935b-0c37960832c5",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "59563978-083f-486c-891e-d1f483058974",
+          "type": "ScriptComponent",
+          "name": "GhostCoach",
+          "enabled": true,
+          "properties": {
+            "useBridge": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Ask the bridge for a written tip. Turn off to use only the bundled lines.\"}",
+              "defaultValue": "true"
+            },
+            "timeoutSec": {
+              "isScriptInput": true,
+              "value": 6,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds to wait for a tip before falling back. Short on purpose: the learner is mid-stroke, and a late tip is worse than a bundled one.\", \"widget\":\"slider\", \"min\":1, \"max\":15, \"step\":0.5}",
+              "defaultValue": "6"
+            },
+            "internetModule": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "46241788-3794-4d79-b8b3-1684fe9f1e20"
+              },
+              "type": "Asset.InternetModule",
+              "uiInfo": "{\"hint\":\"Internet Module. Without it the coach still speaks, using its bundled lines.\"}"
+            },
+            "bridgeUrl": {
+              "isScriptInput": true,
+              "value": "http://127.0.0.1:8766/coach",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"The webcam bridge's coach endpoint, used in the Lens Studio preview. Needs Experimental API enabled for a plain http:// URL.\"}",
+              "defaultValue": "http://127.0.0.1:8766/coach"
+            },
+            "scriptAsset": "@asset:Scripts/GhostCoach.ts",
+            "inputNames.0": "bridgeUrl",
+            "inputNames.1": "internetModule",
+            "inputNames.2": "timeoutSec",
+            "inputNames.3": "useBridge",
+            "name": "GhostCoach",
+            "enabled": true,
+            "sceneObject": "@sceneObject:Coach",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "59563978-083f-486c-891e-d1f483058974",
             "type": "ScriptComponent"
           }
         }
