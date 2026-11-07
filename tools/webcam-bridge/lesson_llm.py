@@ -30,6 +30,12 @@ import urllib.error
 import urllib.request
 
 GEMINI_MODEL = "gemini-flash-latest"
+#: Gemini thinking budgets, in tokens. Planning and review are the two calls
+#: that have to get a strict schema right first time, so they get a small
+#: budget; a coach tip is one sentence the learner is waiting on mid-stroke, so
+#: it gets none at all and comes back as fast as the network allows.
+GEMINI_PLAN_THINKING = 512
+GEMINI_COACH_THINKING = 0
 ANTHROPIC_MODEL = "claude-opus-5-5"
 OPENAI_MODEL = "gpt-5"
 TIMEOUT_S = 90
@@ -258,10 +264,14 @@ def _post(url, headers, payload):
         return json.loads(r.read().decode("utf-8"))
 
 
-def _gemini(system, user, key, json_mode=True):
+def _gemini(system, user, key, json_mode=True, thinking_budget=None):
     """Gemini via the REST endpoint. The key goes in a header, never the URL —
     query strings end up in proxy logs and shell history."""
     cfg = {"temperature": 0.4}
+    if thinking_budget is not None:
+        # 0 disables thinking entirely. Checked against None, not falsiness,
+        # because 0 is exactly the value the coach path wants to send.
+        cfg["thinkingConfig"] = {"thinkingBudget": int(thinking_budget)}
     if json_mode:
         # Gemini's JSON mode: the model is constrained to emit a single JSON
         # value, which removes the markdown-fence guessing _parse otherwise has
@@ -286,7 +296,7 @@ def _gemini(system, user, key, json_mode=True):
     return "".join(p.get("text", "") for p in parts)
 
 
-def _anthropic(system, user, key, json_mode=True):
+def _anthropic(system, user, key, json_mode=True, thinking_budget=None):
     body = _post(
         "https://api.anthropic.com/v1/messages",
         {"content-type": "application/json",
@@ -301,7 +311,7 @@ def _anthropic(system, user, key, json_mode=True):
                    if b.get("type") == "text")
 
 
-def _openai(system, user, key, json_mode=True):
+def _openai(system, user, key, json_mode=True, thinking_budget=None):
     payload = {"model": OPENAI_MODEL,
                "messages": [{"role": "system", "content": system},
                             {"role": "user", "content": user}]}
@@ -347,14 +357,16 @@ def model_name():
             "openai": OPENAI_MODEL}.get(name)
 
 
-def _call(system, user, json_mode=True):
+def _call(system, user, json_mode=True, thinking_budget=None):
     name, key = provider()
     if not name:
         raise RuntimeError(
             "No LLM key. Export GEMINI_API_KEY (or ANTHROPIC_API_KEY, or "
             "OPENAI_API_KEY) before starting the bridge. GHOST falls back to "
             "its bundled lessons.")
-    return _BACKENDS[name](system, user, key, json_mode)
+    # thinking_budget is Gemini-only; the other backends accept and ignore it
+    # so the caller never has to know which provider is live.
+    return _BACKENDS[name](system, user, key, json_mode, thinking_budget)
 
 
 def _parse(text):
@@ -390,7 +402,7 @@ REVIEW_SYSTEM = (
 
 def _attempt(system, user):
     """One call plus at most one repair round, fed the validator's complaints."""
-    raw = _call(system, user)
+    raw = _call(system, user, thinking_budget=GEMINI_PLAN_THINKING)
     try:
         return validate(_parse(raw))
     except (LessonInvalid, json.JSONDecodeError, KeyError) as e:
@@ -401,7 +413,8 @@ def _attempt(system, user):
             + "\n- ".join(str(x) for x in problems)
             + "\n\nYour previous reply was:\n" + (raw or "")[:12000]
         )
-        return validate(_parse(_call(system, repair)))
+        return validate(_parse(_call(system, repair,
+                                     thinking_budget=GEMINI_PLAN_THINKING)))
 
 
 # ── Coach ────────────────────────────────────────────────────────────────────
@@ -446,7 +459,8 @@ def coach_tip(skill, step, reason, detail=None):
             user += "\nExtra detail: %s" % detail
         # Plain text, not JSON: this is one sentence, and forcing JSON mode
         # here would only make the model wrap it in an object to unwrap again.
-        text = (_call(COACH_SYSTEM, user, json_mode=False) or "").strip()
+        text = (_call(COACH_SYSTEM, user, json_mode=False,
+                      thinking_budget=GEMINI_COACH_THINKING) or "").strip()
         text = text.strip('"').strip()
         # A model that ignores "one sentence" should not get to fill the HUD.
         if text and len(text) <= 160:
