@@ -349,11 +349,11 @@ export class GhostSheetUI extends BaseScriptComponent {
   // sits ABOVE the sheet so a changing instruction never jostles the fixed
   // block of text underneath it.
   private buildRomaji(): void {
-    this.romajiText = this.buildText("SheetRomaji", -9.1, "Headline1", 7);
+    this.romajiText = this.buildText("SheetRomaji", -8.9, "Title1", 7);
   }
 
   private buildHook(): void {
-    this.hookText = this.buildText("SheetHook", -11.0, "Caption", 9);
+    this.hookText = this.buildText("SheetHook", -10.3, "Body", 11);
   }
 
   private buildLine(): void {
@@ -361,7 +361,10 @@ export class GhostSheetUI extends BaseScriptComponent {
   }
 
   private buildDotRoot(): void {
-    const so = this.obj(this.sceneObject, "ProgressDots", new vec3(0, -12.6, 0.03));
+    // Above the sheet, not below: the romaji/hook block already fills the space
+    // under the paper, and content much below -11 cm falls outside the SPECS
+    // frame at 45 cm (measured, not assumed).
+    const so = this.obj(this.sceneObject, "ProgressDots", new vec3(0, 11.0, 0.03));
     so.enabled = false;
     this.dotRoot = so;
   }

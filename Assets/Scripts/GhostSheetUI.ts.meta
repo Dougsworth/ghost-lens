@@ -29,6 +29,10 @@
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
     counterOffsetCm: false
+    progressCurrentColor: false
+    progressDimColor: false
+    progressDoneColor: false
+    progressDotRadiusCm: false
     tabGapCm: false
     tabHeightCm: false
     tabHighlightColor: false
@@ -48,6 +52,10 @@
     - tabPaperColor: !<Vec4> {x: 0.220000, y: 0.200000, z: 0.150000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
       typeColor: !<Vec4> {x: 0.780000, y: 0.740000, z: 0.660000, w: 1.000000}
+      progressDoneColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      progressCurrentColor: !<Vec4> {x: 0.720000, y: 0.680000, z: 0.600000, w: 1.000000}
+      progressDimColor: !<Vec4> {x: 0.300000, y: 0.280000, z: 0.240000, w: 1.000000}
+      progressDotRadiusCm: 0.200000
       tabWidthCm: !<float> 4.000000
       tabHeightCm: 3.200000
       tabGapCm: 0.600000
@@ -64,6 +72,10 @@
     - "// @input vec4 tabPaperColor = \"{0.26,0.23,0.17,1}\" {\"hint\":\"Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.\", \"widget\":\"color\"}"
     - '// @input vec4 tabHighlightColor = "{0.46,0.41,0.31,1}" {"hint":"Tab colour when the user aims at it — the same paper, lit up. Still washi, never a highlight box.", "widget":"color"}'
     - '// @input vec4 typeColor = "{0.96,0.93,0.86,1}" {"hint":"Colour of the tab labels and the stroke counter. Near-white emitted light: on the additive display the faint washi tab gives the type no dark ground to sit on, so the letters have to carry their own brightness to read at 45 cm.", "widget":"color"}'
+    - '// @input vec4 progressDoneColor = "{1.0,0.95,0.86,1}" {"hint":"A progress dot for a character already finished.", "widget":"color"}'
+    - '// @input vec4 progressCurrentColor = "{0.72,0.68,0.60,1}" {"hint":"The dot for the character being practised now.", "widget":"color"}'
+    - "// @input vec4 progressDimColor = \"{0.30,0.28,0.24,1}\" {\"hint\":\"A dot for a character not reached yet. Dim, never dark: on the additive display an 'empty' dot can only be dim.\", \"widget\":\"color\"}"
+    - '// @input float progressDotRadiusCm = 0.2 {"hint":"Radius of each progress dot, in cm.", "widget":"slider", "min":0.08, "max":0.6, "step":0.02}'
     - '// @input float tabWidthCm = 3 {"hint":"Width of each bookmark tab, in cm.", "widget":"slider", "min":2, "max":8, "step":0.1}'
     - '// @input float tabHeightCm = 3.2 {"hint":"Height of each bookmark tab, in cm. The brief asks for at least 3 cm so they stay forgiving pinch targets.", "widget":"slider", "min":2, "max":6, "step":0.1}'
     - '// @input float tabGapCm = 0.6 {"hint":"Vertical gap between stacked tabs, in cm.", "widget":"slider", "min":0, "max":2, "step":0.1}'

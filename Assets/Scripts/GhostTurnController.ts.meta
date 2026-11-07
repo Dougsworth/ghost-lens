@@ -37,6 +37,7 @@
     pinchInput: false
     pulseColor: false
     sheet: false
+    startToleranceCm: false
     toleranceCm: false
     wetInkColor: false
   ScriptTypesHidden:
@@ -56,6 +57,7 @@
       toleranceCm: 1.600000
       minLengthRatio: 0.450000
       maxLengthRatio: 2.200000
+      startToleranceCm: !<float> 3.000000
       missesBeforeDemo: !<float> 3.000000
       inkWidthCm: 0.550000
       inputSmoothing: 0.500000
@@ -76,9 +78,10 @@
     - "// @input vec4 wetInkColor = \"{1,0.97,0.90,1}\" {\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}"
     - "// @input vec4 driedInkColor = \"{0.92,0.86,0.74,1}\" {\"hint\":\"Colour the user's ink dries to once a stroke is accepted. Stays on the sheet until the page turns.\", \"widget\":\"color\"}"
     - '// @input vec4 pulseColor = "{1,0.86,0.55,1}" {"hint":"Colour of the pulsing marker that shows where to begin again after a miss.", "widget":"color"}'
-    - '// @input float toleranceCm = 1.6 {"hint":"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.", "widget":"slider", "min":0.3, "max":4, "step":0.1}'
-    - "// @input float minLengthRatio = 0.45 {\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}"
-    - '// @input float maxLengthRatio = 2.2 {"hint":"And at most this multiple of it, so scribbling cannot pass.", "widget":"slider", "min":1, "max":4, "step":0.1}'
+    - '// @input float toleranceCm = 2.4 {"hint":"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.", "widget":"slider", "min":0.3, "max":5, "step":0.1}'
+    - "// @input float minLengthRatio = 0.3 {\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}"
+    - '// @input float maxLengthRatio = 3 {"hint":"And at most this multiple of it, so scribbling cannot pass.", "widget":"slider", "min":1, "max":5, "step":0.1}'
+    - "// @input float startToleranceCm = 3 {\"hint\":\"How far from the stroke's start point you may begin the drag, in cm, before that offset counts against the shape score. Forgives WHERE you start, not what you draw.\", \"widget\":\"slider\", \"min\":0, \"max\":6, \"step\":0.1}"
     - '// @input float missesBeforeDemo = 3 {"hint":"Misses on the same stroke before the ghost quietly demonstrates that one stroke again.", "widget":"slider", "min":1, "max":6, "step":1}'
     - "// @input float inkWidthCm = 0.55 {\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}"
     - '// @input float inputSmoothing = 0.5 {"hint":"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.", "widget":"slider", "min":0, "max":0.9, "step":0.05}'
