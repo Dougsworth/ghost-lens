@@ -1,69 +1,72 @@
 /**
- * GhostFretboard — the 6-string, 5-fret practice board, in paper and ink.
+ * GhostFretboard — the 6-string, 5-fret practice neck, in paper and ink.
  *
- * Owns:  the board geometry and the board's coordinate system. Everything in
- *        the guitar pack that needs to know "where is string 3, fret 2" asks
- *        here, so the dots, the ghost hand and the strum zone can never drift
- *        out of agreement with the drawn frets.
+ * Owns:  the neck geometry, its labels, and the neck's coordinate system.
+ *        Everything in the guitar pack that needs to know "where is the A
+ *        string at fret 2" asks here, so the circles, the ghost hand and the
+ *        strum band can never drift out of agreement with the drawn frets.
  * Must not: sequence the lesson, read input, or decide anything. The controller
  *        drives it; this is geometry and look only.
  *
  * All geometry comes from GhostInkRibbon's helpers (createWashiSheet,
- * createQuads, createDot) so the board is the same paper and the same ink as
- * the kana practice sheet. Additive display: every value here is emitted light,
- * never dark — strings and frets are fine INK LINES on cream paper, not dark
- * lines on a white board.
+ * createQuads) so the neck is the same paper and the same ink as the
+ * kana practice sheet. Additive display: every value here is emitted light,
+ * never dark — strings and frets are fine INK LINES on faint cream paper.
  *
- * ── Orientation, and why ────────────────────────────────────────────────────
- * The board is built flat in its own XY plane (like every other surface in this
- * project) and then the whole thing is pitched back about X, so it lies away
- * from the user like a neck resting on a table and angled up to be read.
+ * ── Orientation: the neck as a PLAYER sees it ───────────────────────────────
+ * Local +X runs from the nut on the LEFT toward the body on the RIGHT, so the
+ * strings run left to right across the view, and the headstock end is where a
+ * right-handed player's left hand actually is.
  *
- * Local +Y runs from the strum end (near the user, bottom of the view) UP to
- * the nut (far from the user, top of the view). That is the standard chord-
- * diagram orientation — nut at the top, frets descending, × and ○ above the
- * nut — and it is also physically right: you strum past the frets, on the body
- * side, which is the end nearest you. It puts the one target the user has to
- * drag across (the strum) closest to them and largest on screen.
+ * Local +Y is string pitch, and string 0 (low E) sits at the BOTTOM. That is
+ * what you see looking down at your own guitar, and it is what makes the ghost
+ * hand's approach from below read as a hand wrapping the neck.
  *
- * Local +X runs low E (left) to high E (right), again as a chord diagram reads.
+ * The neck is pitched back only slightly, enough to read as an object lying in
+ * your space rather than a flat card. An earlier build laid it almost flat,
+ * running away from the viewer like a road, and a beginner could not tell which
+ * string was which: that view is correct for a guitar on a table and useless
+ * for learning a chord, because every fret past the first was foreshortened
+ * into a sliver.
  *
- * ── Why the 30 cm board fits a 21.5 cm frame ────────────────────────────────
- * At 45 cm the SPECS 27 view is about 21.5 cm wide by 29.8 cm tall — PORTRAIT,
- * so width is the scarce axis and a 30 cm board laid across it simply cannot
- * fit. It is not laid across it. The 30 cm runs UP the 29.8 cm axis and AWAY
- * from the user in depth, and the pitch-back foreshortens 36 cm of paper into
- * about 22 cm of apparent height. The only thing spending screen width is the
- * 7.5 cm string span (9.6 cm of paper) — well under half the 21.5 cm available.
+ * ── Fitting the frame ───────────────────────────────────────────────────────
+ * The measured SPECS frame at 45 cm is about 21.5 cm wide by 29.8 cm tall —
+ * PORTRAIT — and the kana pack measured (not assumed) that content past about
+ * ±11 cm vertically falls outside it. A horizontal neck therefore spends the
+ * SCARCE axis, so the fretted length here is deliberately well under the
+ * brief's 30 cm and the neck is pushed a little further back than the 45 cm
+ * anchor. Height is the plentiful axis, which is why the instruction, the
+ * chord name, the fret numbers, the legend and the tabs all stack vertically.
  */
 
-import { createDot, createQuads, createStamp, createWashiSheet, RectSpec } from "./GhostInkRibbon";
+import { createQuads, createStamp, createWashiSheet, RectSpec } from "./GhostInkRibbon";
+import { STRING_NAMES } from "./GhostGuitarPack";
 
 /**
- * Fret positions as a fraction of the board's length from the nut, following a
- * real guitar's logarithmic scale (1 - 2^(-n/12)) renormalised so fret 5 lands
- * exactly on the far end. Even spacing would read as a ladder; this reads as a
- * fretboard, and the narrowest cell is still over 5 cm — a forgiving target.
+ * Fret positions as a fraction of the fretted length, following a real
+ * guitar's logarithmic scale (1 - 2^(-n/12)) renormalised so fret 5 lands on
+ * the far end. Even spacing would read as a ladder; this reads as a fretboard.
  */
 const FRET_POS = [0, 0.2237, 0.4349, 0.6344, 0.8225, 1.0];
 
 export const STRING_COUNT = 6;
 export const FRET_COUNT = 5;
 
-/** Colours and sizes the board is drawn with. Set from the controller's inputs. */
+const FONT_SIZE_SCALE = 1.0;
+const PANEL_DISTANCE_CM = 45;
+/** Caption role at weight 500: thin dim type does not survive an additive display. */
+const LABEL_SIZE = 42 * FONT_SIZE_SCALE * (PANEL_DISTANCE_CM / 110);
+
+/** Colours and sizes the neck is drawn with. Read by the controller. */
 export interface FretboardStyle {
-  /** Warm off-white: the ink value the kana brush writes with. */
   inkColor: vec4;
-  /** Faint translucent cream: paper and structure. */
   paperColor: vec4;
-  /** Dimmed ink: a guide the user is not acting on yet. */
   guideColor: vec4;
-  lengthCm: number;
-  stringSpanCm: number;
+  fretLengthCm: number;
+  stringGapCm: number;
   dotRadiusCm: number;
 }
 
-/** A point on the board, in board-local centimetres. */
 export interface BoardPoint {
   x: number;
   y: number;
@@ -71,71 +74,71 @@ export interface BoardPoint {
 
 @component
 export class GhostFretboard extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">GhostFretboard &ndash; 6 strings, 5 frets, paper and ink</span>')
+  @ui.label('<span style="color: #60A5FA;">GhostFretboard &ndash; the neck, as a player sees it</span>')
   @ui.separator
 
   @ui.label('<span style="color: #60A5FA;">Settings</span>')
   @ui.group_start("Settings")
   @input("vec4", "{1.00,0.95,0.86,1}")
-  @hint("Ink: the nut, the string lines and the finger dots. The same warm off-white the kana brush writes with.")
+  @hint("Ink: the nut and the string lines. The same warm off-white the kana brush writes with.")
   @widget(new ColorWidget())
   inkColor: vec4;
 
   @input("vec4", "{0.26,0.23,0.17,1}")
-  @hint("Paper: the board itself. Additive display, so this is a faint translucent cream and never dark.")
+  @hint("Paper: the neck itself. Additive display, so this is a faint translucent cream and never dark.")
   @widget(new ColorWidget())
   paperColor: vec4;
 
-  @input("vec4", "{0.42,0.39,0.33,1}")
-  @hint("Dimmed ink: the fret hairlines and a dot the user has not reached yet.")
+  @input("vec4", "{0.62,0.58,0.50,1}")
+  @hint("Dimmed ink: fret hairlines, string names and fret numbers. Bright enough to read on glass, quiet enough to stay behind the finger circles.")
   @widget(new ColorWidget())
   guideColor: vec4;
 
   @input
-  @hint("Nut to fifth fret, in cm. The brief asks for about 30; this runs up the view and away from the user, not across it.")
-  @widget(new SliderWidget(18, 40, 0.5))
-  lengthCm: number = 30;
+  @hint("Nut to fifth fret, in cm. This runs ACROSS the view, which is the scarce 21.5 cm axis, so it is much shorter than a real neck and the board sits further back to compensate.")
+  @widget(new SliderWidget(5, 16, 0.1))
+  fretLengthCm: number = 7.8;
 
   @input
-  @hint("Low E to high E across the board, in cm. This is the only thing spending the scarce 21.5 cm of view width.")
-  @widget(new SliderWidget(4, 12, 0.1))
-  stringSpanCm: number = 7.5;
+  @hint("Distance between neighbouring strings, in cm. Height is the plentiful axis, so this is generous: it is what gives the finger circles room to read as separate.")
+  @widget(new SliderWidget(0.8, 2.2, 0.05))
+  stringGapCm: number = 1.45;
 
   @input
-  @hint("How far the board is pitched back from upright, in degrees. 0 faces the user flat on; 90 lies flat on a table. Higher values foreshorten the board into less apparent height, which is what buys the room for a 30 cm neck.")
-  @widget(new SliderWidget(20, 75, 1))
-  tiltDeg: number = 62;
+  @hint("How far the neck is pitched back from facing you, in degrees. Small on purpose: enough to sit in your space, not so much that the far frets foreshorten into slivers.")
+  @widget(new SliderWidget(0, 45, 1))
+  tiltDeg: number = 14;
 
   @input
-  @hint("Where the board's centre sits relative to this object, in cm. Chest height means below the eye line, so y is small and positive only because the pitch-back lifts the far end.")
+  @hint("Where the neck's centre sits relative to this object, in cm. Negative z pushes it further away, which is what buys the width for a horizontal neck.")
   centreCm: vec3;
 
   @input
-  @hint("Radius of a finger dot, in cm. The pinch target around it is wider still.")
-  @widget(new SliderWidget(0.5, 2, 0.05))
-  dotRadiusCm: number = 1.05;
+  @hint("Radius of a finger circle, in cm. The pinch target around it is wider still.")
+  @widget(new SliderWidget(0.3, 1.2, 0.05))
+  dotRadiusCm: number = 0.58;
 
   @input("vec4", "{0.92,0.26,0.17,1}")
-  @hint("The hanko stamp that lands when a chord is played. Additive display: this has to be an emitted vermilion, because a dark red would simply not appear.")
+  @hint("The hanko stamp that lands when a chord is played. Additive display: an emitted vermilion, because a dark red would simply not appear.")
   @widget(new ColorWidget())
   stampColor: vec4;
   @ui.group_end
 
-  /** The pitched-back child every board-local thing parents to. */
   private root: SceneObject | null = null;
   private strings: RenderMeshVisual | null = null;
   private marksRoot: SceneObject | null = null;
   private markObjects: SceneObject[] = [];
   private stamp: SceneObject | null = null;
+  private strumArrow: SceneObject | null = null;
 
   onAwake(): void {
-    // Text components live on this board, so it needs its own Canvas — the same
-    // thing GhostSheetUI and GhostAslUI do for their world-space type.
+    // String names and fret numbers are world-space Text on this object, so it
+    // needs its own Canvas — the same thing GhostSheetUI and GhostAslUI do.
     this.sceneObject.createComponent("Component.Canvas");
     this.build();
   }
 
-  /** The pitched-back root. Dots, the ghost hand and the strum zone go here. */
+  /** The pitched-back root. Circles, the ghost hand and the strum zone go here. */
   get boardRoot(): SceneObject {
     if (!this.root) this.build();
     return this.root as SceneObject;
@@ -146,59 +149,60 @@ export class GhostFretboard extends BaseScriptComponent {
       inkColor: this.inkColor,
       paperColor: this.paperColor,
       guideColor: this.guideColor,
-      lengthCm: this.lengthCm,
-      stringSpanCm: this.stringSpanCm,
+      fretLengthCm: this.fretLengthCm,
+      stringGapCm: this.stringGapCm,
       dotRadiusCm: this.dotRadiusCm,
     };
   }
 
-  // ── The board's coordinate system ─────────────────────────────────────────
+  // ── The neck's coordinate system ──────────────────────────────────────────
 
-  /** Board-local x of a string. 0 = low E (left), 5 = high E (right). */
-  stringX(stringIndex: number): number {
-    const step = this.stringSpanCm / (STRING_COUNT - 1);
-    return -this.stringSpanCm * 0.5 + stringIndex * step;
+  /** Neck-local y of a string. 0 = low E at the BOTTOM, 5 = high e at the top. */
+  stringY(stringIndex: number): number {
+    const span = this.stringGapCm * (STRING_COUNT - 1);
+    return -span * 0.5 + stringIndex * this.stringGapCm;
   }
 
-  /** Board-local y of a fret line. 0 = the nut, 5 = the far end. */
-  fretY(fret: number): number {
+  /** Neck-local x of a fret line. 0 = the nut on the LEFT, 5 = the far end. */
+  fretX(fret: number): number {
     const f = Math.max(0, Math.min(FRET_COUNT, fret));
-    return this.lengthCm * 0.5 - this.lengthCm * FRET_POS[f];
+    return -this.fretLengthCm * 0.5 + this.fretLengthCm * FRET_POS[f];
   }
 
-  /**
-   * Board-local y where a finger sits for a given fret: the middle of the cell
-   * BEHIND that fret, which is where a finger actually presses.
-   */
-  cellY(fret: number): number {
+  /** Neck-local x where a finger presses: the middle of the cell behind a fret. */
+  cellX(fret: number): number {
     const f = Math.max(1, Math.min(FRET_COUNT, fret));
-    return this.lengthCm * 0.5 - this.lengthCm * (FRET_POS[f - 1] + FRET_POS[f]) * 0.5;
+    return -this.fretLengthCm * 0.5 +
+      this.fretLengthCm * (FRET_POS[f - 1] + FRET_POS[f]) * 0.5;
   }
 
   /** Where a fingertip goes for one string and fret. */
   fingerPoint(stringIndex: number, fret: number): BoardPoint {
-    return { x: this.stringX(stringIndex), y: this.cellY(fret) };
+    return { x: this.cellX(fret), y: this.stringY(stringIndex) };
   }
 
-  /** Board-local y of the × / ○ row, just beyond the nut. */
-  get markY(): number {
-    return this.lengthCm * 0.5 + 1.4;
+  get stringSpanCm(): number {
+    return this.stringGapCm * (STRING_COUNT - 1);
   }
 
-  /** Board-local y of the strum band, past the frets on the body side. */
-  get strumY(): number {
-    return -this.lengthCm * 0.5 - 1.6;
+  /** Neck-local x of the × / ○ column, just left of the nut. */
+  get markX(): number {
+    return this.fretX(0) - 0.72;
   }
 
-  get strumHeightCm(): number {
-    return 3.0;
+  /** Neck-local x of the strum band, right of the frets on the body side. */
+  get strumX(): number {
+    return this.fretX(FRET_COUNT) + 1.15;
   }
 
   get strumWidthCm(): number {
-    return this.stringSpanCm + 1.6;
+    return 1.8;
   }
 
-  /** Radius a dot reads as "reached", for the device-side fingertip check. */
+  get strumHeightCm(): number {
+    return this.stringSpanCm + 1.2;
+  }
+
   get dotRadius(): number {
     return this.dotRadiusCm;
   }
@@ -211,77 +215,150 @@ export class GhostFretboard extends BaseScriptComponent {
     const root = global.scene.createSceneObject("BoardRoot");
     root.setParent(this.sceneObject);
     root.getTransform().setLocalPosition(this.centreCm);
-    // Pitch back about X only. Yaw or roll here would skew the string lines off
-    // the horizontal and make the board read as dropped rather than laid down.
+    // Pitch back about X only. Yaw or roll would tip the string lines off the
+    // horizontal, and a sloping string is a string a learner cannot name.
     root.getTransform().setLocalRotation(
       quat.fromEulerAngles(-this.tiltDeg * Math.PI / 180, 0, 0)
     );
     this.root = root;
 
-    const L = this.lengthCm;
+    const L = this.fretLengthCm;
     const span = this.stringSpanCm;
+    const left = this.fretX(0);
+    const right = this.strumX + this.strumWidthCm * 0.5;
 
-    // Paper, with the same torn washi edge as the practice sheet. Tall enough
-    // to carry the × / ○ row above the nut and the strum band below fret 5.
-    createWashiSheet(root, span + 2.1, L + 6.4, 0.11, this.paperColor, 0);
+    // Paper, with the same torn washi edge as the practice sheet. It reaches
+    // left past the nut to carry the × / ○ column and right past fret 5 to
+    // carry the strum band.
+    const paperW = (right - left) + 2.3;
+    const paperCx = (left + right) * 0.5 - 0.35;
+    const paper = createWashiSheet(root, paperW, span + 1.6, 0.09, this.paperColor, 0);
+    paper.getSceneObject().getTransform().setLocalPosition(new vec3(paperCx, 0, 0));
 
-    // Fret hairlines, faintest layer: the board's structure, not its content.
+    // Fret hairlines: the neck's structure, dimmer than the strings.
     const fretRects: RectSpec[] = [];
     for (let n = 1; n <= FRET_COUNT; n++) {
-      fretRects.push({ x: 0, y: this.fretY(n), w: span + 0.9, h: 0.075 });
+      fretRects.push({ x: this.fretX(n), y: 0, w: 0.07, h: span + 0.8 });
     }
     createQuads(root, "Frets", fretRects, this.guideColor, 0.04);
 
-    // The nut: ink, and heavier than a fret, because it is the end of the board.
-    createQuads(root, "Nut", [{ x: 0, y: this.fretY(0), w: span + 1.1, h: 0.3 }],
-      this.inkColor, 0.05);
+    // The nut: ink, heavier than a fret, because it is the end of the neck.
+    createQuads(root, "Nut",
+      [{ x: this.fretX(0), y: 0, w: 0.26, h: span + 1.0 }], this.inkColor, 0.05);
 
-    // Strings: fine ink lines running the whole board, a touch under full ink so
-    // the finger dots still read as the brightest thing on the paper.
+    // Strings: fine ink lines running the whole neck. Low strings are visibly
+    // thicker, which tells you which end is which at a glance.
     const stringRects: RectSpec[] = [];
     for (let s = 0; s < STRING_COUNT; s++) {
-      // Low strings are visibly thicker than high ones on a real instrument,
-      // and the taper tells the user which end is which at a glance.
-      const w = 0.125 - s * 0.009;
-      stringRects.push({ x: this.stringX(s), y: (this.fretY(0) + this.strumY) * 0.5,
-        w: w, h: this.fretY(0) - this.strumY });
+      const h = 0.115 - s * 0.008;
+      stringRects.push({ x: (left + right) * 0.5, y: this.stringY(s), w: right - left, h: h });
     }
-    this.strings = createQuads(root, "Strings", stringRects, this.fade(this.inkColor, 0.66), 0.06);
+    this.strings = createQuads(root, "Strings", stringRects, this.fade(this.inkColor, 0.72), 0.06);
 
-    // The strum band: a faint cream panel past the frets, so the place to brush
-    // across reads as part of the instrument rather than an invisible hotspot.
+    // The strum band: a faint panel past the frets, so the place to brush
+    // across reads as part of the instrument and not an invisible hotspot.
     createQuads(root, "StrumBand",
-      [{ x: 0, y: this.strumY, w: this.strumWidthCm, h: this.strumHeightCm }],
-      this.fade(this.paperColor, 0.8), 0.03);
+      [{ x: this.strumX, y: 0, w: this.strumWidthCm, h: this.strumHeightCm }],
+      this.fade(this.paperColor, 0.85), 0.03);
+
+    this.buildStringNames();
+    this.buildFretNumbers();
+    this.buildStrumArrow();
 
     this.marksRoot = global.scene.createSceneObject("StringMarks");
     this.marksRoot.setParent(root);
     this.marksRoot.getTransform().setLocalPosition(new vec3(0, 0, 0.08));
 
     // The red hanko that lands when a chord is finished, the same seal the kana
-    // sheet gets. It sits over the right end of the strum band — the body of
-    // the instrument, which is where a maker's mark goes, and the one patch of
-    // paper no dot and no target ever uses.
-    this.stamp = createStamp(root, 2.2, this.stampColor, 0.18);
-    this.stamp.getTransform().setLocalPosition(new vec3(3.1, this.strumY, 0.18));
+    // sheet gets. It sits past the strum band, clear of every string and circle.
+    this.stamp = createStamp(root, 1.7, this.stampColor, 0.18);
+    // On the strum band itself: the one patch of the neck that carries no
+    // string name, fret number or finger circle, and thematically where a
+    // maker's mark goes on a real instrument.
+    this.stamp.getTransform().setLocalPosition(new vec3(this.strumX, 0, 0.18));
     this.stamp.enabled = false;
   }
 
-  /** Land the stamp: this chord is done. */
-  showStamp(): void {
-    if (this.stamp) this.stamp.enabled = true;
+  /**
+   * String names down the left edge, low E at the bottom. A learner cannot act
+   * on "the fifth string" if nothing on the neck says which one that is.
+   */
+  private buildStringNames(): void {
+    if (!this.root) return;
+    for (let s = 0; s < STRING_COUNT; s++) {
+      this.addLabel(this.root, "StringName" + s, STRING_NAMES[s],
+        this.markX - 0.95, this.stringY(s), this.guideColor);
+    }
   }
 
-  hideStamp(): void {
-    if (this.stamp) this.stamp.enabled = false;
+  /** Fret numbers under the neck, so "fret 2" points at something. */
+  private buildFretNumbers(): void {
+    if (!this.root) return;
+    const y = -this.stringSpanCm * 0.5 - 1.05;
+    for (let n = 1; n <= FRET_COUNT; n++) {
+      this.addLabel(this.root, "FretNumber" + n, String(n), this.cellX(n), y, this.guideColor);
+    }
   }
-
-  // ── × and ○ at the nut end ────────────────────────────────────────────────
 
   /**
-   * Draw the muted / open row for a chord: a small × over a string that is not
-   * strummed, a small ○ over one that rings open. Fretted strings get neither —
-   * their mark is the numbered dot further down the board.
+   * A soft arrow across the strings, shown only when the strum is the step.
+   * It points the way a beginner should brush: from the low E upward across
+   * all six, which on this neck is bottom to top.
+   */
+  private buildStrumArrow(): void {
+    if (!this.root) return;
+    const so = global.scene.createSceneObject("StrumArrow");
+    so.setParent(this.root);
+    so.getTransform().setLocalPosition(new vec3(this.strumX, 0, 0.14));
+
+    const half = this.stringSpanCm * 0.5;
+    const rects: RectSpec[] = [
+      { x: 0, y: 0, w: 0.14, h: this.stringSpanCm + 0.5 },
+      { x: -0.26, y: half + 0.02, w: 0.42, h: 0.14 },
+      { x: 0.26, y: half + 0.02, w: 0.42, h: 0.14 },
+    ];
+    const vis = createQuads(so, "ArrowBody", rects, this.fade(this.inkColor, 0.9), 0);
+    // Splay the two head bars into a chevron pointing up the strings.
+    const head = vis.getSceneObject();
+    head.getTransform().setLocalPosition(new vec3(0, 0, 0));
+    so.enabled = false;
+    this.strumArrow = so;
+  }
+
+  setStrumArrowVisible(on: boolean): void {
+    if (this.strumArrow) this.strumArrow.enabled = on;
+  }
+
+  private addLabel(
+    parent: SceneObject,
+    name: string,
+    text: string,
+    x: number,
+    y: number,
+    color: vec4
+  ): void {
+    const so = global.scene.createSceneObject(name);
+    so.setParent(parent);
+    so.getTransform().setLocalPosition(new vec3(x, y, 0.1));
+    const t = so.createComponent("Component.Text") as Text;
+    t.text = text;
+    t.depthTest = true;
+    t.size = LABEL_SIZE;
+    t.weight = 500;
+    t.textFill.color = color;
+    t.horizontalAlignment = HorizontalAlignment.Center;
+    t.verticalAlignment = VerticalAlignment.Center;
+    t.horizontalOverflow = HorizontalOverflow.Overflow;
+    t.verticalOverflow = VerticalOverflow.Overflow;
+    t.layoutRect = Rect.create(-0.6, 0.6, -0.5, 0.5);
+  }
+
+  // ── × and ○ at the nut ────────────────────────────────────────────────────
+
+  /**
+   * The muted / open column left of the nut: × over a string that is not
+   * strummed, ○ over one that rings open. Fretted strings get neither — their
+   * mark is the numbered circle out on the neck.
    */
   setStringMarks(frets: number[]): void {
     this.clearStringMarks();
@@ -289,47 +366,63 @@ export class GhostFretboard extends BaseScriptComponent {
 
     for (let s = 0; s < STRING_COUNT && s < frets.length; s++) {
       const fret = frets[s];
-      if (fret > 0) continue; // fretted: the dot says it
+      if (fret > 0) continue;
+      const y = this.stringY(s);
 
-      const x = this.stringX(s);
       if (fret === 0) {
-        // Open: a ring. Two concentric dots, the inner one in paper, which on an
-        // additive display subtracts nothing but reads as a hole in the ink.
-        const ring = createDot(this.marksRoot, "OpenMark" + s, 0.46, this.inkColor, 0, 20);
-        ring.getSceneObject().getTransform().setLocalPosition(new vec3(x, this.markY, 0));
-        this.markObjects.push(ring.getSceneObject());
-        const hole = createDot(this.marksRoot, "OpenHole" + s, 0.3, this.paperColor, 0.01, 20);
-        hole.getSceneObject().getTransform().setLocalPosition(new vec3(x, this.markY, 0.01));
-        this.markObjects.push(hole.getSceneObject());
+        this.addMark("OpenMark" + s, "\u25CB", y);
       } else {
-        // Muted: a small ink ×, two crossed bars.
-        const arm = 0.78;
-        const t = 0.1;
-        const cross = createQuads(this.marksRoot, "MuteMark" + s, [
-          { x: 0, y: 0, w: arm, h: t },
-          { x: 0, y: 0, w: t, h: arm },
-        ], this.fade(this.inkColor, 0.8), 0);
-        const so = cross.getSceneObject();
-        so.getTransform().setLocalPosition(new vec3(x, this.markY, 0));
-        // Rotate the plus into an ×. 45 degrees, in radians at runtime.
-        so.getTransform().setLocalRotation(quat.fromEulerAngles(0, 0, Math.PI / 4));
-        this.markObjects.push(so);
+        this.addMark("MuteMark" + s, "\u00D7", y);
       }
     }
   }
 
+  /**
+   * One × or ○ left of the nut, drawn as a TEXT glyph rather than as meshes.
+   *
+   * An earlier version built the ○ from a bright ring with a paper-coloured
+   * disc inside it, reasoning that the inner disc would read as a hole. On an
+   * ADDITIVE display it does the opposite: paper colour over ink ADDS light, so
+   * the ring filled in and both marks rendered as solid white blobs. Glyphs
+   * have the hole built into the shape, which is the only way to get a hole on
+   * a display that cannot subtract.
+   */
+  private addMark(name: string, glyph: string, y: number): void {
+    if (!this.marksRoot) return;
+    const so = global.scene.createSceneObject(name);
+    so.setParent(this.marksRoot);
+    so.getTransform().setLocalPosition(new vec3(this.markX, y, 0));
+    const t = so.createComponent("Component.Text") as Text;
+    t.text = glyph;
+    t.depthTest = true;
+    t.size = LABEL_SIZE;
+    t.weight = 500;
+    t.textFill.color = this.inkColor;
+    t.horizontalAlignment = HorizontalAlignment.Center;
+    t.verticalAlignment = VerticalAlignment.Center;
+    t.horizontalOverflow = HorizontalOverflow.Overflow;
+    t.verticalOverflow = VerticalOverflow.Overflow;
+    t.layoutRect = Rect.create(-0.5, 0.5, -0.45, 0.45);
+    this.markObjects.push(so);
+  }
+
   clearStringMarks(): void {
-    for (let i = 0; i < this.markObjects.length; i++) {
-      this.markObjects[i].destroy();
-    }
+    for (let i = 0; i < this.markObjects.length; i++) this.markObjects[i].destroy();
     this.markObjects = [];
   }
 
   /** Brighten the strings for a moment as the chord sounds. */
   setStringsLit(on: boolean): void {
     if (!this.strings) return;
-    this.strings.mainMaterial.mainPass.baseColor =
-      this.fade(this.inkColor, on ? 1.0 : 0.66);
+    this.strings.mainMaterial.mainPass.baseColor = this.fade(this.inkColor, on ? 1.0 : 0.72);
+  }
+
+  showStamp(): void {
+    if (this.stamp) this.stamp.enabled = true;
+  }
+
+  hideStamp(): void {
+    if (this.stamp) this.stamp.enabled = false;
   }
 
   private fade(c: vec4, f: number): vec4 {

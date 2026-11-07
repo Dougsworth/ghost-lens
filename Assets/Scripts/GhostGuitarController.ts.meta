@@ -28,6 +28,8 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    chordBoxAtCm: false
+    chordBoxSizeCm: false
     fingertipReachCm: false
     fretboard: false
     handColor: false
@@ -54,6 +56,8 @@
       settleSec: 0.280000
       strumSec: 0.400000
       strumStringsNeeded: !<float> 4.000000
+      chordBoxAtCm: !<Vec3> {x: 0.000000, y: 0.000000, z: 0.000000}
+      chordBoxSizeCm: !<Vec3> {x: 0.000000, y: 0.000000, z: 0.000000}
       fingertipReachCm: 2.600000
   ScriptTypes:
     -
@@ -68,12 +72,14 @@
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - '// @input vec4 handColor = "{0.95,0.91,0.83,1}" {"hint":"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.", "widget":"color"}'
-    - '// @input float handScale = 0.45 {"hint":"Size of the ghost hand, where 1 is roughly life-size. A life-size hand beside a 30 cm board does not fit the 21.5 cm view, so this is under 1 by necessity.", "widget":"slider", "min":0.25, "max":1.2, "step":0.05}'
-    - '// @input float handRollDeg = -60 {"hint":"How the ghost hand is turned on the board, in degrees. Negative reaches in from the lower left, like your own fretting hand seen from above.", "widget":"slider", "min":-90, "max":0, "step":1}'
+    - "// @input vec4 handColor = \"{0.40,0.38,0.33,1}\" {\"hint\":\"Ghost hand colour, and the only thing that makes it TRANSLUCENT. The display is additive, so a surface is see-through exactly to the degree that it is dim: at the ASL pack's bright off-white the hand renders as a solid white slab covering the strings and the circles underneath it. Dim is what makes it a ghost.\", \"widget\":\"color\"}"
+    - '// @input float handScale = 0.6 {"hint":"Size of the ghost hand, where 1 is roughly life-size. The hand is unlit boxes whose form comes from the GAPS between them, and those close up when it is shrunk, so do not go far below this — a small hand is not a smaller hand, it is a white slab.", "widget":"slider", "min":0.3, "max":1.2, "step":0.05}'
+    - '// @input float handRollDeg {"hint":"How the ghost hand is turned on the neck, in degrees. 0 wraps it up from BELOW with the fingers crossing the strings, which is how your own fretting hand meets the neck. The wrist is allowed to run off the bottom of the view — so does your real one.", "widget":"slider", "min":-90, "max":90, "step":5}'
     - '// @input float placeSec = 0.55 {"hint":"Seconds the hand takes to travel to each fingertip.", "widget":"slider", "min":0.2, "max":1.5, "step":0.05}'
     - '// @input float settleSec = 0.28 {"hint":"Seconds the hand rests on each dot before moving to the next finger.", "widget":"slider", "min":0.05, "max":1, "step":0.05}'
     - "// @input float strumSec = 0.4 {\"hint\":\"Seconds the ghost's brush takes to cross the strings.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.2, \"step\":0.05}"
     - '// @input float strumStringsNeeded = 4 {"hint":"How many strings a drag must cross before the chord sounds early. A release anywhere on the strum band always plays it, so this only decides when a real sweep gets rewarded mid-gesture.", "widget":"slider", "min":2, "max":6, "step":1}'
+    - '// @input vec3 chordBoxAtCm {"hint":"Where the chord-box diagram sits relative to this object, in cm. It goes beside the neck, on the side the neck does not reach."}'
+    - '// @input vec3 chordBoxSizeCm {"hint":"Width and height of the chord-box diagram, in cm. z is unused."}'
     - '// @input float fingertipReachCm = 2.6 {"hint":"How close a real fingertip must come to a dot to count as placed, in cm. Only used on device and over the webcam bridge; a pinch needs no radius.", "widget":"slider", "min":1, "max":6, "step":0.1}'
     - '// @ui {"widget":"group_end"}'

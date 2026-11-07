@@ -1,28 +1,31 @@
 /**
- * GhostGuitarUI — the guitar lesson's furniture: the chord name above the
- * board, how far through the set you are, the one explanation line, and the
- * bookmark tabs beside it.
+ * GhostGuitarUI — the guitar lesson's furniture: the one instruction, the
+ * chord name, how far through the set you are, the × / ○ legend, and the tabs.
  *
  * Owns:  every visible string in the guitar pack and its three pinch targets.
- * Must not: hold lesson state. GhostMain pushes text in and listens for
- *        pinches, the same one-way flow the kana and ASL packs use.
+ * Must not: hold lesson state, or compose the instruction's words. GhostMain
+ *        pushes finished text in and listens for pinches.
  *
- * Styled to match the other two packs: the same washi tab colour, the same thin
- * type, no boxes — one visual language across the whole lens. The surfaces here
- * are UIKit (Button inside a FlexLayout), exactly as GhostAslUI and GhostShelfUI
- * build theirs; only the fretboard itself is code-authored geometry, because it
- * is an instrument drawn in ink, not a panel.
+ * ── One instruction at a time ───────────────────────────────────────────────
+ * The top line carries exactly one step — "Now finger 3 on the D string, fret
+ * 2" — and is replaced, never appended to. The brief's rule is "show one thing
+ * at a time", and a beginner reading a list of four finger placements has to
+ * work out which one they are on before they can do anything. There is
+ * deliberately no second line and no step list anywhere in this module.
  *
- * ── Why the text sits where it does ─────────────────────────────────────────
- * At 45 cm the view is about 21.5 cm wide by 29.8 cm tall. The board is pitched
- * back and runs up the tall axis, filling roughly the middle three quarters of
- * the height, so the only clear room is a band above it and a band below. The
- * chord name takes the top band (it is the thing you read first), the
- * explanation takes the bottom band, and the tabs take the right margin, which
- * the 9.6 cm-wide board leaves completely free.
+ * ── Legibility on an additive display ───────────────────────────────────────
+ * Thin dim type does not survive on glass. The kana pack learned this: its tab
+ * labels were unreadable at weight 300 / size 38 and were fixed at weight 500 /
+ * size 42 with a near-white emitted colour. Every role here starts from that
+ * finding, which is why nothing in this file is lighter than weight 500 and the
+ * default type colour is 0.96 rather than the 0.80 the other packs still use.
  *
- * Unlike the board, this type is NOT pitched back: a chord name foreshortened
- * by 52 degrees is a chord name you have to work to read.
+ * ── Why the layout stacks ───────────────────────────────────────────────────
+ * The measured SPECS frame at 45 cm is about 21.5 cm wide by 29.8 cm tall, and
+ * the kana pack measured content past about ±11 cm vertically falling outside
+ * it. The neck is horizontal, so it spends the scarce width; everything else
+ * therefore stacks into the plentiful height — instruction, name, neck, fret
+ * numbers, legend, tabs — rather than competing for the sides.
  */
 
 import { Button } from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button";
@@ -39,13 +42,17 @@ import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
 const FONT_SIZE_SCALE = 1.0;
 const PANEL_DISTANCE_CM = 45;
 
-type TextRole = "Title1" | "Headline1" | "Body" | "Caption" | "TabThin";
+type TextRole = "ChordName" | "Step" | "Body" | "Small" | "Tab";
+/**
+ * Every weight is 500 or above. See the header: the kana pack proved weight 300
+ * type is not readable on this display, and nothing here repeats that.
+ */
 const TYPE_SCALE: Record<TextRole, { size: number; weight: number }> = {
-  Title1: { size: 105, weight: 700 },
-  Headline1: { size: 54, weight: 700 },
-  Body: { size: 39, weight: 500 },
-  Caption: { size: 38, weight: 500 },
-  TabThin: { size: 38, weight: 300 },
+  ChordName: { size: 88, weight: 700 },
+  Step: { size: 50, weight: 500 },
+  Body: { size: 44, weight: 500 },
+  Small: { size: 42, weight: 500 },
+  Tab: { size: 44, weight: 500 },
 };
 function roleSize(role: TextRole, d: number = PANEL_DISTANCE_CM): number {
   return TYPE_SCALE[role].size * FONT_SIZE_SCALE * (d / 110);
@@ -62,45 +69,56 @@ const TAB_LABELS = ["Replay", "Next", "Packs"];
 
 @component
 export class GhostGuitarUI extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">GhostGuitarUI &ndash; chord name, the one line, and the tabs</span>')
+  @ui.label('<span style="color: #60A5FA;">GhostGuitarUI &ndash; one instruction, the chord name, and the tabs</span>')
   @ui.separator
 
   @ui.label('<span style="color: #60A5FA;">Settings</span>')
   @ui.group_start("Settings")
-  @input("vec4", "{0.26,0.23,0.17,1}")
-  @hint("Tab paper colour — the same washi as the kana and ASL packs' bookmarks.")
+  @input("vec4", "{0.30,0.27,0.20,1}")
+  @hint("Tab paper colour — the washi the other packs' bookmarks use, lifted slightly so a tab reads as a surface on glass.")
   @widget(new ColorWidget())
   tabPaperColor: vec4;
 
-  @input("vec4", "{0.46,0.41,0.31,1}")
+  @input("vec4", "{0.52,0.47,0.36,1}")
   @hint("Tab colour when the user aims at it.")
   @widget(new ColorWidget())
   tabHighlightColor: vec4;
 
-  @input("vec4", "{0.80,0.76,0.68,1}")
-  @hint("Colour of the chord name, the line and the tab labels.")
+  @input("vec4", "{0.96,0.93,0.86,1}")
+  @hint("Colour of the instruction, the chord name and the tab labels. Near-white on purpose: the kana pack found dimmer type unreadable on an additive display.")
   @widget(new ColorWidget())
   typeColor: vec4;
 
-  @input
-  @hint("Height of the chord name above centre, in cm. The board's far end reaches about 11 cm, so this clears it.")
-  @widget(new SliderWidget(8, 14, 0.1))
-  nameHeightCm: number = 12.6;
+  @input("vec4", "{0.62,0.58,0.50,1}")
+  @hint("Colour of the quieter type — the counter and the legend — which should read without competing with the instruction.")
+  @widget(new ColorWidget())
+  dimTypeColor: vec4;
 
   @input
-  @hint("Height of the explanation line, in cm. Negative: it sits below the board's near end.")
-  @widget(new SliderWidget(-14.2, -8, 0.1))
-  lineHeightCm: number = -13.1;
+  @hint("Height of the single instruction line above centre, in cm. Content past about 11 cm falls outside the SPECS frame at 45 cm (measured by the kana pack, not assumed).")
+  @widget(new SliderWidget(6, 10.2, 0.1))
+  stepHeightCm: number = 9.3;
 
   @input
-  @hint("How far right of centre the tab stack sits, in cm. The board is only 9.6 cm wide, so the right margin is free.")
-  @widget(new SliderWidget(4, 9.2, 0.1))
-  tabOffsetXCm: number = 7.6;
+  @hint("Height of the chord name, in cm. It sits between the instruction and the top of the neck.")
+  @widget(new SliderWidget(4, 9, 0.1))
+  nameHeightCm: number = 6.2;
+
+  @input
+  @hint("Height of the o / x legend, in cm. Negative: below the neck and its fret numbers.")
+  @widget(new SliderWidget(-9, -4, 0.1))
+  legendHeightCm: number = -6.6;
+
+  @input
+  @hint("Height of the tab row, in cm. The tabs run across the bottom rather than down the right, because a horizontal neck already spends the width.")
+  @widget(new SliderWidget(-10.6, -7, 0.1))
+  tabHeightCm: number = -9.4;
   @ui.group_end
 
+  private stepText: Text | null = null;
   private nameText: Text | null = null;
   private progressText: Text | null = null;
-  private lineText: Text | null = null;
+  private legendText: Text | null = null;
 
   private readonly _onReplay = new Event<void>();
   private readonly _onNext = new Event<void>();
@@ -116,6 +134,14 @@ export class GhostGuitarUI extends BaseScriptComponent {
     return this._onPacks.publicApi();
   }
 
+  /**
+   * The ONE instruction currently in front of the user. Replaces whatever was
+   * there; there is no second line to append to on purpose.
+   */
+  setStep(text: string): void {
+    if (this.stepText) this.stepText.text = text;
+  }
+
   /** The chord being learnt, e.g. "Em". */
   setChordName(name: string): void {
     if (this.nameText) this.nameText.text = name;
@@ -128,36 +154,44 @@ export class GhostGuitarUI extends BaseScriptComponent {
     }
   }
 
-  /** The single calm line: what the hand does, or what to do next. */
-  setLine(text: string): void {
-    if (this.lineText) this.lineText.text = text;
+  /** The × / ○ key. Constant while a chord is up; blanked between packs. */
+  setLegend(text: string): void {
+    if (this.legendText) this.legendText.text = text;
   }
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas");
-    this.nameText = this.addLine("ChordName", this.nameHeightCm, "Title1", 11, 1.5);
-    this.progressText = this.addLine("ChordProgress", this.nameHeightCm - 1.6, "Caption", 4.4, 0.7);
+
+    this.stepText = this.addLine("ChordStep", 0, this.stepHeightCm, "Step", 19, 1.4, this.typeColor);
+    this.stepText.horizontalOverflow = HorizontalOverflow.Wrap;
+
+    this.nameText = this.addLine("ChordName", 0, this.nameHeightCm, "ChordName", 12, 1.3, this.typeColor);
+
+    this.progressText = this.addLine(
+      "ChordProgress", -7.5, this.nameHeightCm, "Small", 4.4, 0.8, this.dimTypeColor);
     this.progressText.horizontalAlignment = HorizontalAlignment.Left;
-    this.progressText.getSceneObject().getTransform()
-      .setLocalPosition(new vec3(-7.9, this.nameHeightCm - 0.4, 0.03));
-    this.lineText = this.addLine("ChordLine", this.lineHeightCm, "Body", 18, 1.9);
-    if (this.lineText) this.lineText.horizontalOverflow = HorizontalOverflow.Wrap;
+
+    this.legendText = this.addLine(
+      "ChordLegend", 0, this.legendHeightCm, "Small", 19, 0.9, this.dimTypeColor);
+
     this.buildTabs();
   }
 
   private addLine(
     name: string,
+    x: number,
     y: number,
     role: TextRole,
     widthCm: number,
-    halfHeightCm: number
+    halfHeightCm: number,
+    color: vec4
   ): Text {
-    const so = this.obj(this.sceneObject, name, new vec3(0, y, 0.03));
+    const so = this.obj(this.sceneObject, name, new vec3(x, y, 0.03));
     const t = so.createComponent("Component.Text") as Text;
     t.text = "";
     t.depthTest = true;
     applyTextRole(t, role);
-    t.textFill.color = this.typeColor;
+    t.textFill.color = color;
     t.horizontalAlignment = HorizontalAlignment.Center;
     t.verticalAlignment = VerticalAlignment.Center;
     t.horizontalOverflow = HorizontalOverflow.Overflow;
@@ -166,19 +200,24 @@ export class GhostGuitarUI extends BaseScriptComponent {
     return t;
   }
 
+  /**
+   * The tabs run ACROSS the bottom. The other packs stack theirs down the right
+   * edge, but a horizontal neck plus a chord box already uses that side, and
+   * the frame is portrait — the room left over is at the bottom.
+   */
   private buildTabs(): void {
-    const w = 3.4;
-    const h = 3.2;
-    const gap = 0.6;
-    const stackH = TAB_LABELS.length * h + (TAB_LABELS.length - 1) * gap;
-    const host = this.obj(this.sceneObject, "GuitarTabs", new vec3(this.tabOffsetXCm, 0, 0));
-    const column = this.flexColumn(host, w, stackH, gap);
+    const w = 4.6;
+    const h = 2.8;
+    const gap = 0.7;
+    const rowW = TAB_LABELS.length * w + (TAB_LABELS.length - 1) * gap;
+    const host = this.obj(this.sceneObject, "GuitarTabs", new vec3(0, this.tabHeightCm, 0));
+    const row = this.flexRow(host, rowW, h, gap);
 
     const items: FlexItem[] = [];
     for (let i = 0; i < TAB_LABELS.length; i++) {
       const label = TAB_LABELS[i];
       items.push(
-        this.flexChild(column, w, h, (cell) => {
+        this.flexChild(row, w, h, (cell) => {
           const btn = cell.createComponent(Button.getTypeName()) as Button;
           btn.setVariant({ theme: "SnapOS2", shape: "Rectangle", style: "PrimaryNeutral" });
           btn.size = new vec3(w, h, 1);
@@ -191,7 +230,7 @@ export class GhostGuitarUI extends BaseScriptComponent {
         })
       );
     }
-    this.registerItems(column, items);
+    this.registerItems(row, items);
   }
 
   private fire(label: string): void {
@@ -222,7 +261,7 @@ export class GhostGuitarUI extends BaseScriptComponent {
     return so;
   }
 
-  private flexColumn(parent: SceneObject, width: number, height: number, gap: number): SceneObject {
+  private flexRow(parent: SceneObject, width: number, height: number, gap: number): SceneObject {
     const container = this.obj(parent, "Flex", new vec3(0, 0, LAYOUT_Z_LIFT));
     const flex = container.createComponent(FlexLayout.getTypeName()) as FlexLayout;
     const item = container.createComponent(FlexItem.getTypeName()) as FlexItem;
@@ -231,8 +270,8 @@ export class GhostGuitarUI extends BaseScriptComponent {
     flex.onInitialized.add(() => {
       flex.width = width;
       flex.height = height;
-      flex.direction = FlexDirection.Column;
-      flex.rowGap = gap;
+      flex.direction = FlexDirection.Row;
+      flex.columnGap = gap;
       flex.justifyContent = FlexJustify.Center;
       flex.alignItems = FlexAlign.Center;
     });
@@ -262,13 +301,13 @@ export class GhostGuitarUI extends BaseScriptComponent {
     const t = so.createComponent("Component.Text") as Text;
     t.text = text;
     t.depthTest = true;
-    applyTextRole(t, "TabThin");
+    applyTextRole(t, "Tab");
     t.textFill.color = this.typeColor;
     t.horizontalAlignment = HorizontalAlignment.Center;
     t.verticalAlignment = VerticalAlignment.Center;
     t.horizontalOverflow = HorizontalOverflow.Overflow;
     t.verticalOverflow = VerticalOverflow.Overflow;
-    t.layoutRect = Rect.create(-widthCm / 2, widthCm / 2, -0.6, 0.6);
+    t.layoutRect = Rect.create(-widthCm / 2, widthCm / 2, -0.7, 0.7);
     so.createComponent(FlexItem.getTypeName());
   }
 }

@@ -31,11 +31,11 @@ import { GhostGuitarUI } from "./GhostGuitarUI";
 import { GhostGuitarController } from "./GhostGuitarController";
 import { GUITAR_CHORDS } from "./GhostGuitarPack";
 import {
-  GUITAR_INTRO_LINE,
+  GUITAR_LEGEND,
   GUITAR_STRUM_LINE,
-  fingerName,
   lineFor as guitarLineFor,
   praiseFor as guitarPraiseFor,
+  stepLine,
 } from "./GhostGuitarLesson";
 
 /** What the sheet is currently doing. */
@@ -216,6 +216,7 @@ export class GhostMain extends BaseScriptComponent {
     this.guitar.onFingerPlaced.add((f: number) => this.onFingerPlaced(f));
     this.guitar.onAllFingersPlaced.add(() => this.onAllFingersPlaced());
     this.guitar.onChordPlayed.add((id: string) => this.onChordPlayed(id));
+    this.guitar.onStepChanged.add((i: number) => this.onGuitarStepChanged(i));
 
     if (this.debugColliders) this.setColliderDebugAll(this.sceneObject, true);
 
@@ -224,7 +225,7 @@ export class GhostMain extends BaseScriptComponent {
     // and a SceneObject disabled before OnStart never initialises at all. Wait a
     // beat so every control finishes building before hiding the unused halves.
     const ready = this.createEvent("DelayedCallbackEvent");
-    ready.bind(() => this.openGuitar(0)); // TEMP-CAPTURE
+    ready.bind(() => this.showShelf());
     ready.reset(0.1);
   }
 
@@ -596,7 +597,6 @@ export class GhostMain extends BaseScriptComponent {
   // had not actually generalised.
 
   private guitarIndex = 0;
-  private guitarIntroShown = false;
   private guitarPraiseCount = 0;
 
   /** Open the guitar notebook: the ghost places a chord on the fretboard. */
@@ -620,7 +620,11 @@ export class GhostMain extends BaseScriptComponent {
 
     this.guitarUI.setChordName(chord.name);
     this.guitarUI.setProgress(this.guitarIndex, n);
-    this.guitarUI.setLine(guitarLineFor(chord.id));
+    this.guitarUI.setLegend(GUITAR_LEGEND);
+    // While the ghost demonstrates, the single line says what the chord IS.
+    // It becomes the step-by-step instruction the moment the board is handed
+    // over, so there is never more than one thing to read.
+    this.guitarUI.setStep(guitarLineFor(chord.id));
     this.fretboardStamp(false);
 
     this.audio.playUnroll();
@@ -641,14 +645,9 @@ export class GhostMain extends BaseScriptComponent {
     const handOver = this.createEvent("DelayedCallbackEvent");
     handOver.bind(() => {
       if (this.mode !== "guitar") return;
-      const chord = GUITAR_CHORDS[this.guitarIndex];
-      this.guitar.beginTurn(chord);
-      if (!this.guitarIntroShown) {
-        this.guitarIntroShown = true;
-        this.guitarUI.setLine(GUITAR_INTRO_LINE);
-      } else {
-        this.guitarUI.setLine(guitarLineFor(chord.id));
-      }
+      // beginTurn fires onStepChanged, which is what writes the first
+      // instruction — so there is exactly one place that decides the words.
+      this.guitar.beginTurn(GUITAR_CHORDS[this.guitarIndex]);
     });
     handOver.reset(1.5);
   }
@@ -661,25 +660,52 @@ export class GhostMain extends BaseScriptComponent {
   private onFingerPlaced(finger: number): void {
     if (this.mode !== "guitar") return;
     this.audio.playInkDry();
-    // Only talk during the user's turn. Narrating the ghost's own hand would be
-    // two things at once, and the brief shows one thing at a time.
-    if (this.guitar.isDemonstrating) return;
-    this.guitarUI.setLine(guitarPraiseFor(this.guitarPraiseCount));
-    this.guitarPraiseCount++;
+    // The words are not written here: onStepChanged fires straight after this
+    // and replaces the line with the NEXT instruction, so a praise word written
+    // here would be overwritten within the same frame. Praise rides along with
+    // the next step instead -- see onGuitarStepChanged.
+    if (!this.guitar.isDemonstrating) this.guitarPraiseCount++;
   }
 
-  /** Every dot is placed. Only the strum is left, so say so. */
+  /**
+   * The one instruction, rewritten. -1 means every finger is down and only the
+   * strum is left. This is the single place the guitar pack decides what the
+   * user is being asked to do, which is what keeps "one thing at a time" true
+   * rather than aspirational.
+   */
+  private onGuitarStepChanged(index: number): void {
+    if (this.mode !== "guitar") return;
+    if (index < 0) {
+      this.guitarUI.setStep(GUITAR_STRUM_LINE);
+      return;
+    }
+    const target = this.guitar.currentTarget;
+    if (!target) return;
+    this.guitarUI.setStep(
+      stepLine(
+        GUITAR_CHORDS[this.guitarIndex].name,
+        target.finger,
+        this.guitar.stringNameOf(target),
+        target.fret,
+        index
+      )
+    );
+  }
+
+  /**
+   * Every circle is placed. The instruction was already switched to the strum
+   * by onStepChanged(-1); this is here for the sound and anything else that
+   * should mark the moment the chord is fully fretted.
+   */
   private onAllFingersPlaced(): void {
     if (this.mode !== "guitar") return;
-    if (this.guitar.isDemonstrating) return;
-    this.guitarUI.setLine(GUITAR_STRUM_LINE);
   }
 
   /** The user strummed: sound the chord, stamp it, move on. */
   private onChordPlayed(id: string): void {
     if (this.mode !== "guitar") return;
     this.audio.playChord(id);
-    this.guitarUI.setLine("");
+    this.guitarUI.setStep(guitarPraiseFor(this.guitarPraiseCount));
 
     const stamp = this.createEvent("DelayedCallbackEvent");
     stamp.bind(() => {

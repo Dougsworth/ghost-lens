@@ -28,10 +28,12 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    lineHeightCm: false
+    dimTypeColor: false
+    legendHeightCm: false
     nameHeightCm: false
+    stepHeightCm: false
+    tabHeightCm: false
     tabHighlightColor: false
-    tabOffsetXCm: false
     tabPaperColor: false
     typeColor: false
   ScriptTypesHidden:
@@ -46,21 +48,25 @@
     - tabPaperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
       typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      dimTypeColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
+      stepHeightCm: 9.500000
       nameHeightCm: 12.600000
-      lineHeightCm: -13.100000
-      tabOffsetXCm: 7.600000
+      legendHeightCm: -6.600000
+      tabHeightCm: -9.400000
   ScriptTypes:
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostGuitarUI &ndash; chord name, the one line, and the tabs</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostGuitarUI &ndash; one instruction, the chord name, and the tabs</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - "// @input vec4 tabPaperColor = \"{0.26,0.23,0.17,1}\" {\"hint\":\"Tab paper colour — the same washi as the kana and ASL packs' bookmarks.\", \"widget\":\"color\"}"
-    - '// @input vec4 tabHighlightColor = "{0.46,0.41,0.31,1}" {"hint":"Tab colour when the user aims at it.", "widget":"color"}'
-    - '// @input vec4 typeColor = "{0.80,0.76,0.68,1}" {"hint":"Colour of the chord name, the line and the tab labels.", "widget":"color"}'
-    - "// @input float nameHeightCm = 12.6 {\"hint\":\"Height of the chord name above centre, in cm. The board's far end reaches about 11 cm, so this clears it.\", \"widget\":\"slider\", \"min\":8, \"max\":14, \"step\":0.1}"
-    - "// @input float lineHeightCm = -13.1 {\"hint\":\"Height of the explanation line, in cm. Negative: it sits below the board's near end.\", \"widget\":\"slider\", \"min\":-14.2, \"max\":-8, \"step\":0.1}"
-    - '// @input float tabOffsetXCm = 7.6 {"hint":"How far right of centre the tab stack sits, in cm. The board is only 9.6 cm wide, so the right margin is free.", "widget":"slider", "min":4, "max":9.2, "step":0.1}'
+    - "// @input vec4 tabPaperColor = \"{0.30,0.27,0.20,1}\" {\"hint\":\"Tab paper colour — the washi the other packs' bookmarks use, lifted slightly so a tab reads as a surface on glass.\", \"widget\":\"color\"}"
+    - '// @input vec4 tabHighlightColor = "{0.52,0.47,0.36,1}" {"hint":"Tab colour when the user aims at it.", "widget":"color"}'
+    - '// @input vec4 typeColor = "{0.96,0.93,0.86,1}" {"hint":"Colour of the instruction, the chord name and the tab labels. Near-white on purpose: the kana pack found dimmer type unreadable on an additive display.", "widget":"color"}'
+    - '// @input vec4 dimTypeColor = "{0.62,0.58,0.50,1}" {"hint":"Colour of the quieter type — the counter and the legend — which should read without competing with the instruction.", "widget":"color"}'
+    - '// @input float stepHeightCm = 9.3 {"hint":"Height of the single instruction line above centre, in cm. Content past about 11 cm falls outside the SPECS frame at 45 cm (measured by the kana pack, not assumed).", "widget":"slider", "min":6, "max":10.2, "step":0.1}'
+    - '// @input float nameHeightCm = 6.2 {"hint":"Height of the chord name, in cm. It sits between the instruction and the top of the neck.", "widget":"slider", "min":4, "max":9, "step":0.1}'
+    - '// @input float legendHeightCm = -6.6 {"hint":"Height of the o / x legend, in cm. Negative: below the neck and its fret numbers.", "widget":"slider", "min":-9, "max":-4, "step":0.1}'
+    - '// @input float tabHeightCm = -9.4 {"hint":"Height of the tab row, in cm. The tabs run across the bottom rather than down the right, because a horizontal neck already spends the width.", "widget":"slider", "min":-10.6, "max":-7, "step":0.1}'
     - '// @ui {"widget":"group_end"}'

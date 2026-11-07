@@ -25,3 +25,6 @@ For the hackathon build: path engine with the Japanese pack and Ask GHOST, ASL a
 ## Webcam bridge (preview only, stretch goal)
 tools/webcam-bridge streams real webcam hand points (MediaPipe) over ws://127.0.0.1:8765. Assets/Scripts/WebcamHandBridge.ts receives them and fires onPinchStart/Move/End with world positions. Build the core with SIK pinch and drag first. Then wire the brush to also accept bridge events, and first test whether the preview allows a WebSocket to localhost. Verify the InternetModule WebSocket API in WebcamHandBridge.ts against docs. Only add Internet Module / experimental API settings the project needs for this.
 Use the fast bridge: tools/webcam-bridge/run_fast.sh (tracking in Chrome on the GPU, relayed on ws://127.0.0.1:8765, same message format). bridge.py is the slower fallback.
+
+## UX rules (from NEXT_UX_OVERHAUL.md, apply to all new work)
+Watch, Try, Fix loop; per joint or per segment colour feedback (green, amber, red); target hand superimposed on the real hand; one learning card; palm up hand menu instead of side tabs; fading guidance; simplest items first. Deadline Monday Nov 9, 5pm ET; scope freeze Sunday night.

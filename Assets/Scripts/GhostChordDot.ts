@@ -1,9 +1,9 @@
 /**
- * GhostChordDot — one numbered ink dot on the fretboard, and its pinch target.
+ * GhostChordDot — one numbered finger circle on the neck, and its pinch target.
  *
- * Owns:  the dot's geometry (ink circle plus its finger number), its four
- *        visual states, and the SIK Interactable that makes it pinchable in
- *        Interactive Preview, over the webcam bridge and on SPECS.
+ * Owns:  the circle's geometry (a coloured disc plus its finger number), its
+ *        four visual states, and the SIK Interactable that makes it pinchable
+ *        in Interactive Preview, over the webcam bridge and on SPECS.
  * Must not: know the chord, the order, or what happens when it is pinched. It
  *        reports a pinch and renders the state it is told to be in.
  *
@@ -22,6 +22,7 @@
 import { Interactable } from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
 import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
 import { createDot } from "./GhostInkRibbon";
+import { fingerColor } from "./GhostGuitarPack";
 
 /** How a dot is reading right now. */
 export type DotState =
@@ -50,10 +51,12 @@ export class GhostChordDot {
   private ink: RenderMeshVisual;
   private numberText: Text;
   private interactable: Interactable;
-  private inkColor: vec4;
+  /** This finger's own hue, so neighbouring circles are told apart by colour. */
+  private liveColor: vec4;
   private guideColor: vec4;
   private state: DotState = "hidden";
   private pulseT = 0;
+  private radiusCm = 0.58;
 
   private readonly _onPinched = new Event<number>();
 
@@ -68,13 +71,14 @@ export class GhostChordDot {
     xCm: number,
     yCm: number,
     radiusCm: number,
-    inkColor: vec4,
     guideColor: vec4
   ) {
     this.finger = finger;
     this.xCm = xCm;
     this.yCm = yCm;
-    this.inkColor = inkColor;
+    // A circle's colour IS its identity here: four fingers, four hues, so the
+    // learner can match circle to finger without reading the number first.
+    this.liveColor = fingerColor(finger);
     this.guideColor = guideColor;
 
     const so = global.scene.createSceneObject("ChordDot" + finger);
@@ -83,6 +87,7 @@ export class GhostChordDot {
     this.sceneObject = so;
 
     this.ink = createDot(so, "DotInk", radiusCm, guideColor, 0, 26);
+    this.radiusCm = radiusCm;
 
     // The finger number, sitting on top of the ink.
     const numSO = global.scene.createSceneObject("DotNumber");
@@ -121,7 +126,7 @@ export class GhostChordDot {
       if (this.state === "live") this._onPinched.invoke(this.finger);
     });
     this.interactable.onHoverEnter.add(() => {
-      if (this.state === "live") this.ink.mainMaterial.mainPass.baseColor = this.inkColor;
+      if (this.state === "live") this.ink.mainMaterial.mainPass.baseColor = this.liveColor;
     });
 
     this.setState("hidden");
@@ -134,11 +139,14 @@ export class GhostChordDot {
 
     const pass = this.ink.mainMaterial.mainPass;
     if (state === "guide") {
-      pass.baseColor = this.guideColor;
-      this.numberText.textFill.color = new vec4(0.06, 0.055, 0.045, 1);
+      // Waiting its turn: the finger's own hue, dimmed, so the shape of the
+      // whole chord is visible from the start without competing with the step
+      // the user is actually on.
+      pass.baseColor = this.fade(this.liveColor, 0.4);
+      this.numberText.textFill.color = new vec4(0.05, 0.045, 0.04, 1);
     } else {
-      pass.baseColor = this.inkColor;
-      this.numberText.textFill.color = new vec4(0.10, 0.09, 0.07, 1);
+      pass.baseColor = this.liveColor;
+      this.numberText.textFill.color = new vec4(0.08, 0.07, 0.055, 1);
     }
     if (state !== "live") {
       this.sceneObject.getTransform().setLocalScale(vec3.one());
@@ -166,6 +174,10 @@ export class GhostChordDot {
     this.pulseT += dt;
     const s = 1 + 0.12 * Math.sin(this.pulseT * 3.4);
     this.sceneObject.getTransform().setLocalScale(new vec3(s, s, 1));
+  }
+
+  private fade(c: vec4, f: number): vec4 {
+    return new vec4(c.x * f, c.y * f, c.z * f, c.w);
   }
 
   destroy(): void {

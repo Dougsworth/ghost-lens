@@ -20,11 +20,11 @@ export type ChordLesson = {
 };
 
 export const GUITAR_LESSON: { [id: string]: ChordLesson } = {
-  Em: { line: "Em: two fingers, side by side. All six strings ring." },
-  Am: { line: "Am: the same shape, moved over one, with your index on top." },
-  C: { line: "C: a diagonal — ring, middle, index, stepping down." },
-  G: { line: "G: fingers spread wide. Reach the little one up to the top." },
-  D: { line: "D: a tight triangle on the thin three. Strum only four." },
+  Em: { line: "Two fingers, side by side. All six strings ring." },
+  Am: { line: "Em's shape moved over one, plus your index." },
+  C: { line: "A diagonal: ring, middle, index, stepping down." },
+  G: { line: "Spread wide. The ring finger reaches the thin E." },
+  D: { line: "A tight triangle on the thin three. Strum four." },
 };
 
 /** The line for a chord, or an empty string rather than an invented one. */
@@ -34,10 +34,46 @@ export function lineFor(id: string): string {
 }
 
 /** Shown once, the first time the guitar notebook opens. */
-export const GUITAR_INTRO_LINE = "Watch the hand, then pinch each dot in order.";
+export const GUITAR_INTRO_LINE = "Watch the hand, then pinch each circle in order.";
 
-/** Shown when every dot is placed and only the strum is left. */
-export const GUITAR_STRUM_LINE = "Now brush down across the strings.";
+/** Shown when every circle is placed and only the strum is left. */
+export const GUITAR_STRUM_LINE = "Strum all strings";
+
+/** Under the neck, always. The two marks a chord box uses and nothing else. */
+export const GUITAR_LEGEND = "o = play open     x = don't play";
+
+/**
+ * The one instruction visible at any moment, in the words a teacher would use:
+ * which finger, which string by NAME, which fret by NUMBER. Never a list — the
+ * brief's "show one thing at a time" is the whole point of this function
+ * existing instead of a block of text.
+ *
+ * `ordinal` is which step of the chord this is, so the first reads as an
+ * opening instruction and the rest as continuations.
+ */
+export function stepLine(
+  chordName: string,
+  finger: number,
+  stringName: string,
+  fret: number,
+  ordinal: number
+): string {
+  const who = fingerName(finger);
+  const where = "the " + stringName + " string, fret " + fret;
+  if (ordinal === 0) {
+    return chordName + ": put finger " + finger + " (" + who + ") on " + where;
+  }
+  return "Now finger " + finger + " (" + who + ") on " + where;
+}
+
+/** Which finger is coming next, in words. Index 1..4. */
+export function fingerName(finger: number): string {
+  if (finger === 1) return "index";
+  if (finger === 2) return "middle";
+  if (finger === 3) return "ring";
+  if (finger === 4) return "little";
+  return "";
+}
 
 /**
  * Said as each fingertip lands. Cycled rather than random so the same word
@@ -49,13 +85,4 @@ export function praiseFor(n: number): string {
   if (GUITAR_PRAISE.length === 0) return "";
   const i = ((n % GUITAR_PRAISE.length) + GUITAR_PRAISE.length) % GUITAR_PRAISE.length;
   return GUITAR_PRAISE[i];
-}
-
-/** Which finger is coming next, in words. Index 1..4. */
-export function fingerName(finger: number): string {
-  if (finger === 1) return "index";
-  if (finger === 2) return "middle";
-  if (finger === 3) return "ring";
-  if (finger === 4) return "little";
-  return "";
 }

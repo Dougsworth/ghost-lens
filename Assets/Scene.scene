@@ -1547,9 +1547,6 @@
   Enabled: true
   ScriptAsset: !<reference> c699c345-68ef-47cf-a5a1-2f895020700f
   ScriptInputsDefault:
-    handColor: true
-    handScale: true
-    handRollDeg: true
     placeSec: true
     settleSec: true
     strumSec: true
@@ -1560,13 +1557,15 @@
   ScriptInputs:
     "":
       fretboard: !<MappingBased.AssignableType_1> 959c2bc8-0195-442b-b147-d28448f9ade8
-      handColor: !<Vec4> {x: 0.950000, y: 0.910000, z: 0.830000, w: 1.000000}
-      handScale: 0.450000
-      handRollDeg: !<float> -60.000000
+      handColor: !<Vec4> {x: 0.400000, y: 0.380000, z: 0.330000, w: 1.000000}
+      handScale: 0.600000
+      handRollDeg: !<float> 0.000000
       placeSec: 0.550000
       settleSec: 0.280000
       strumSec: 0.400000
       strumStringsNeeded: !<float> 4.000000
+      chordBoxAtCm: !<Vec3> {x: 7.300000, y: 0.000000, z: 0.000000}
+      chordBoxSizeCm: !<Vec3> {x: 3.400000, y: 5.000000, z: 0.000000}
       fingertipReachCm: 2.600000
   ScriptTypes:
     "":
@@ -2074,11 +2073,8 @@
   ScriptInputsDefault:
     inkColor: true
     paperColor: true
-    guideColor: true
-    lengthCm: true
-    stringSpanCm: true
-    tiltDeg: true
-    dotRadiusCm: true
+    fretLengthCm: true
+    stringGapCm: true
     stampColor: true
   ScriptTypesDefault:
     {}
@@ -2086,12 +2082,12 @@
     "":
       inkColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
       paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
-      guideColor: !<Vec4> {x: 0.420000, y: 0.390000, z: 0.330000, w: 1.000000}
-      lengthCm: !<float> 30.000000
-      stringSpanCm: 7.500000
-      tiltDeg: !<float> 52.000000
-      centreCm: !<Vec3> {x: 0.000000, y: 1.500000, z: 0.000000}
-      dotRadiusCm: 1.050000
+      guideColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
+      fretLengthCm: 7.800000
+      stringGapCm: 1.450000
+      tiltDeg: !<float> 14.000000
+      centreCm: !<Vec3> {x: -1.800000, y: 0.000000, z: 0.000000}
+      dotRadiusCm: 0.580000
       stampColor: !<Vec4> {x: 0.920000, y: 0.260000, z: 0.170000, w: 1.000000}
   ScriptTypes:
     "":
@@ -3104,22 +3100,21 @@
   Enabled: true
   ScriptAsset: !<reference> 7165e8d8-46e3-42f0-bfdb-2c4c51c5878e
   ScriptInputsDefault:
-    tabPaperColor: true
-    tabHighlightColor: true
-    typeColor: true
-    nameHeightCm: true
-    lineHeightCm: true
-    tabOffsetXCm: true
+    dimTypeColor: true
+    legendHeightCm: true
+    tabHeightCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      tabPaperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
-      tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
-      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
-      nameHeightCm: 12.600000
-      lineHeightCm: -13.100000
-      tabOffsetXCm: 7.600000
+      tabPaperColor: !<Vec4> {x: 0.300000, y: 0.270000, z: 0.200000, w: 1.000000}
+      tabHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}
+      dimTypeColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
+      stepHeightCm: 9.300000
+      nameHeightCm: 6.200000
+      legendHeightCm: -6.600000
+      tabHeightCm: -9.400000
   ScriptTypes:
     "":
       {}

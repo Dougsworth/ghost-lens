@@ -148,7 +148,10 @@ export class GhostAudio extends BaseScriptComponent {
       print("[GhostAudio] no chord clip for '" + id + "' - skipping.");
       return;
     }
-    this.chord.stop(false);
+    // stop() throws "Audio player is not enabled" on a source that has never
+    // played, which is exactly the state of this pooled source on the first
+    // chord of a session.
+    if (this.chord.isPlaying()) this.chord.stop(false);
     this.chord.audioTrack = clip;
     this.chord.volume = this.chordVolume;
     this.chord.play(1);

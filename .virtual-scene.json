@@ -6331,73 +6331,73 @@
               "isScriptInput": true,
               "value": "{x: 0.92, y: 0.26, z: 0.17, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"The hanko stamp that lands when a chord is played. Additive display: this has to be an emitted vermilion, because a dark red would simply not appear.\", \"widget\":\"color\"}",
+              "uiInfo": "{\"hint\":\"The hanko stamp that lands when a chord is played. Additive display: an emitted vermilion, because a dark red would simply not appear.\", \"widget\":\"color\"}",
               "defaultValue": "{0.92,0.26,0.17,1}"
             },
             "tiltDeg": {
               "isScriptInput": true,
-              "value": 52,
+              "value": 14,
               "type": "float",
-              "uiInfo": "{\"hint\":\"How far the board is pitched back from upright, in degrees. 0 faces the user flat on; 90 lies flat on a table. Higher values foreshorten the board into less apparent height, which is what buys the room for a 30 cm neck.\", \"widget\":\"slider\", \"min\":20, \"max\":75, \"step\":1}",
-              "defaultValue": "62"
+              "uiInfo": "{\"hint\":\"How far the neck is pitched back from facing you, in degrees. Small on purpose: enough to sit in your space, not so much that the far frets foreshorten into slivers.\", \"widget\":\"slider\", \"min\":0, \"max\":45, \"step\":1}",
+              "defaultValue": "14"
             },
             "paperColor": {
               "isScriptInput": true,
               "value": "{x: 0.26, y: 0.23, z: 0.17, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"Paper: the board itself. Additive display, so this is a faint translucent cream and never dark.\", \"widget\":\"color\"}",
+              "uiInfo": "{\"hint\":\"Paper: the neck itself. Additive display, so this is a faint translucent cream and never dark.\", \"widget\":\"color\"}",
               "defaultValue": "{0.26,0.23,0.17,1}"
-            },
-            "dotRadiusCm": {
-              "isScriptInput": true,
-              "value": 1.0499999523162842,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"Radius of a finger dot, in cm. The pinch target around it is wider still.\", \"widget\":\"slider\", \"min\":0.5, \"max\":2, \"step\":0.05}",
-              "defaultValue": "1.05"
-            },
-            "lengthCm": {
-              "isScriptInput": true,
-              "value": 30,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"Nut to fifth fret, in cm. The brief asks for about 30; this runs up the view and away from the user, not across it.\", \"widget\":\"slider\", \"min\":18, \"max\":40, \"step\":0.5}",
-              "defaultValue": "30"
             },
             "inkColor": {
               "isScriptInput": true,
               "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"Ink: the nut, the string lines and the finger dots. The same warm off-white the kana brush writes with.\", \"widget\":\"color\"}",
+              "uiInfo": "{\"hint\":\"Ink: the nut and the string lines. The same warm off-white the kana brush writes with.\", \"widget\":\"color\"}",
               "defaultValue": "{1.00,0.95,0.86,1}"
             },
-            "stringSpanCm": {
+            "fretLengthCm": {
               "isScriptInput": true,
-              "value": 7.5,
+              "value": 7.800000190734863,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Low E to high E across the board, in cm. This is the only thing spending the scarce 21.5 cm of view width.\", \"widget\":\"slider\", \"min\":4, \"max\":12, \"step\":0.1}",
-              "defaultValue": "7.5"
+              "uiInfo": "{\"hint\":\"Nut to fifth fret, in cm. This runs ACROSS the view, which is the scarce 21.5 cm axis, so it is much shorter than a real neck and the board sits further back to compensate.\", \"widget\":\"slider\", \"min\":5, \"max\":16, \"step\":0.1}",
+              "defaultValue": "7.8"
+            },
+            "dotRadiusCm": {
+              "isScriptInput": true,
+              "value": 0.5799999833106995,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Radius of a finger circle, in cm. The pinch target around it is wider still.\", \"widget\":\"slider\", \"min\":0.3, \"max\":1.2, \"step\":0.05}",
+              "defaultValue": "0.58"
             },
             "guideColor": {
               "isScriptInput": true,
-              "value": "{x: 0.42, y: 0.39, z: 0.33, w: 1}",
+              "value": "{x: 0.62, y: 0.58, z: 0.5, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"Dimmed ink: the fret hairlines and a dot the user has not reached yet.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.42,0.39,0.33,1}"
+              "uiInfo": "{\"hint\":\"Dimmed ink: fret hairlines, string names and fret numbers. Bright enough to read on glass, quiet enough to stay behind the finger circles.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.62,0.58,0.50,1}"
+            },
+            "stringGapCm": {
+              "isScriptInput": true,
+              "value": 1.4500000476837158,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Distance between neighbouring strings, in cm. Height is the plentiful axis, so this is generous: it is what gives the finger circles room to read as separate.\", \"widget\":\"slider\", \"min\":0.8, \"max\":2.2, \"step\":0.05}",
+              "defaultValue": "1.45"
             },
             "centreCm": {
               "isScriptInput": true,
-              "value": "{x: 0, y: 1.5, z: 0}",
+              "value": "{x: -1.8, y: 0, z: 0}",
               "type": "vec3",
-              "uiInfo": "{\"hint\":\"Where the board's centre sits relative to this object, in cm. Chest height means below the eye line, so y is small and positive only because the pitch-back lifts the far end.\"}"
+              "uiInfo": "{\"hint\":\"Where the neck's centre sits relative to this object, in cm. Negative z pushes it further away, which is what buys the width for a horizontal neck.\"}"
             },
             "scriptAsset": "@asset:Scripts/GhostFretboard.ts",
             "inputNames.0": "centreCm",
             "inputNames.1": "dotRadiusCm",
-            "inputNames.2": "guideColor",
-            "inputNames.3": "inkColor",
-            "inputNames.4": "lengthCm",
+            "inputNames.2": "fretLengthCm",
+            "inputNames.3": "guideColor",
+            "inputNames.4": "inkColor",
             "inputNames.5": "paperColor",
             "inputNames.6": "stampColor",
-            "inputNames.7": "stringSpanCm",
+            "inputNames.7": "stringGapCm",
             "inputNames.8": "tiltDeg",
             "name": "GhostFretboard",
             "enabled": true,
@@ -6461,26 +6461,24 @@
               "uiInfo": "{\"hint\":\"Seconds the hand rests on each dot before moving to the next finger.\", \"widget\":\"slider\", \"min\":0.05, \"max\":1, \"step\":0.05}",
               "defaultValue": "0.28"
             },
-            "handRollDeg": {
-              "isScriptInput": true,
-              "value": -60,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How the ghost hand is turned on the board, in degrees. Negative reaches in from the lower left, like your own fretting hand seen from above.\", \"widget\":\"slider\", \"min\":-90, \"max\":0, \"step\":1}",
-              "defaultValue": "-60"
-            },
             "handScale": {
               "isScriptInput": true,
-              "value": 0.44999998807907104,
+              "value": 0.6000000238418579,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Size of the ghost hand, where 1 is roughly life-size. A life-size hand beside a 30 cm board does not fit the 21.5 cm view, so this is under 1 by necessity.\", \"widget\":\"slider\", \"min\":0.25, \"max\":1.2, \"step\":0.05}",
-              "defaultValue": "0.45"
+              "uiInfo": "{\"hint\":\"Size of the ghost hand, where 1 is roughly life-size. The hand is unlit boxes whose form comes from the GAPS between them, and those close up when it is shrunk, so do not go far below this — a small hand is not a smaller hand, it is a white slab.\", \"widget\":\"slider\", \"min\":0.3, \"max\":1.2, \"step\":0.05}",
+              "defaultValue": "0.6"
             },
-            "handColor": {
+            "handRollDeg": {
               "isScriptInput": true,
-              "value": "{x: 0.95, y: 0.91, z: 0.83, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.95,0.91,0.83,1}"
+              "value": 0,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How the ghost hand is turned on the neck, in degrees. 0 wraps it up from BELOW with the fingers crossing the strings, which is how your own fretting hand meets the neck. The wrist is allowed to run off the bottom of the view — so does your real one.\", \"widget\":\"slider\", \"min\":-90, \"max\":90, \"step\":5}"
+            },
+            "chordBoxAtCm": {
+              "isScriptInput": true,
+              "value": "{x: 7.3, y: 0, z: 0}",
+              "type": "vec3",
+              "uiInfo": "{\"hint\":\"Where the chord-box diagram sits relative to this object, in cm. It goes beside the neck, on the side the neck does not reach.\"}"
             },
             "fretboard": {
               "isScriptInput": true,
@@ -6505,16 +6503,31 @@
               "uiInfo": "{\"hint\":\"How close a real fingertip must come to a dot to count as placed, in cm. Only used on device and over the webcam bridge; a pinch needs no radius.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":0.1}",
               "defaultValue": "2.6"
             },
+            "handColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.4, y: 0.38, z: 0.33, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.95,0.91,0.83,1}"
+            },
+            "chordBoxSizeCm": {
+              "isScriptInput": true,
+              "value": "{x: 3.4, y: 5, z: 0}",
+              "type": "vec3",
+              "uiInfo": "{\"hint\":\"Width and height of the chord-box diagram, in cm. z is unused.\"}"
+            },
             "scriptAsset": "@asset:Scripts/GhostGuitarController.ts",
-            "inputNames.0": "fingertipReachCm",
-            "inputNames.1": "fretboard",
-            "inputNames.2": "handColor",
-            "inputNames.3": "handRollDeg",
-            "inputNames.4": "handScale",
-            "inputNames.5": "placeSec",
-            "inputNames.6": "settleSec",
-            "inputNames.7": "strumSec",
-            "inputNames.8": "strumStringsNeeded",
+            "inputNames.0": "chordBoxAtCm",
+            "inputNames.1": "chordBoxSizeCm",
+            "inputNames.2": "fingertipReachCm",
+            "inputNames.3": "fretboard",
+            "inputNames.4": "handColor",
+            "inputNames.5": "handRollDeg",
+            "inputNames.6": "handScale",
+            "inputNames.7": "placeSec",
+            "inputNames.8": "settleSec",
+            "inputNames.9": "strumSec",
+            "inputNames.10": "strumStringsNeeded",
             "name": "GhostGuitarController",
             "enabled": true,
             "sceneObject": "@sceneObject:ChordPlayer",
@@ -6556,55 +6569,71 @@
           "name": "GhostGuitarUI",
           "enabled": true,
           "properties": {
-            "tabOffsetXCm": {
+            "tabPaperColor": {
               "isScriptInput": true,
-              "value": 7.599999904632568,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far right of centre the tab stack sits, in cm. The board is only 9.6 cm wide, so the right margin is free.\", \"widget\":\"slider\", \"min\":4, \"max\":9.2, \"step\":0.1}",
-              "defaultValue": "7.6"
+              "value": "{x: 0.3, y: 0.27, z: 0.2, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Tab paper colour — the washi the other packs' bookmarks use, lifted slightly so a tab reads as a surface on glass.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.30,0.27,0.20,1}"
             },
             "typeColor": {
               "isScriptInput": true,
-              "value": "{x: 0.8, y: 0.76, z: 0.68, w: 1}",
+              "value": "{x: 0.96, y: 0.93, z: 0.86, w: 1}",
               "type": "vec4",
-              "uiInfo": "{\"hint\":\"Colour of the chord name, the line and the tab labels.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.80,0.76,0.68,1}"
+              "uiInfo": "{\"hint\":\"Colour of the instruction, the chord name and the tab labels. Near-white on purpose: the kana pack found dimmer type unreadable on an additive display.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.96,0.93,0.86,1}"
             },
             "tabHighlightColor": {
               "isScriptInput": true,
-              "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
+              "value": "{x: 0.52, y: 0.47, z: 0.36, w: 1}",
               "type": "vec4",
               "uiInfo": "{\"hint\":\"Tab colour when the user aims at it.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.46,0.41,0.31,1}"
+              "defaultValue": "{0.52,0.47,0.36,1}"
             },
-            "tabPaperColor": {
+            "stepHeightCm": {
               "isScriptInput": true,
-              "value": "{x: 0.26, y: 0.23, z: 0.17, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Tab paper colour — the same washi as the kana and ASL packs' bookmarks.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.26,0.23,0.17,1}"
+              "value": 9.300000190734863,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Height of the single instruction line above centre, in cm. Content past about 11 cm falls outside the SPECS frame at 45 cm (measured by the kana pack, not assumed).\", \"widget\":\"slider\", \"min\":6, \"max\":10.2, \"step\":0.1}",
+              "defaultValue": "9.3"
             },
             "nameHeightCm": {
               "isScriptInput": true,
-              "value": 12.600000381469727,
+              "value": 6.199999809265137,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Height of the chord name above centre, in cm. The board's far end reaches about 11 cm, so this clears it.\", \"widget\":\"slider\", \"min\":8, \"max\":14, \"step\":0.1}",
-              "defaultValue": "12.6"
+              "uiInfo": "{\"hint\":\"Height of the chord name, in cm. It sits between the instruction and the top of the neck.\", \"widget\":\"slider\", \"min\":4, \"max\":9, \"step\":0.1}",
+              "defaultValue": "6.2"
             },
-            "lineHeightCm": {
+            "tabHeightCm": {
               "isScriptInput": true,
-              "value": -13.100000381469727,
+              "value": -9.399999618530273,
               "type": "float",
-              "uiInfo": "{\"hint\":\"Height of the explanation line, in cm. Negative: it sits below the board's near end.\", \"widget\":\"slider\", \"min\":-14.2, \"max\":-8, \"step\":0.1}",
-              "defaultValue": "-13.1"
+              "uiInfo": "{\"hint\":\"Height of the tab row, in cm. The tabs run across the bottom rather than down the right, because a horizontal neck already spends the width.\", \"widget\":\"slider\", \"min\":-10.6, \"max\":-7, \"step\":0.1}",
+              "defaultValue": "-9.4"
+            },
+            "legendHeightCm": {
+              "isScriptInput": true,
+              "value": -6.599999904632568,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Height of the o / x legend, in cm. Negative: below the neck and its fret numbers.\", \"widget\":\"slider\", \"min\":-9, \"max\":-4, \"step\":0.1}",
+              "defaultValue": "-6.6"
+            },
+            "dimTypeColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.62, y: 0.58, z: 0.5, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the quieter type — the counter and the legend — which should read without competing with the instruction.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.62,0.58,0.50,1}"
             },
             "scriptAsset": "@asset:Scripts/GhostGuitarUI.ts",
-            "inputNames.0": "lineHeightCm",
-            "inputNames.1": "nameHeightCm",
-            "inputNames.2": "tabHighlightColor",
-            "inputNames.3": "tabOffsetXCm",
-            "inputNames.4": "tabPaperColor",
-            "inputNames.5": "typeColor",
+            "inputNames.0": "dimTypeColor",
+            "inputNames.1": "legendHeightCm",
+            "inputNames.2": "nameHeightCm",
+            "inputNames.3": "stepHeightCm",
+            "inputNames.4": "tabHeightCm",
+            "inputNames.5": "tabHighlightColor",
+            "inputNames.6": "tabPaperColor",
+            "inputNames.7": "typeColor",
             "name": "GhostGuitarUI",
             "enabled": true,
             "sceneObject": "@sceneObject:GuitarPanel",

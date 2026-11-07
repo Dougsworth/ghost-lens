@@ -31,16 +31,19 @@ import { Interactable } from "SpectaclesInteractionKit.lspkg/Components/Interact
 import { InteractorEvent } from "SpectaclesInteractionKit.lspkg/Core/Interactor/InteractorEvent";
 import { Interactor } from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor";
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider";
-import { Chord, FingerTarget, fingerTargets } from "./GhostGuitarPack";
+import { Chord, FingerTarget, fingerTargets, STRING_NAMES } from "./GhostGuitarPack";
 import { GhostFretboard, STRING_COUNT } from "./GhostFretboard";
 import { GhostChordDot } from "./GhostChordDot";
 import { GhostHand } from "./GhostHands";
 import { HandPose } from "./GhostAslPack";
 import { createDot } from "./GhostInkRibbon";
+import { GhostChordBox } from "./GhostChordBox";
 
 /**
  * Fingertip position in GhostHand's own local centimetres, fully extended, for
- * fingers 1..4. Derived from the hand GhostHands builds: a finger's root sits
+ * fingers 1..4. The hand's fingers point along its local +Y, so at the default
+ * roll of 0 they point straight up the view — which is what makes the hand
+ * meet the horizontal neck from below, the way your own fretting hand does. Derived from the hand GhostHands builds: a finger's root sits
  * at (fingerX, 4.8) on the palm and its three segments add up to its length.
  * Index 0 is unused so the array can be read with the finger number directly.
  *
@@ -59,7 +62,7 @@ const TIP_LOCAL: number[][] = [
 
 /** Curl for a finger that is reaching for the board, and one that is tucked. */
 const CURL_EXTENDED = 0.08;
-const CURL_TUCKED = 0.78;
+const CURL_TUCKED = 0.52;
 const CURL_THUMB = 0.55;
 
 type Phase = "idle" | "reach" | "settle" | "preStrum" | "ghostStrum" | "turn" | "done";
@@ -79,20 +82,20 @@ export class GhostGuitarController extends BaseScriptComponent {
   @ui.separator
   @ui.label('<span style="color: #60A5FA;">Settings</span>')
   @ui.group_start("Settings")
-  @input("vec4", "{0.95,0.91,0.83,1}")
-  @hint("Ghost hand colour. The same warm off-white light as the ASL hands and the brush, so the ghost reads as one character across all three packs.")
+  @input("vec4", "{0.40,0.38,0.33,1}")
+  @hint("Ghost hand colour, and the only thing that makes it TRANSLUCENT. The display is additive, so a surface is see-through exactly to the degree that it is dim: at the ASL pack's bright off-white the hand renders as a solid white slab covering the strings and the circles underneath it. Dim is what makes it a ghost.")
   @widget(new ColorWidget())
   handColor: vec4;
 
   @input
-  @hint("Size of the ghost hand, where 1 is roughly life-size. A life-size hand beside a 30 cm board does not fit the 21.5 cm view, so this is under 1 by necessity.")
-  @widget(new SliderWidget(0.25, 1.2, 0.05))
-  handScale: number = 0.45;
+  @hint("Size of the ghost hand, where 1 is roughly life-size. The hand is unlit boxes whose form comes from the GAPS between them, and those close up when it is shrunk, so do not go far below this — a small hand is not a smaller hand, it is a white slab.")
+  @widget(new SliderWidget(0.3, 1.2, 0.05))
+  handScale: number = 0.60;
 
   @input
-  @hint("How the ghost hand is turned on the board, in degrees. Negative reaches in from the lower left, like your own fretting hand seen from above.")
-  @widget(new SliderWidget(-90, 0, 1))
-  handRollDeg: number = -60;
+  @hint("How the ghost hand is turned on the neck, in degrees. 0 wraps it up from BELOW with the fingers crossing the strings, which is how your own fretting hand meets the neck. The wrist is allowed to run off the bottom of the view — so does your real one.")
+  @widget(new SliderWidget(-90, 90, 5))
+  handRollDeg: number = 0;
 
   @input
   @hint("Seconds the hand takes to travel to each fingertip.")
@@ -115,6 +118,14 @@ export class GhostGuitarController extends BaseScriptComponent {
   strumStringsNeeded: number = 4;
 
   @input
+  @hint("Where the chord-box diagram sits relative to this object, in cm. It goes beside the neck, on the side the neck does not reach.")
+  chordBoxAtCm: vec3;
+
+  @input
+  @hint("Width and height of the chord-box diagram, in cm. z is unused.")
+  chordBoxSizeCm: vec3;
+
+  @input
   @hint("How close a real fingertip must come to a dot to count as placed, in cm. Only used on device and over the webcam bridge; a pinch needs no radius.")
   @widget(new SliderWidget(1, 6, 0.1))
   fingertipReachCm: number = 2.6;
@@ -131,6 +142,7 @@ export class GhostGuitarController extends BaseScriptComponent {
   private wristFrom: vec3 = vec3.zero();
   private wristTo: vec3 = vec3.zero();
 
+  private chordBox: GhostChordBox | null = null;
   private strumZone: SceneObject | null = null;
   private strumInteractable: Interactable | null = null;
   private ghostPick: SceneObject | null = null;
@@ -144,6 +156,7 @@ export class GhostGuitarController extends BaseScriptComponent {
   private readonly _onFingerPlaced = new Event<number>();
   private readonly _onAllFingersPlaced = new Event<void>();
   private readonly _onChordPlayed = new Event<string>();
+  private readonly _onStepChanged = new Event<number>();
 
   /** The ghost has finished showing the chord. */
   get onDemoFinished(): PublicApi<string> {
@@ -160,6 +173,34 @@ export class GhostGuitarController extends BaseScriptComponent {
   /** The user strummed and the chord sounded. Payload: chord id. */
   get onChordPlayed(): PublicApi<string> {
     return this._onChordPlayed.publicApi();
+  }
+  /**
+   * The step the user is on changed. Payload: index into the chord's finger
+   * targets, or -1 once every finger is down and only the strum is left.
+   *
+   * The controller reports WHICH step, never the words for it: the sentence
+   * belongs to GhostGuitarLesson, so the instruction can be reworded, or
+   * translated, without touching the engine.
+   */
+  get onStepChanged(): PublicApi<number> {
+    return this._onStepChanged.publicApi();
+  }
+
+  /** The finger target the user is on, or null outside their turn. */
+  get currentTarget(): FingerTarget | null {
+    if (this.phase !== "turn") return null;
+    if (this.stepIndex < 0 || this.stepIndex >= this.targets.length) return null;
+    return this.targets[this.stepIndex];
+  }
+
+  /** How many fingers this chord asks for. */
+  get targetCount(): number {
+    return this.targets.length;
+  }
+
+  /** The name of a target's string, e.g. "A". */
+  stringNameOf(t: FingerTarget): string {
+    return STRING_NAMES[Math.max(0, Math.min(STRING_NAMES.length - 1, t.stringIndex))];
   }
 
   /**
@@ -201,6 +242,19 @@ export class GhostGuitarController extends BaseScriptComponent {
     this.ghostPick.enabled = false;
 
     this.buildStrumZone(board);
+
+    // The chord box sits beside the neck and is deliberately NOT parented to
+    // the pitched-back board: it is a diagram, and a diagram read at an angle
+    // is a diagram read badly.
+    const style = this.fretboard.style;
+    this.chordBox = new GhostChordBox(
+      this.sceneObject, this.chordBoxSizeCm.x, this.chordBoxSizeCm.y,
+      style.inkColor, style.guideColor
+    );
+    this.chordBox.root.getTransform().setLocalPosition(
+      new vec3(this.chordBoxAtCm.x, this.chordBoxAtCm.y, this.chordBoxAtCm.z)
+    );
+    this.chordBox.buildStringNames();
   }
 
   /**
@@ -211,11 +265,11 @@ export class GhostGuitarController extends BaseScriptComponent {
   private buildStrumZone(board: SceneObject): void {
     const so = global.scene.createSceneObject("StrumZone");
     so.setParent(board);
-    so.getTransform().setLocalPosition(new vec3(0, this.fretboard.strumY, 0.2));
+    so.getTransform().setLocalPosition(new vec3(this.fretboard.strumX, 0, 0.2));
 
     const collider = so.createComponent("Physics.ColliderComponent") as ColliderComponent;
     const box = Shape.createBoxShape();
-    box.size = new vec3(this.fretboard.strumWidthCm, this.fretboard.strumHeightCm + 1.0, 1.4);
+    box.size = new vec3(this.fretboard.strumWidthCm + 1.2, this.fretboard.strumHeightCm, 1.4);
     collider.shape = box;
     collider.debugDrawEnabled = false;
 
@@ -241,6 +295,8 @@ export class GhostGuitarController extends BaseScriptComponent {
     this.targets = fingerTargets(chord);
 
     this.fretboard.setStringMarks(chord.frets);
+    this.fretboard.setStrumArrowVisible(false);
+    if (this.chordBox) this.chordBox.setChord(chord);
     this.clearDots();
     this.buildDots();
     this.setStrumEnabled(false);
@@ -270,6 +326,7 @@ export class GhostGuitarController extends BaseScriptComponent {
     this.targets = fingerTargets(chord);
 
     this.fretboard.setStringMarks(chord.frets);
+    if (this.chordBox) this.chordBox.setChord(chord);
     this.clearDots();
     this.buildDots();
 
@@ -281,11 +338,15 @@ export class GhostGuitarController extends BaseScriptComponent {
     this.refreshDotStates();
 
     if (this.targets.length === 0) {
-      // Em-style all-open chords still exist in the data model; strum straight away.
+      // All-open chords still exist in the data model; strum straight away.
       this.setStrumEnabled(true);
+      this.fretboard.setStrumArrowVisible(true);
+      this._onStepChanged.invoke(-1);
       this._onAllFingersPlaced.invoke();
     } else {
       this.setStrumEnabled(false);
+      this.fretboard.setStrumArrowVisible(false);
+      this._onStepChanged.invoke(0);
     }
   }
 
@@ -302,7 +363,11 @@ export class GhostGuitarController extends BaseScriptComponent {
   clear(): void {
     this.stop();
     this.clearDots();
-    if (this.fretboard) this.fretboard.clearStringMarks();
+    if (this.fretboard) {
+      this.fretboard.clearStringMarks();
+      this.fretboard.setStrumArrowVisible(false);
+    }
+    if (this.chordBox) this.chordBox.clear();
   }
 
   setVisible(on: boolean): void {
@@ -352,7 +417,11 @@ export class GhostGuitarController extends BaseScriptComponent {
 
     if (this.stepIndex >= this.targets.length) {
       this.setStrumEnabled(true);
+      if (this.fretboard) this.fretboard.setStrumArrowVisible(true);
+      this._onStepChanged.invoke(-1);
       this._onAllFingersPlaced.invoke();
+    } else {
+      this._onStepChanged.invoke(this.stepIndex);
     }
   }
 
@@ -407,7 +476,10 @@ export class GhostGuitarController extends BaseScriptComponent {
     if (this.strumFired || !this.chord) return;
     this.strumFired = true;
     this.phase = "done";
-    if (this.fretboard) this.fretboard.setStringsLit(true);
+    if (this.fretboard) {
+      this.fretboard.setStringsLit(true);
+      this.fretboard.setStrumArrowVisible(false);
+    }
     this.setStrumEnabled(false);
     for (let i = 0; i < this.dots.length; i++) this.dots[i].setState("placed");
     this._onChordPlayed.invoke(this.chord.id);
@@ -425,7 +497,7 @@ export class GhostGuitarController extends BaseScriptComponent {
 
     for (let s = 0; s < STRING_COUNT; s++) {
       if (this.strumSeen[s]) continue;
-      if (Math.abs(local.x - this.fretboard.stringX(s)) < 0.75) {
+      if (Math.abs(local.y - this.fretboard.stringY(s)) < this.fretboard.style.stringGapCm * 0.6) {
         this.strumSeen[s] = true;
         this.strumCrossed++;
       }
@@ -474,7 +546,7 @@ export class GhostGuitarController extends BaseScriptComponent {
       const t = this.targets[i];
       const p = this.fretboard.fingerPoint(t.stringIndex, t.fret);
       const dot = new GhostChordDot(
-        board, t.finger, p.x, p.y, style.dotRadiusCm, style.inkColor, style.guideColor
+        board, t.finger, p.x, p.y, style.dotRadiusCm, style.guideColor
       );
       dot.onPinched.add((finger: number) => this.satisfyTarget(finger));
       this.dots.push(dot);
@@ -590,7 +662,7 @@ export class GhostGuitarController extends BaseScriptComponent {
       if (this.ghostPick && this.fretboard) {
         this.ghostPick.enabled = true;
         this.ghostPick.getTransform().setLocalPosition(
-          new vec3(this.fretboard.stringX(0) - 1.2, this.fretboard.strumY, 0.3)
+          new vec3(this.fretboard.strumX, this.fretboard.stringY(0) - 0.9, 0.3)
         );
       }
       if (this.fretboard) this.fretboard.setStringsLit(true);
@@ -603,10 +675,12 @@ export class GhostGuitarController extends BaseScriptComponent {
       const dur = Math.max(0.05, this.strumSec);
       const f = Math.min(1, this.phaseT / dur);
       if (this.ghostPick && this.fretboard) {
-        const x0 = this.fretboard.stringX(0) - 1.2;
-        const x1 = this.fretboard.stringX(STRING_COUNT - 1) + 1.2;
+        // Up across the strings, low E first — the direction the arrow points
+        // and the direction the baked strum stagger actually sounds.
+        const y0 = this.fretboard.stringY(0) - 0.9;
+        const y1 = this.fretboard.stringY(STRING_COUNT - 1) + 0.9;
         this.ghostPick.getTransform().setLocalPosition(
-          new vec3(x0 + (x1 - x0) * f, this.fretboard.strumY, 0.3)
+          new vec3(this.fretboard.strumX, y0 + (y1 - y0) * f, 0.3)
         );
       }
       if (f >= 1) {

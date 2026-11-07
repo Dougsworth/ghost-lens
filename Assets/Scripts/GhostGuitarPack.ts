@@ -26,6 +26,33 @@
 /** Standard tuning, low E first, as MIDI note numbers. Shared with the generator. */
 export const OPEN_STRING_MIDI = [40, 45, 50, 55, 59, 64];
 
+/**
+ * String names as a player says them, low E first. The low and high E are
+ * written "E" and "e" because that is how every chord book and every teacher
+ * tells them apart, and a learner reading the board should meet the notation
+ * they will meet everywhere else.
+ */
+export const STRING_NAMES = ["E", "A", "D", "G", "B", "e"];
+
+/**
+ * One colour per finger, so a numbered circle can be told from its neighbours
+ * at a glance. Additive display: these are EMITTED light, separated by hue and
+ * kept uniformly bright — a darker colour would simply read as more
+ * transparent, so brightness cannot be used to tell fingers apart.
+ */
+export const FINGER_COLORS: vec4[] = [
+  new vec4(1.00, 0.95, 0.86, 1), // 0 unused — the ink value, as a safe default
+  new vec4(1.00, 0.74, 0.34, 1), // 1 index  — amber
+  new vec4(0.52, 0.95, 0.58, 1), // 2 middle — green
+  new vec4(0.50, 0.78, 1.00, 1), // 3 ring   — sky
+  new vec4(1.00, 0.62, 0.88, 1), // 4 little — pink
+];
+
+export function fingerColor(finger: number): vec4 {
+  const i = Math.max(0, Math.min(FINGER_COLORS.length - 1, finger));
+  return FINGER_COLORS[i];
+}
+
 export interface Chord {
   /** Stable id; also the audio clip name, Assets/GeneratedSFX/Chord_<id>.wav. */
   id: string;
