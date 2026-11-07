@@ -1,0 +1,54 @@
+- !<AssetImportMetadata/05a8f42d-e91b-430f-bcb2-2d5c384527fe>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> b9edaa83-40e5-4b1c-a79d-f31cc2def4b4
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> b9edaa83-40e5-4b1c-a79d-f31cc2def4b4
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> d12ed677-adaa-4d09-9033-33d523a8089d
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/d12ed677-adaa-4d09-9033-33d523a8089d>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 37a7ae18-ce58-412a-9dd0-7aca554d9dd2
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    sfxVolume: false
+    voiceVolume: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - sfxVolume: 0.650000
+      voiceVolume: 0.900000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostAudio &ndash; brush, paper, stamp and the spoken characters</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float sfxVolume = 0.65 {"hint":"Volume of the brush, paper, ink and stamp sounds.", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - '// @input float voiceVolume = 0.9 {"hint":"Volume of the spoken character sounds.", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - '// @ui {"widget":"group_end"}'

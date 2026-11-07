@@ -1,0 +1,60 @@
+- !<AssetImportMetadata/8cd2afcf-2789-42a5-9c22-fe996f7d6775>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 5201d715-a74d-49cb-9852-9f72bc1eb0d9
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 5201d715-a74d-49cb-9852-9f72bc1eb0d9
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 76623ff2-3b4b-44ff-8d31-d1874a578056
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/76623ff2-3b4b-44ff-8d31-d1874a578056>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: b1ddc3c3-faae-43cd-84cb-db49dce58800
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    anchorCm: false
+    endHoldSec: false
+    handColor: false
+    handScale: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - handColor: !<Vec4> {x: 0.950000, y: 0.910000, z: 0.830000, w: 1.000000}
+      anchorCm: !<Vec3> {x: 0.000000, y: 0.000000, z: 0.000000}
+      handScale: 0.850000
+      endHoldSec: 0.600000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostAslController &ndash; ghost hands sign at hand height</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 handColor = "{0.95,0.91,0.83,1}" {"hint":"Ghost hand colour. Additive display: a warm off-white light, matching the brush ink so the ghost reads as one character across both packs.", "widget":"color"}'
+    - '// @input vec3 anchorCm {"hint":"Where the hands sign, relative to this object, in cm. The brief puts ASL at hand height in front of the user, in place of the sheet."}'
+    - '// @input float handScale = 0.85 {"hint":"Overall size of the ghost hands, where 1 is roughly life-size.", "widget":"slider", "min":0.4, "max":2, "step":0.05}'
+    - '// @input float endHoldSec = 0.6 {"hint":"Seconds to pause on the final pose before the sign is called finished.", "widget":"slider", "min":0.1, "max":2, "step":0.1}'
+    - '// @ui {"widget":"group_end"}'

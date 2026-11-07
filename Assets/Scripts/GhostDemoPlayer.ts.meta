@@ -1,0 +1,79 @@
+- !<AssetImportMetadata/f1806f4f-c749-4760-a51c-8a0343375a75>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 12f79c26-606f-4037-a991-2497b3c6ff54
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 12f79c26-606f-4037-a991-2497b3c6ff54
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> d558858a-5ff4-4ceb-a1b0-2223a9021d56
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/d558858a-5ff4-4ceb-a1b0-2223a9021d56>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 8713a3f0-605e-427a-b7d9-e624106c3332
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    fadeSeconds: false
+    glyphUnitCm: false
+    guideColor: false
+    inkColor: false
+    inkWidthCm: false
+    interStrokePauseSec: false
+    sheet: false
+    slowerSpeedMultiplier: false
+    strokeDurationSec: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - sheet: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      glyphUnitCm: !<float> 15.000000
+      strokeDurationSec: !<float> 1.000000
+      interStrokePauseSec: 0.300000
+      slowerSpeedMultiplier: 0.500000
+      inkColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      guideColor: !<Vec4> {x: 0.420000, y: 0.390000, z: 0.330000, w: 1.000000}
+      inkWidthCm: 0.550000
+      fadeSeconds: 0.500000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostDemoPlayer &ndash; the ghost brush writes a character</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input AssignableType_1 sheet {"hint":"The practice sheet this player draws onto. Supplies the guide/ink/brush layers and the sheet size."}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float glyphUnitCm = 15 {"hint":"Centimetres per 1.0 of normalised character height. 15 makes あ about 10.5 cm tall on a 15 cm sheet.", "widget":"slider", "min":5, "max":24, "step":0.5}'
+    - '// @input float strokeDurationSec = 1 {"hint":"Seconds the brush takes to draw one stroke at normal speed.", "widget":"slider", "min":0.3, "max":3, "step":0.05}'
+    - '// @input float interStrokePauseSec = 0.3 {"hint":"Quiet beat between strokes, in seconds, so each stroke reads as a separate movement.", "widget":"slider", "min":0, "max":1.5, "step":0.05}'
+    - '// @input float slowerSpeedMultiplier = 0.5 {"hint":"Speed factor used by the Slower tab. 0.5 = half speed.", "widget":"slider", "min":0.2, "max":1, "step":0.05}'
+    - '// @input vec4 inkColor = "{1,0.95,0.86,1}" {"hint":"Wet ink colour. The display is additive, so ink must be a WARM OFF-WHITE LIGHT — black sumi would simply be invisible on glass.", "widget":"color"}'
+    - "// @input vec4 guideColor = \"{0.42,0.39,0.33,1}\" {\"hint\":\"Colour the ink settles to after the demo — the guide the user traces. 'Pale grey' means a DIMMED warm white, still emitted light.\", \"widget\":\"color\"}"
+    - '// @input float inkWidthCm = 0.55 {"hint":"Brush stroke thickness at its fullest, in cm. Ends taper automatically.", "widget":"slider", "min":0.15, "max":1.5, "step":0.05}'
+    - '// @input float fadeSeconds = 0.5 {"hint":"Seconds for the finished ink to fade down into the pale guide outline.", "widget":"slider", "min":0.1, "max":2, "step":0.05}'
+    - '// @ui {"widget":"group_end"}'

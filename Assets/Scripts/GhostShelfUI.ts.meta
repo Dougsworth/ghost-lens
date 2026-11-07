@@ -1,0 +1,69 @@
+- !<AssetImportMetadata/a0f370bc-b0f2-4667-b5fc-ce0f6a1fddbd>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 145553e4-e14f-453d-a5f4-a8e731815437
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 145553e4-e14f-453d-a5f4-a8e731815437
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> af74e402-9423-44e0-94e3-bce94485b6a8
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/af74e402-9423-44e0-94e3-bce94485b6a8>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: f0f4d4fe-d965-4615-a427-5d09b3b0a812
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    coverColor: false
+    coverGapCm: false
+    coverHeightCm: false
+    coverHighlightColor: false
+    coverWidthCm: false
+    lockedFade: false
+    typeColor: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - coverColor: !<Vec4> {x: 0.240000, y: 0.210000, z: 0.160000, w: 1.000000}
+      coverHighlightColor: !<Vec4> {x: 0.540000, y: 0.490000, z: 0.380000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      lockedFade: 0.450000
+      coverWidthCm: 4.200000
+      coverHeightCm: !<float> 6.000000
+      coverGapCm: 0.900000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostShelfUI &ndash; the five-notebook pack shelf</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 coverColor = "{0.24,0.21,0.16,1}" {"hint":"Notebook cover colour for an available pack. Additive display: a faint warm cream, never dark.", "widget":"color"}'
+    - '// @input vec4 coverHighlightColor = "{0.54,0.49,0.38,1}" {"hint":"Cover colour when the user aims at an available notebook.", "widget":"color"}'
+    - "// @input vec4 typeColor = \"{0.80,0.76,0.68,1}\" {\"hint\":\"Colour of cover art and titles. The brief's thin grey type as dimmed warm white, legible from 45 cm.\", \"widget\":\"color\"}"
+    - '// @input float lockedFade = 0.45 {"hint":"How much the three locked notebooks are faded, 0 = invisible, 1 = same as an open pack.", "widget":"slider", "min":0.1, "max":1, "step":0.05}'
+    - '// @input float coverWidthCm = 3.2 {"hint":"Width of each notebook cover, in cm. Five covers plus gaps must stay inside the visible frame, measured at about 20.3 cm wide at 45 cm.", "widget":"slider", "min":2.5, "max":6, "step":0.1}'
+    - '// @input float coverHeightCm = 6 {"hint":"Height of each notebook cover, in cm.", "widget":"slider", "min":3, "max":10, "step":0.1}'
+    - '// @input float coverGapCm = 0.65 {"hint":"Gap between notebooks on the shelf, in cm.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
+    - '// @ui {"widget":"group_end"}'

@@ -1,0 +1,79 @@
+- !<AssetImportMetadata/d5937451-5f54-4ba3-a772-20effcd5dc20>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 9ad2319d-ccbf-4711-976d-f77735930890
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 9ad2319d-ccbf-4711-976d-f77735930890
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 30c5bfd0-7ec6-4891-b5eb-d1b12af46423
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/30c5bfd0-7ec6-4891-b5eb-d1b12af46423>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 616cc0e9-5ba1-4b7f-a75a-ad1e74cf5a70
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    camera: false
+    enabledInPreview: false
+    internetModule: false
+    planeDistance: false
+    planeHeight: false
+    planeWidth: false
+    singleHandOnly: false
+    smoothing: false
+    surface: false
+    surfaceHeightCm: false
+    surfaceWidthCm: false
+    url: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - internetModule: !<reference.InternetModule> 00000000-0000-0000-0000-000000000000
+      camera: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      url: "ws://127.0.0.1:8765"
+      enabledInPreview: true
+      planeDistance: !<float> 45.000000
+      planeWidth: !<float> 30.000000
+      planeHeight: !<float> 22.000000
+      smoothing: 0.500000
+      surface: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      surfaceWidthCm: !<float> 15.000000
+      surfaceHeightCm: !<float> 15.000000
+      singleHandOnly: true
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Asset.InternetModule internetModule
+    - // @input SceneObject camera
+    - '// @input string url = "ws://127.0.0.1:8765"'
+    - // @input bool enabledInPreview = true
+    - // @input float planeDistance = 45
+    - // @input float planeWidth = 30
+    - // @input float planeHeight = 22
+    - // @input float smoothing = 0.5
+    - '// @input SceneObject surface {"hint":"The practice sheet. The webcam frame is mapped onto THIS surface, so the middle of the camera view is the middle of the sheet and a hand sweep crosses the paper. Leave empty to fall back to a plane in front of the camera."}'
+    - '// @input float surfaceWidthCm = 15 {"hint":"Width of the mapped area on the surface, in cm. Match the sheet (15 cm)."}'
+    - '// @input float surfaceHeightCm = 15 {"hint":"Height of the mapped area on the surface, in cm. Match the sheet (15 cm)."}'
+    - '// @input bool singleHandOnly = true {"hint":"Use only the hand nearest the centre of the camera view, so a second person in frame cannot take over the brush."}'

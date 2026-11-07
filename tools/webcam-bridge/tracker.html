@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>GHOST hand tracker</title>
+<style>
+:root{--bg:#f4f1ea;--ink:#1c1b19;--muted:#8a857b;--rule:#d8d2c6;--accent:#b3261e}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,sans-serif}
+main{max-width:720px;margin:24px auto;padding:0 16px}
+h1{font-weight:500;font-size:18px;margin:0 0 4px}
+p{margin:0;color:var(--muted)}
+.wrap{position:relative;margin-top:16px;border-top:1px solid var(--rule);padding-top:16px}
+video,canvas{width:100%;display:block;transform:scaleX(-1)}
+canvas{position:absolute;left:0;top:16px}
+#stat{margin-top:10px;font-variant-numeric:tabular-nums}
+</style></head><body><main>
+<h1>GHOST hand tracker</h1>
+<p>Keep this tab open while you test in Lens Studio. Pinch thumb and index finger to paint.</p>
+<div class="wrap"><video id="v" playsinline muted></video><canvas id="c"></canvas></div>
+<div id="stat">starting</div>
+</main>
+<script type="module">
+import {FilesetResolver, HandLandmarker} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+const v=document.getElementById('v'), c=document.getElementById('c'), g=c.getContext('2d'), stat=document.getElementById('stat');
+// Pinch is measured relative to hand size, so it works near or far from the camera.
+const PINCH_ON=0.38, PINCH_OFF=0.55;
+// One Euro filter: smooth when the hand is slow, responsive when it moves fast.
+class OneEuro{constructor(minCut=0.5,beta=0.004,dCut=1.0){this.minCut=minCut;this.beta=beta;this.dCut=dCut;this.x=null;this.dx=0;this.t=null}
+ a(c,dt){const r=2*Math.PI*c*dt;return r/(r+1)}
+ f(x,t){if(this.x===null){this.x=x;this.t=t;return x}const dt=Math.max(1e-3,(t-this.t)/1000);this.t=t;
+  const dx=(x-this.x)/dt;this.dx=this.dx+this.a(this.dCut,dt)*(dx-this.dx);const c=this.minCut+this.beta*Math.abs(this.dx);
+  const nx=this.x+this.a(c,dt)*(x-this.x);
+  // ignore tiny wobbles (hand tremor) below ~2 px at 640 wide
+  if(Math.abs(nx-this.x)>0.0015) this.x=nx; return this.x}}
+const filt={};
+function smooth(side,i,v,t){const k=side+i;if(!filt[k])filt[k]=new OneEuro();return filt[k].f(v,t)}
+let ws=null, open=false, pinching={}, cnt={}, lenses=0;
+function connect(){ ws=new WebSocket('ws://127.0.0.1:8765'); ws.onopen=()=>{open=true; ws.send('source')}; ws.onclose=()=>{open=false; setTimeout(connect,1000)}; ws.onerror=()=>{}; }
+connect();
+setInterval(async()=>{try{lenses=(await (await fetch('/status')).json()).lenses}catch(e){}},1000);
+const fileset=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+const lm=await HandLandmarker.createFromOptions(fileset,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2});
+v.srcObject=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},frameRate:{ideal:60,min:24}}});
+await v.play(); c.width=v.videoWidth; c.height=v.videoHeight;
+let last=performance.now(), fps=0, lastT=-1;
+function loop(){
+  const t=performance.now();
+  if(v.currentTime!==lastT){ lastT=v.currentTime;
+    const r=lm.detectForVideo(v,t); const hands=[];
+    g.clearRect(0,0,c.width,c.height);
+    (r.landmarks||[]).forEach((pts,i)=>{
+      // video is shown mirrored, so mirror x to match the user
+      let side=r.handednesses?.[i]?.[0]?.categoryName||'Right';
+      const p=pts.map((q,j)=>[+smooth(side,j*3,1-q.x,t).toFixed(4),+smooth(side,j*3+1,q.y,t).toFixed(4),+q.z.toFixed(4)]);
+      const raw=pts.map(q=>[1-q.x,q.y]);
+      const handSize=Math.hypot(raw[0][0]-raw[9][0],raw[0][1]-raw[9][1])||0.1;
+      // 3D thumb-index distance, scaled by palm size
+      const d=Math.hypot(pts[4].x-pts[8].x,pts[4].y-pts[8].y,(pts[4].z-pts[8].z)*0.6)/handSize;
+      // debounce: the pinch state only flips after 3 frames in a row agree
+      const want=pinching[side]? d<PINCH_OFF : d<PINCH_ON;
+      cnt[side]=(want!==!!pinching[side])?(cnt[side]||0)+1:0;
+      if(cnt[side]>=3){pinching[side]=want;cnt[side]=0}
+      const now=!!pinching[side];
+      // brush point = midpoint of thumb and index tips: stays put when you pinch,
+      // instead of the index tip jumping toward the thumb
+      const bx=(p[4][0]+p[8][0])/2, by=(p[4][1]+p[8][1])/2;
+      p[8]=[+bx.toFixed(4),+by.toFixed(4),p[8][2]];
+      hands.push({side,pinch:now,pinchDist:+d.toFixed(4),points:p});
+      g.fillStyle='#1c1b19'; pts.forEach(q=>{g.beginPath();g.arc(q.x*c.width,q.y*c.height,3,0,7);g.fill()});
+      g.strokeStyle=now?'#b3261e':'#ffffff'; g.lineWidth=3; g.beginPath(); g.arc(pts[8].x*c.width,pts[8].y*c.height,10,0,7); g.stroke();
+    });
+    if(open) ws.send(JSON.stringify({t:Date.now()/1000,hands}));
+    fps=0.9*fps+0.1*(1000/Math.max(1,t-last)); last=t;
+  }
+  stat.textContent=`${fps.toFixed(0)} fps  ·  relay ${open?'connected':'connecting'}  ·  lenses ${lenses}`;
+  requestAnimationFrame(loop);
+}
+loop();
+</script></body></html>

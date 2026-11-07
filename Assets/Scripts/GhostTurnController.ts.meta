@@ -1,0 +1,85 @@
+- !<AssetImportMetadata/89e5ec22-52ce-4f8c-8da4-ee2d0545c213>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> fea58b14-3508-4ea1-8382-8477d74769d6
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> fea58b14-3508-4ea1-8382-8477d74769d6
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 89c5b927-ce08-4166-b53d-94f3e83e3479
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/89c5b927-ce08-4166-b53d-94f3e83e3479>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 41a358c3-4537-46ea-bcab-a6fcfca953e8
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    driedInkColor: false
+    inkWidthCm: false
+    inputSmoothing: false
+    maxLengthRatio: false
+    minLengthRatio: false
+    missesBeforeDemo: false
+    pinchInput: false
+    pulseColor: false
+    sheet: false
+    toleranceCm: false
+    wetInkColor: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - sheet: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      pinchInput: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      wetInkColor: !<Vec4> {x: 1.000000, y: 0.970000, z: 0.900000, w: 1.000000}
+      driedInkColor: !<Vec4> {x: 0.920000, y: 0.860000, z: 0.740000, w: 1.000000}
+      pulseColor: !<Vec4> {x: 1.000000, y: 0.860000, z: 0.550000, w: 1.000000}
+      toleranceCm: 1.600000
+      minLengthRatio: 0.450000
+      maxLengthRatio: 2.200000
+      missesBeforeDemo: !<float> 3.000000
+      inkWidthCm: 0.550000
+      inputSmoothing: 0.500000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostTurnController &ndash; the user traces the guide</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - "// @input AssignableType_1 sheet {\"hint\":\"The practice sheet. User ink is drawn into its inkRoot, in front of the ghost's guide.\"}"
+    - '// @input AssignableType_2 pinchInput {"hint":"Pinch source: SIK hand or mouse, plus the webcam bridge when connected."}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - "// @input vec4 wetInkColor = \"{1,0.97,0.90,1}\" {\"hint\":\"The user's wet ink while dragging. Additive display: a bright warm off-white, brighter than the guide underneath it.\", \"widget\":\"color\"}"
+    - "// @input vec4 driedInkColor = \"{0.92,0.86,0.74,1}\" {\"hint\":\"Colour the user's ink dries to once a stroke is accepted. Stays on the sheet until the page turns.\", \"widget\":\"color\"}"
+    - '// @input vec4 pulseColor = "{1,0.86,0.55,1}" {"hint":"Colour of the pulsing marker that shows where to begin again after a miss.", "widget":"color"}'
+    - '// @input float toleranceCm = 1.6 {"hint":"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.", "widget":"slider", "min":0.3, "max":4, "step":0.1}'
+    - "// @input float minLengthRatio = 0.45 {\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}"
+    - '// @input float maxLengthRatio = 2.2 {"hint":"And at most this multiple of it, so scribbling cannot pass.", "widget":"slider", "min":1, "max":4, "step":0.1}'
+    - '// @input float missesBeforeDemo = 3 {"hint":"Misses on the same stroke before the ghost quietly demonstrates that one stroke again.", "widget":"slider", "min":1, "max":6, "step":1}'
+    - "// @input float inkWidthCm = 0.55 {\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}"
+    - '// @input float inputSmoothing = 0.5 {"hint":"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.", "widget":"slider", "min":0, "max":0.9, "step":0.05}'
+    - '// @ui {"widget":"group_end"}'

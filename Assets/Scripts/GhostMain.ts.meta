@@ -1,0 +1,109 @@
+- !<AssetImportMetadata/d02e8450-3b99-4b9b-a11e-d34e32c24106>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 1cfe76b1-423e-487b-a75e-a28dde59e473
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 1cfe76b1-423e-487b-a75e-a28dde59e473
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 417cc689-cb59-4c96-a3ef-c941875b5679
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/417cc689-cb59-4c96-a3ef-c941875b5679>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: a4932794-5254-4c4a-9c47-1ea2cf121fb2
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    anchorDistanceCm: false
+    askRoot: false
+    askUI: false
+    asl: false
+    aslRoot: false
+    aslUI: false
+    audio: false
+    debugColliders: false
+    demo: false
+    lessonRoot: false
+    lessonSequence: false
+    pinchInput: false
+    reanchorOnOpen: false
+    sheet: false
+    sheetUI: false
+    shelfRoot: false
+    shelfUI: false
+    stampHoldSec: false
+    turn: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - shelfRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      lessonRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      askRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      shelfUI: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      sheetUI: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      askUI: !<MappingBased.AssignableType_3> 00000000-0000-0000-0000-000000000000
+      sheet: !<MappingBased.AssignableType_4> 00000000-0000-0000-0000-000000000000
+      demo: !<MappingBased.AssignableType_5> 00000000-0000-0000-0000-000000000000
+      turn: !<MappingBased.AssignableType_6> 00000000-0000-0000-0000-000000000000
+      pinchInput: !<MappingBased.AssignableType_7> 00000000-0000-0000-0000-000000000000
+      aslRoot: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      aslUI: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
+      asl: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
+      audio: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
+      lessonSequence: あいうえお
+      reanchorOnOpen: true
+      anchorDistanceCm: !<float> 45.000000
+      stampHoldSec: 1.100000
+      debugColliders: false
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostMain &ndash; shelf, lesson, your turn, Ask GHOST</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input SceneObject shelfRoot {"hint":"Group root holding the notebook shelf."}'
+    - '// @input SceneObject lessonRoot {"hint":"Group root holding the practice sheet and its bookmark tabs."}'
+    - '// @input SceneObject askRoot {"hint":"Group root holding the Ask GHOST word picker."}'
+    - '// @input AssignableType_1 shelfUI {"hint":"The notebook shelf UI module."}'
+    - "// @input AssignableType_2 sheetUI {\"hint\":\"The sheet's stroke counter, caption and bookmark tabs.\"}"
+    - '// @input AssignableType_3 askUI {"hint":"The Ask GHOST word picker."}'
+    - '// @input AssignableType_4 sheet {"hint":"The washi practice sheet."}'
+    - '// @input AssignableType_5 demo {"hint":"The ghost brush that demonstrates a character."}'
+    - "// @input AssignableType_6 turn {\"hint\":\"The user's turn: pinch, drag, check, dry.\"}"
+    - '// @input AssignableType_7 pinchInput {"hint":"Pinch source shared by the turn controller."}'
+    - "// @input SceneObject aslRoot {\"hint\":\"Group root holding the ASL pack's ghost hands and tabs.\"}"
+    - "// @input AssignableType_8 aslUI {\"hint\":\"The ASL lesson's sign name, hint and Got it tab.\"}"
+    - '// @input AssignableType_9 asl {"hint":"The ghost hands that demonstrate each ASL sign."}'
+    - '// @input AssignableType_10 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - "// @input string lessonSequence = \"あいうえお\" {\"hint\":\"Characters taught by the Japanese pack, in order. The engine can read any of KanaStrokes' 168 kana.\"}"
+    - '// @input bool reanchorOnOpen = true {"hint":"Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin."}'
+    - "// @input float anchorDistanceCm = 45 {\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}"
+    - '// @input float stampHoldSec = 1.1 {"hint":"Seconds the finished sheet rests with its stamp before the page turns.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
+    - '// @input bool debugColliders {"hint":"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart."}'
+    - '// @ui {"widget":"group_end"}'

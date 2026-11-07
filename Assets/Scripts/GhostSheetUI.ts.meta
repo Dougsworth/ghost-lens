@@ -1,0 +1,72 @@
+- !<AssetImportMetadata/4fac563f-e05b-41e6-ad3e-c6369e71eba1>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f7e255b9-1cc8-4ec7-8e84-d1bfd5e8047d
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f7e255b9-1cc8-4ec7-8e84-d1bfd5e8047d
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> e0000878-a507-425c-99ce-52e3bf09a9bc
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/e0000878-a507-425c-99ce-52e3bf09a9bc>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 3ef607c5-dc9e-40e3-82e8-7629c3f90795
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    counterOffsetCm: false
+    tabGapCm: false
+    tabHeightCm: false
+    tabHighlightColor: false
+    tabOffsetXCm: false
+    tabPaperColor: false
+    tabWidthCm: false
+    typeColor: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - tabPaperColor: !<Vec4> {x: 0.220000, y: 0.200000, z: 0.150000, w: 1.000000}
+      tabHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.780000, y: 0.740000, z: 0.660000, w: 1.000000}
+      tabWidthCm: !<float> 4.000000
+      tabHeightCm: 3.200000
+      tabGapCm: 0.600000
+      tabOffsetXCm: 12.500000
+      counterOffsetCm: !<Vec2> {x: -6.000000, y: 6.300000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostSheetUI &ndash; stroke counter and the bookmark tabs</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - "// @input vec4 tabPaperColor = \"{0.26,0.23,0.17,1}\" {\"hint\":\"Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.\", \"widget\":\"color\"}"
+    - '// @input vec4 tabHighlightColor = "{0.46,0.41,0.31,1}" {"hint":"Tab colour when the user aims at it — the same paper, lit up. Still washi, never a highlight box.", "widget":"color"}'
+    - '// @input vec4 typeColor = "{0.96,0.93,0.86,1}" {"hint":"Colour of the tab labels and the stroke counter. Near-white emitted light: on the additive display the faint washi tab gives the type no dark ground to sit on, so the letters have to carry their own brightness to read at 45 cm.", "widget":"color"}'
+    - '// @input float tabWidthCm = 3 {"hint":"Width of each bookmark tab, in cm.", "widget":"slider", "min":2, "max":8, "step":0.1}'
+    - '// @input float tabHeightCm = 3.2 {"hint":"Height of each bookmark tab, in cm. The brief asks for at least 3 cm so they stay forgiving pinch targets.", "widget":"slider", "min":2, "max":6, "step":0.1}'
+    - '// @input float tabGapCm = 0.6 {"hint":"Vertical gap between stacked tabs, in cm.", "widget":"slider", "min":0, "max":2, "step":0.1}'
+    - '// @input float tabOffsetXCm = 8.4 {"hint":"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.", "widget":"slider", "min":6, "max":16, "step":0.1}'
+    - "// @input vec2 counterOffsetCm = \"{-6.0,6.3}\" {\"hint\":\"Stroke-counter position relative to the sheet centre, in cm. Default is the sheet's top-left corner.\"}"
+    - '// @ui {"widget":"group_end"}'

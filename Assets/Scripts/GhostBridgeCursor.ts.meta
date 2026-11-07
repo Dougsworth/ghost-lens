@@ -1,0 +1,67 @@
+- !<AssetImportMetadata/abaea070-eb56-4bce-aedb-83b892e6f208>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 06c852f5-cb63-427e-b994-f8d3576f90d8
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 06c852f5-cb63-427e-b994-f8d3576f90d8
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 4265a90a-9d05-4c0d-9347-5a6f08c35c53
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/4265a90a-9d05-4c0d-9347-5a6f08c35c53>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 9ba98cec-d08b-4826-93af-765fb7cac330
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    idleColor: false
+    liftCm: false
+    pinchColor: false
+    radiusCm: false
+    surface: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - surface: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      radiusCm: 0.450000
+      idleColor: !<Vec4> {x: 0.550000, y: 0.520000, z: 0.450000, w: 1.000000}
+      pinchColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      liftCm: 0.160000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostBridgeCursor &ndash; webcam fingertip dot</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input SceneObject surface {"hint":"The practice sheet. The dot is parented here and positioned in its local centimetres."}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Appearance</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Appearance"}'
+    - '// @input float radiusCm = 0.45 {"hint":"Dot radius in cm. Big enough to find, small enough not to hide the stroke you are tracing.", "widget":"slider", "min":0.1, "max":1.5, "step":0.05}'
+    - '// @input vec4 idleColor = {0.55,0.52,0.45,1} {"hint":"Resting colour while the fingertip is tracked but not pinching. Additive: this is emitted light.", "widget":"color"}'
+    - "// @input vec4 pinchColor = {1,0.95,0.86,1} {\"hint\":\"Colour while pinching. Brighter than the resting colour, so 'painting' is obvious.\", \"widget\":\"color\"}"
+    - '// @input float liftCm = 0.16 {"hint":"How far in front of the sheet the dot floats, in cm. Keeps it above the paper, grid and ink."}'
+    - '// @ui {"widget":"group_end"}'

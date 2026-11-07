@@ -1,0 +1,63 @@
+- !<AssetImportMetadata/11931ea7-f774-4495-88ce-9fbb17d6747c>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 2bda9de8-b46b-4509-a456-29b52d07c4f9
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 2bda9de8-b46b-4509-a456-29b52d07c4f9
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 0208ff0b-7c73-4a70-b07c-add611872477
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/0208ff0b-7c73-4a70-b07c-add611872477>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 115396f4-b74d-4b4a-a83f-bb718abd192f
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    panelWidthCm: false
+    tileColor: false
+    tileHeightCm: false
+    tileHighlightColor: false
+    typeColor: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - tileColor: !<Vec4> {x: 0.220000, y: 0.200000, z: 0.150000, w: 1.000000}
+      tileHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      panelWidthCm: !<float> 17.000000
+      tileHeightCm: 2.100000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostAskUI &ndash; pick a word for GHOST to write</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 tileColor = "{0.22,0.20,0.15,1}" {"hint":"Word tile colour. Additive display: a faint warm cream, never dark.", "widget":"color"}'
+    - '// @input vec4 tileHighlightColor = "{0.52,0.47,0.36,1}" {"hint":"Tile colour when the user aims at it.", "widget":"color"}'
+    - '// @input vec4 typeColor = "{0.80,0.76,0.68,1}" {"hint":"Colour of the title and the word labels.", "widget":"color"}'
+    - '// @input float panelWidthCm = 17 {"hint":"Width of the whole picker panel, in cm. Must stay inside the visible frame, about 20.3 cm wide at 45 cm.", "widget":"slider", "min":8, "max":20, "step":0.5}'
+    - '// @input float tileHeightCm = 2.1 {"hint":"Height of each word tile, in cm. Keep it a forgiving pinch target.", "widget":"slider", "min":1.5, "max":4, "step":0.1}'
+    - '// @ui {"widget":"group_end"}'
