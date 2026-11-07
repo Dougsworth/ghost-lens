@@ -32,6 +32,11 @@ import {
 import { GhostGuitarUI } from "./GhostGuitarUI";
 import { GhostGuitarController } from "./GhostGuitarController";
 import { GUITAR_CHORDS } from "./GhostGuitarPack";
+import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
+import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
+import { GhostCoach } from "./GhostCoach";
+import { Lesson } from "./GhostLessonSchema";
+import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import {
   GUITAR_LEGEND,
   GUITAR_STRUM_LINE,
@@ -41,7 +46,7 @@ import {
 } from "./GhostGuitarLesson";
 
 /** What the sheet is currently doing. */
-type Mode = "shelf" | "demo" | "turn" | "finished" | "ask" | "asl" | "guitar";
+type Mode = "front" | "shelf" | "demo" | "turn" | "finished" | "ask" | "asl" | "guitar";
 
 @component
 export class GhostMain extends BaseScriptComponent {
@@ -115,6 +120,22 @@ export class GhostMain extends BaseScriptComponent {
   guitar!: GhostGuitarController;
 
   @input
+  @hint("Group root holding the front door sheet.")
+  frontRoot!: SceneObject;
+
+  @input
+  @hint("The front door: what do you want to learn?")
+  frontUI!: GhostFrontDoorUI;
+
+  @input
+  @hint("Plans a lesson, or falls back to a bundled one. Never fails.")
+  lessonSource!: GhostLessonSource;
+
+  @input
+  @hint("One short line after each attempt. Never blocks the lesson.")
+  coach!: GhostCoach;
+
+  @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
   audio!: GhostAudio;
   @ui.group_end
@@ -181,7 +202,8 @@ export class GhostMain extends BaseScriptComponent {
       !this.shelfUI || !this.sheetUI || !this.askUI ||
       !this.sheet || !this.demo || !this.turn || !this.pinchInput || !this.audio ||
       !this.aslRoot || !this.aslUI || !this.asl ||
-      !this.guitarRoot || !this.guitarUI || !this.guitar
+      !this.guitarRoot || !this.guitarUI || !this.guitar ||
+      !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach
     ) {
       print("[GhostMain] ERROR: a required @input is not wired. Check the scene bootstrap's input-wiring pass.");
       return;
@@ -219,6 +241,11 @@ export class GhostMain extends BaseScriptComponent {
     this.aslUI.onPacks.add(() => this.onPacks());
     this.asl.onSignFinished.add(() => this.onSignFinished());
 
+    this.frontUI.onSkillPicked.add((skill: string) => this.onSkillPicked(skill));
+    this.frontUI.onMicPressed.add(() => this.onMicPressed());
+    this.frontUI.onNotebookPicked.add((id: string) => this.onPackSelected(id));
+    this.coach.onTip.add((tip: string) => this.onCoachTip(tip));
+
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
     this.guitarUI.onNext.add(() => this.onGuitarNext());
     this.guitarUI.onPacks.add(() => this.onPacks());
@@ -235,7 +262,7 @@ export class GhostMain extends BaseScriptComponent {
     // and a SceneObject disabled before OnStart never initialises at all. Wait a
     // beat so every control finishes building before hiding the unused halves.
     const ready = this.createEvent("DelayedCallbackEvent");
-    ready.bind(() => this.showShelf());
+    ready.bind(() => this.showFrontDoor());
     ready.reset(0.1);
   }
 
@@ -257,6 +284,7 @@ export class GhostMain extends BaseScriptComponent {
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.shelfRoot.enabled = true;
   }
 
@@ -300,6 +328,7 @@ export class GhostMain extends BaseScriptComponent {
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.lessonRoot.enabled = true;
 
     if (unroll) {
@@ -409,9 +438,14 @@ export class GhostMain extends BaseScriptComponent {
 
   /** The one line above the sheet: how to move for the stroke about to be drawn. */
   private showStrokeTip(strokeIndex: number): void {
+    // A planned lesson carries its own tip per STEP; the kana pack has one per
+    // stroke. Both end up in the same single line.
+    const tip = this.playingPlanned
+      ? this.plannedTip
+      : tipFor(this.currentChar, strokeIndex);
     // Hold 0: the instruction for the stroke you are about to draw stays up
     // until something replaces it, unlike the transient WATCH / NICE words.
-    this.sheetUI.say(tipFor(this.currentChar, strokeIndex), 0);
+    this.sheetUI.say(tip, 0);
   }
 
 
@@ -470,6 +504,7 @@ export class GhostMain extends BaseScriptComponent {
     // without a next step; the tip alone would feel like silence after effort.
     const last = index >= this.glyph.strokeCount - 1;
     this.sheetUI.say(praiseFor(this.praiseCount), 0.9);
+    if (this.playingPlanned && last) this.askCoach(index, "ok");
     this.praiseCount++;
     if (!last) {
       const then = this.createEvent("DelayedCallbackEvent");
@@ -495,6 +530,9 @@ export class GhostMain extends BaseScriptComponent {
     this.cleanRun = 0;
     this.demo.setGuideStrength(1);
     this.sheetUI.say(SAY_MISS, 1.0);
+    // The coach answers after TRY AGAIN has had its moment. It always answers,
+    // so there is no branch here for "no planner" — see GhostCoach.
+    this.askCoach(info.index, info.reason);
     // Re-show the movement for THIS stroke once TRY AGAIN has had its moment.
     // Saying nothing after a miss reads as a dead end; repeating the tip is
     // the quietest useful answer.
@@ -530,7 +568,28 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPageTurnComplete(): void {
     if (this.mode !== "finished") return;
+    if (this.playingPlanned) {
+      this.beginPlannedStep(this.lessonPos + 1);
+      return;
+    }
     this.openLesson(this.lessonIndex + 1);
+  }
+
+  /**
+   * Ask the coach about the attempt just made.
+   *
+   * Only during a planned lesson: the kana pack already has hand-written tips
+   * per stroke, and a model's line would be competing with writing that was
+   * tuned for the character rather than generated for it.
+   */
+  private askCoach(strokeIndex: number, reason: string): void {
+    if (!this.playingPlanned || !this.glyph) return;
+    this.coach.ask({
+      skill: this.lessonSkill,
+      step: "stroke " + (strokeIndex + 1) + " of " + this.glyph.strokeCount,
+      reason: reason,
+      detail: this.plannedTip,
+    });
   }
 
 
@@ -575,7 +634,8 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPacks(): void {
     this.audio.playTap();
-    this.showShelf();
+    // The front door is the home now; the shelf is only reachable from it.
+    this.showFrontDoor();
   }
 
   private onAsk(): void {
@@ -589,6 +649,7 @@ export class GhostMain extends BaseScriptComponent {
     this.asl.stop();
     this.asl.setVisible(false);
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.guitar.clear();
     this.askRoot.enabled = true;
     // Ask opens as its own surface, so it needs placing in front of the user
@@ -660,6 +721,7 @@ export class GhostMain extends BaseScriptComponent {
     this.lessonRoot.enabled = false;
     this.askRoot.enabled = false;
     this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
     this.guitar.clear();
     this.aslRoot.enabled = true;
     this.anchorInFrontOfUser();
@@ -687,6 +749,192 @@ export class GhostMain extends BaseScriptComponent {
   private onAslReplay(): void {
     this.audio.playTap();
     this.openAsl(this.aslIndex);
+  }
+
+  // ── Front door ────────────────────────────────────────────────────────────
+  //
+  // The hero. The Lens opens here, not on the shelf: the question comes first
+  // and the built-in packs are a small row underneath it, because "teach me
+  // anything" is the product and the three packs are examples of it.
+
+  /** The planned lesson being taught, and where we are in it. */
+  private lesson: Lesson | null = null;
+  private lessonSkill = "";
+  private lessonSteps: number[] = [];
+  private lessonPos = 0;
+  private pending: { cancel: () => void } | null = null;
+  /** Rotates the three suggestions so each launch offers something different. */
+  private suggestionSeed = 0;
+
+  private showFrontDoor(): void {
+    this.mode = "front";
+    this.anchorInFrontOfUser();
+    this.demo.stop();
+    this.turn.stop();
+    this.turn.clearAll();
+    this.sheet.hide();
+    this.asl.stop();
+    this.asl.setVisible(false);
+    this.guitar.clear();
+    this.lesson = null;
+    this.lessonSteps = [];
+    if (this.pending) {
+      this.pending.cancel();
+      this.pending = null;
+    }
+
+    this.shelfRoot.enabled = false;
+    this.lessonRoot.enabled = false;
+    this.askRoot.enabled = false;
+    this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = true;
+
+    this.frontUI.setSuggestions(this.pickSuggestions());
+    this.frontUI.showPicker();
+  }
+
+  /**
+   * Three lines, rotated per launch so the front door does not feel static.
+   * Drawn from the bundled bank, which is also exactly the set that still
+   * works with no planner — so a suggestion can never lead to a dead end.
+   */
+  private pickSuggestions(): string[] {
+    const all = this.lessonSource.offlineSkills();
+    if (all.length <= 3) return all.slice();
+    const out: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      out.push(all[(this.suggestionSeed + i) % all.length]);
+    }
+    this.suggestionSeed = (this.suggestionSeed + 1) % all.length;
+    return out;
+  }
+
+  /**
+   * The mic. VoiceML is not wired in this build, so rather than pretend to
+   * listen the mic offers the typed list — which is the brief's own stand-in
+   * rule, and leaves the flow after it identical either way.
+   */
+  private onMicPressed(): void {
+    this.audio.playTap();
+    this.frontUI.setSuggestions(this.pickSuggestions());
+    this.frontUI.setWaiting("Speech is off in the preview — pick one of these.");
+  }
+
+  /** A suggestion was pinched. Plan the lesson, sketching it in as it lands. */
+  private onSkillPicked(skill: string): void {
+    this.audio.playTap();
+    this.lessonSkill = skill;
+    this.frontUI.beginOutline(skill);
+    // No spinner, and no fake progress: one honest line, replaced by the real
+    // step titles the moment they exist.
+    this.frontUI.setWaiting("Writing your lesson...");
+    this.audio.playUnroll();
+
+    this.pending = this.lessonSource.request(skill, (r: LessonResult) => {
+      this.pending = null;
+      if (this.mode !== "front") return;
+      this.onLessonReady(r);
+    });
+  }
+
+  /** The lesson exists. Ink its title lines on, then begin. */
+  private onLessonReady(r: LessonResult): void {
+    this.lesson = r.lesson;
+    this.lessonSteps = traceableSteps(r.lesson);
+    this.lessonPos = 0;
+    this.frontUI.setWaiting(r.origin === "bank" ? r.note : "");
+
+    // The outline is brushed on one line at a time rather than appearing whole,
+    // which is the spec's "ghost sketches the lesson as it arrives".
+    const steps = r.lesson.steps || [];
+    const inkOne = (i: number) => {
+      if (this.mode !== "front") return;
+      if (i >= steps.length) {
+        const go = this.createEvent("DelayedCallbackEvent");
+        go.bind(() => this.startPlannedLesson());
+        go.reset(1.2);
+        return;
+      }
+      this.frontUI.addOutlineLine(steps[i].title);
+      this.audio.playBrush();
+      const next = this.createEvent("DelayedCallbackEvent");
+      next.bind(() => inkOne(i + 1));
+      next.reset(0.45);
+    };
+    inkOne(0);
+  }
+
+  /**
+   * Teach the planned lesson on the practice sheet.
+   *
+   * Only the path steps are taught here: they are the ones the engine can
+   * actually check. A lesson with none of them has nothing this build can
+   * grade, so it returns to the front door rather than opening an empty sheet.
+   */
+  private startPlannedLesson(): void {
+    if (!this.lesson || this.lessonSteps.length === 0) {
+      this.frontUI.setWaiting("That one needs hands, which this build cannot check yet.");
+      return;
+    }
+    this.frontRoot.enabled = false;
+    this.beginPlannedStep(0);
+  }
+
+  private beginPlannedStep(pos: number): void {
+    if (!this.lesson) return;
+    if (pos >= this.lessonSteps.length) {
+      this.showFrontDoor();
+      return;
+    }
+    this.lessonPos = pos;
+    const step = this.lesson.steps[this.lessonSteps[pos]];
+    const glyph = glyphFromStep(step, this.lessonSkill, this.demo.glyphUnitCm);
+    if (!glyph) {
+      this.beginPlannedStep(pos + 1);
+      return;
+    }
+
+    this.glyph = glyph;
+    this.currentChar = "";
+    this.plannedTip = step.tip;
+
+    this.turn.stop();
+    this.turn.clearAll();
+    this.demo.setGlyph(glyph);
+    this.sheetUI.clearStrokeNumbers();
+    this.sheetUI.clearTurnMarkers();
+    this.sheetUI.setStrokeCounter(1, glyph.strokeCount);
+    this.sheetUI.setRomaji("");
+    this.sheetUI.setHook("");
+    this.sheetUI.setProgress(this.lessonSteps.length, pos, pos);
+    this.sheetUI.setCaption(step.title);
+
+    this.shelfRoot.enabled = false;
+    this.askRoot.enabled = false;
+    this.aslRoot.enabled = false;
+    this.guitarRoot.enabled = false;
+    this.frontRoot.enabled = false;
+    this.lessonRoot.enabled = true;
+
+    this.cleanCharacter = true;
+    this.demo.setGuideStrength(this.guideStrengthNow());
+    this.anchorInFrontOfUser();
+    this.sheet.showUnroll();
+    this.audio.playUnroll();
+  }
+
+  /** The planned step's own tip, used instead of the kana table's. */
+  private plannedTip = "";
+
+  /** True while a planned lesson, not a built-in pack, is on the sheet. */
+  private get playingPlanned(): boolean {
+    return this.lesson !== null && this.lessonSteps.length > 0;
+  }
+
+  private onCoachTip(tip: string): void {
+    if (this.mode !== "turn") return;
+    this.sheetUI.say(tip, 2.2);
   }
 
   // ── Guitar pack ───────────────────────────────────────────────────────────
