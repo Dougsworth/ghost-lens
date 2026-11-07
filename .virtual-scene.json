@@ -5370,12 +5370,40 @@
           "name": "GhostSheetUI",
           "enabled": true,
           "properties": {
+            "typeColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.96, y: 0.93, z: 0.86, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour of the tab labels and the stroke counter. Near-white emitted light: on the additive display the faint washi tab gives the type no dark ground to sit on, so the letters have to carry their own brightness to read at 45 cm.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.96,0.93,0.86,1}"
+            },
             "tabWidthCm": {
               "isScriptInput": true,
               "value": 3.200000047683716,
               "type": "float",
               "uiInfo": "{\"hint\":\"Width of each bookmark tab, in cm.\", \"widget\":\"slider\", \"min\":2, \"max\":8, \"step\":0.1}",
               "defaultValue": "3"
+            },
+            "tabOffsetXCm": {
+              "isScriptInput": true,
+              "value": 8,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.\", \"widget\":\"slider\", \"min\":6, \"max\":16, \"step\":0.1}",
+              "defaultValue": "8.4"
+            },
+            "tabHighlightColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Tab colour when the user aims at it — the same paper, lit up. Still washi, never a highlight box.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.46,0.41,0.31,1}"
+            },
+            "progressCurrentColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.72, y: 0.68, z: 0.6, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"The dot for the character being practised now.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.72,0.68,0.60,1}"
             },
             "tabPaperColor": {
               "isScriptInput": true,
@@ -5384,12 +5412,26 @@
               "uiInfo": "{\"hint\":\"Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.\", \"widget\":\"color\"}",
               "defaultValue": "{0.26,0.23,0.17,1}"
             },
-            "counterOffsetCm": {
+            "progressDotRadiusCm": {
               "isScriptInput": true,
-              "value": "{x: -6, y: 6.3}",
-              "type": "vec2",
-              "uiInfo": "{\"hint\":\"Stroke-counter position relative to the sheet centre, in cm. Default is the sheet's top-left corner.\"}",
-              "defaultValue": "{-6.0,6.3}"
+              "value": 0.20000000298023224,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Radius of each progress dot, in cm.\", \"widget\":\"slider\", \"min\":0.08, \"max\":0.6, \"step\":0.02}",
+              "defaultValue": "0.2"
+            },
+            "progressDoneColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"A progress dot for a character already finished.\", \"widget\":\"color\"}",
+              "defaultValue": "{1.0,0.95,0.86,1}"
+            },
+            "progressDimColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.3, y: 0.28, z: 0.24, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"A dot for a character not reached yet. Dim, never dark: on the additive display an 'empty' dot can only be dim.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.30,0.28,0.24,1}"
             },
             "tabHeightCm": {
               "isScriptInput": true,
@@ -5405,36 +5447,26 @@
               "uiInfo": "{\"hint\":\"Vertical gap between stacked tabs, in cm.\", \"widget\":\"slider\", \"min\":0, \"max\":2, \"step\":0.1}",
               "defaultValue": "0.6"
             },
-            "tabOffsetXCm": {
+            "counterOffsetCm": {
               "isScriptInput": true,
-              "value": 8,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far right of the sheet centre the tab stack sits, in cm. 8.4 tucks each tab behind the sheet edge so it sticks out like a real bookmark, and keeps the stack inside the visible frame.\", \"widget\":\"slider\", \"min\":6, \"max\":16, \"step\":0.1}",
-              "defaultValue": "8.4"
-            },
-            "typeColor": {
-              "isScriptInput": true,
-              "value": "{x: 0.96, y: 0.93, z: 0.86, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Colour of the tab labels and the stroke counter. Near-white emitted light: on the additive display the faint washi tab gives the type no dark ground to sit on, so the letters have to carry their own brightness to read at 45 cm.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.96,0.93,0.86,1}"
-            },
-            "tabHighlightColor": {
-              "isScriptInput": true,
-              "value": "{x: 0.46, y: 0.41, z: 0.31, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Tab colour when the user aims at it — the same paper, lit up. Still washi, never a highlight box.\", \"widget\":\"color\"}",
-              "defaultValue": "{0.46,0.41,0.31,1}"
+              "value": "{x: -6, y: 6.3}",
+              "type": "vec2",
+              "uiInfo": "{\"hint\":\"Stroke-counter position relative to the sheet centre, in cm. Default is the sheet's top-left corner.\"}",
+              "defaultValue": "{-6.0,6.3}"
             },
             "scriptAsset": "@asset:Scripts/GhostSheetUI.ts",
             "inputNames.0": "counterOffsetCm",
-            "inputNames.1": "tabGapCm",
-            "inputNames.2": "tabHeightCm",
-            "inputNames.3": "tabHighlightColor",
-            "inputNames.4": "tabOffsetXCm",
-            "inputNames.5": "tabPaperColor",
-            "inputNames.6": "tabWidthCm",
-            "inputNames.7": "typeColor",
+            "inputNames.1": "progressCurrentColor",
+            "inputNames.2": "progressDimColor",
+            "inputNames.3": "progressDoneColor",
+            "inputNames.4": "progressDotRadiusCm",
+            "inputNames.5": "tabGapCm",
+            "inputNames.6": "tabHeightCm",
+            "inputNames.7": "tabHighlightColor",
+            "inputNames.8": "tabOffsetXCm",
+            "inputNames.9": "tabPaperColor",
+            "inputNames.10": "tabWidthCm",
+            "inputNames.11": "typeColor",
             "name": "GhostSheetUI",
             "enabled": true,
             "sceneObject": "@sceneObject:SheetFurniture",
@@ -5476,20 +5508,6 @@
           "name": "GhostTurnController",
           "enabled": true,
           "properties": {
-            "minLengthRatio": {
-              "isScriptInput": true,
-              "value": 0.30000001192092896,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}",
-              "defaultValue": "0.3"
-            },
-            "toleranceCm": {
-              "isScriptInput": true,
-              "value": 2.4000000953674316,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.\", \"widget\":\"slider\", \"min\":0.3, \"max\":5, \"step\":0.1}",
-              "defaultValue": "2.4"
-            },
             "startToleranceCm": {
               "isScriptInput": true,
               "value": 3,
@@ -5536,12 +5554,33 @@
               "uiInfo": "{\"hint\":\"Colour of the pulsing marker that shows where to begin again after a miss.\", \"widget\":\"color\"}",
               "defaultValue": "{1,0.86,0.55,1}"
             },
+            "minDragSec": {
+              "isScriptInput": true,
+              "value": 0.25,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"A pinch shorter than this many seconds is ignored completely - not accepted, and NOT counted as a miss. Stops an accidental tap from burning one of the three tries before the ghost re-demonstrates.\", \"widget\":\"slider\", \"min\":0, \"max\":1, \"step\":0.05}",
+              "defaultValue": "0.25"
+            },
             "missesBeforeDemo": {
               "isScriptInput": true,
               "value": 3,
               "type": "float",
               "uiInfo": "{\"hint\":\"Misses on the same stroke before the ghost quietly demonstrates that one stroke again.\", \"widget\":\"slider\", \"min\":1, \"max\":6, \"step\":1}",
               "defaultValue": "3"
+            },
+            "toleranceCm": {
+              "isScriptInput": true,
+              "value": 2.4000000953674316,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far the drag may stray from the guide, averaged over the stroke, in cm. Bigger is more forgiving. Tune this by hand in the preview.\", \"widget\":\"slider\", \"min\":0.3, \"max\":5, \"step\":0.1}",
+              "defaultValue": "2.4"
+            },
+            "minLengthRatio": {
+              "isScriptInput": true,
+              "value": 0.30000001192092896,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}",
+              "defaultValue": "0.3"
             },
             "maxLengthRatio": {
               "isScriptInput": true,
@@ -5569,14 +5608,15 @@
             "inputNames.1": "inkWidthCm",
             "inputNames.2": "inputSmoothing",
             "inputNames.3": "maxLengthRatio",
-            "inputNames.4": "minLengthRatio",
-            "inputNames.5": "missesBeforeDemo",
-            "inputNames.6": "pinchInput",
-            "inputNames.7": "pulseColor",
-            "inputNames.8": "sheet",
-            "inputNames.9": "startToleranceCm",
-            "inputNames.10": "toleranceCm",
-            "inputNames.11": "wetInkColor",
+            "inputNames.4": "minDragSec",
+            "inputNames.5": "minLengthRatio",
+            "inputNames.6": "missesBeforeDemo",
+            "inputNames.7": "pinchInput",
+            "inputNames.8": "pulseColor",
+            "inputNames.9": "sheet",
+            "inputNames.10": "startToleranceCm",
+            "inputNames.11": "toleranceCm",
+            "inputNames.12": "wetInkColor",
             "name": "GhostTurnController",
             "enabled": true,
             "sceneObject": "@sceneObject:TurnController",
@@ -5741,6 +5781,20 @@
               "uiInfo": "{\"hint\":\"Ignore points landing further than this from the surface centre, in cm. Stops a stray pinch across the room from painting.\", \"widget\":\"slider\", \"min\":5, \"max\":60, \"step\":1}",
               "defaultValue": "24"
             },
+            "bridgeRelativeMode": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Bridge only: start each stroke AT the stroke's start point and move the brush relative to your hand from there, instead of mapping your hand's absolute position onto the paper.\"}",
+              "defaultValue": "true"
+            },
+            "bridgeGain": {
+              "isScriptInput": true,
+              "value": 1.2999999523162842,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Bridge relative mode: how far the brush travels per unit of hand movement. Above 1 means small hand moves cover the whole stroke.\", \"widget\":\"slider\", \"min\":0.5, \"max\":3, \"step\":0.1}",
+              "defaultValue": "1.3"
+            },
             "acceptWebcamBridge": {
               "isScriptInput": true,
               "value": true,
@@ -5750,8 +5804,10 @@
             },
             "scriptAsset": "@asset:Scripts/GhostPinchInput.ts",
             "inputNames.0": "acceptWebcamBridge",
-            "inputNames.1": "reachCm",
-            "inputNames.2": "surface",
+            "inputNames.1": "bridgeGain",
+            "inputNames.2": "bridgeRelativeMode",
+            "inputNames.3": "reachCm",
+            "inputNames.4": "surface",
             "name": "GhostPinchInput",
             "enabled": true,
             "sceneObject": "@sceneObject:PinchInput",
@@ -6082,13 +6138,6 @@
           "name": "GhostBridgeCursor",
           "enabled": true,
           "properties": {
-            "radiusCm": {
-              "isScriptInput": true,
-              "value": 0.44999998807907104,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"Dot radius in cm. Big enough to find, small enough not to hide the stroke you are tracing.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1.5, \"step\":0.05}",
-              "defaultValue": "0.45"
-            },
             "surface": {
               "isScriptInput": true,
               "value": {
@@ -6098,19 +6147,35 @@
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"The practice sheet. The dot is parented here and positioned in its local centimetres.\"}"
             },
-            "pinchColor": {
-              "isScriptInput": true,
-              "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
-              "type": "vec4",
-              "uiInfo": "{\"hint\":\"Colour while pinching. Brighter than the resting colour, so 'painting' is obvious.\", \"widget\":\"color\"}",
-              "defaultValue": "{1,0.95,0.86,1}"
-            },
             "liftCm": {
               "isScriptInput": true,
               "value": 0.1599999964237213,
               "type": "float",
               "uiInfo": "{\"hint\":\"How far in front of the sheet the dot floats, in cm. Keeps it above the paper, grid and ink.\"}",
               "defaultValue": "0.16"
+            },
+            "radiusCm": {
+              "isScriptInput": true,
+              "value": 0.44999998807907104,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Dot radius in cm. Big enough to find, small enough not to hide the stroke you are tracing.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1.5, \"step\":0.05}",
+              "defaultValue": "0.45"
+            },
+            "pinchInput": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "81890501-22b4-4d6f-9127-2579d6587b04",
+                "name": "GhostPinchInput"
+              },
+              "type": "AssignableType_1",
+              "uiInfo": "{\"hint\":\"Optional. In the bridge's relative mode the brush is NOT under your hand, so while pinching the cursor follows the brush instead. Leave empty to always show the raw fingertip.\"}"
+            },
+            "pinchColor": {
+              "isScriptInput": true,
+              "value": "{x: 1, y: 0.95, z: 0.86, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"Colour while pinching. Brighter than the resting colour, so 'painting' is obvious.\", \"widget\":\"color\"}",
+              "defaultValue": "{1,0.95,0.86,1}"
             },
             "idleColor": {
               "isScriptInput": true,
@@ -6123,8 +6188,9 @@
             "inputNames.0": "idleColor",
             "inputNames.1": "liftCm",
             "inputNames.2": "pinchColor",
-            "inputNames.3": "radiusCm",
-            "inputNames.4": "surface",
+            "inputNames.3": "pinchInput",
+            "inputNames.4": "radiusCm",
+            "inputNames.5": "surface",
             "name": "GhostBridgeCursor",
             "enabled": true,
             "sceneObject": "@sceneObject:WebcamHandBridge",

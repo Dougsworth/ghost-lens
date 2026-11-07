@@ -82,6 +82,11 @@ export class GhostTurnController extends BaseScriptComponent {
   startToleranceCm: number = 3.0;
 
   @input
+  @hint("A pinch shorter than this many seconds is ignored completely - not accepted, and NOT counted as a miss. Stops an accidental tap from burning one of the three tries before the ghost re-demonstrates.")
+  @widget(new SliderWidget(0, 1, 0.05))
+  minDragSec: number = 0.25;
+
+  @input
   @hint("Misses on the same stroke before the ghost quietly demonstrates that one stroke again.")
   @widget(new SliderWidget(1, 6, 1))
   missesBeforeDemo: number = 3;
@@ -98,6 +103,7 @@ export class GhostTurnController extends BaseScriptComponent {
   @ui.group_end
 
   private glyph: GlyphPath | null = null;
+  private strokeBeganAt = 0;
   private strokeIndex = 0;
   private misses = 0;
   private active = false;
@@ -161,12 +167,14 @@ export class GhostTurnController extends BaseScriptComponent {
     this.active = true;
     this.setPulse(false);
     if (this.pinchInput) this.pinchInput.accepting = true;
+    this.publishStrokeStart();
   }
 
   /** Take the sheet back (demo replay, page turn, back to the shelf). */
   stop(): void {
     this.active = false;
     if (this.pinchInput) this.pinchInput.accepting = false;
+    this.publishStrokeStart();
     this.discardLive();
     this.setPulse(false);
   }
@@ -176,6 +184,7 @@ export class GhostTurnController extends BaseScriptComponent {
     if (!this.glyph) return;
     this.active = true;
     if (this.pinchInput) this.pinchInput.accepting = true;
+    this.publishStrokeStart();
   }
 
   clearAll(): void {
@@ -194,6 +203,7 @@ export class GhostTurnController extends BaseScriptComponent {
     this.discardLive();
     this.livePoints = [p];
     this.smoothed = { x: p.x, y: p.y };
+    this.strokeBeganAt = getTime();
     this.live = new InkRibbon(
       this.sheet.inkRoot,
       "UserStroke" + this.strokeIndex,
@@ -238,6 +248,14 @@ export class GhostTurnController extends BaseScriptComponent {
       this.live.setRawPoints(this.livePoints);
     }
 
+    // Too brief to be a drag at all: throw the ink away and say nothing. A
+    // stray tap is not an attempt, so scoring it as a miss would push the user
+    // towards the re-demonstration they did not ask for.
+    if (getTime() - this.strokeBeganAt < this.minDragSec) {
+      this.discardLive();
+      return;
+    }
+
     const target = this.glyph.strokes[this.strokeIndex];
     const verdict = checkStroke(
       this.livePoints,
@@ -261,6 +279,7 @@ export class GhostTurnController extends BaseScriptComponent {
       const done = this.strokeIndex;
       this._onStrokeAccepted.invoke(done);
       this.strokeIndex++;
+      this.publishStrokeStart();
       if (this.strokeIndex >= this.glyph.strokeCount) {
         this.active = false;
         if (this.pinchInput) this.pinchInput.accepting = false;
@@ -325,6 +344,23 @@ export class GhostTurnController extends BaseScriptComponent {
   }
 
   // ── Start-point pulse ─────────────────────────────────────────────────────
+
+
+  /**
+   * Tell the input layer where the current stroke begins, so the bridge's
+   * relative mode can anchor there. Null whenever no stroke is waiting, which
+   * makes relative mode fall back to absolute rather than anchoring to a stale
+   * point from the previous stroke.
+   */
+  private publishStrokeStart(): void {
+    if (!this.pinchInput) return;
+    if (!this.active || !this.glyph || this.strokeIndex >= this.glyph.strokeCount) {
+      this.pinchInput.strokeStart = null;
+      return;
+    }
+    const st = this.glyph.strokes[this.strokeIndex].start;
+    this.pinchInput.strokeStart = { x: st.x, y: st.y };
+  }
 
   private setPulse(on: boolean): void {
     this.pulseOn = on;

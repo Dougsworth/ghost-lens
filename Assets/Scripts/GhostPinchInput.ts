@@ -52,6 +52,15 @@ export class GhostPinchInput extends BaseScriptComponent {
   @hint("Ignore points landing further than this from the surface centre, in cm. Stops a stray pinch across the room from painting.")
   @widget(new SliderWidget(5, 60, 1))
   reachCm: number = 24;
+
+  @input
+  @hint("Bridge only: start each stroke AT the stroke's start point and move the brush relative to your hand from there, instead of mapping your hand's absolute position onto the paper.")
+  bridgeRelativeMode: boolean = true;
+
+  @input
+  @hint("Bridge relative mode: how far the brush travels per unit of hand movement. Above 1 means small hand moves cover the whole stroke.")
+  @widget(new SliderWidget(0.5, 3, 0.1))
+  bridgeGain: number = 1.3;
   @ui.group_end
 
   private readonly _onPinchStart = new Event<Pt>();
@@ -76,6 +85,24 @@ export class GhostPinchInput extends BaseScriptComponent {
   private active: Interactor | null = null;
   private lastPoint: Pt | null = null;
   private bridgeHooked = false;
+
+  /**
+   * Where the current stroke begins, in sheet-local cm. Set by the turn
+   * controller as each stroke comes up; null whenever no stroke is waiting.
+   * Relative mode needs this because the input layer deliberately knows
+   * nothing about glyphs.
+   */
+  strokeStart: Pt | null = null;
+
+  /** The last point actually emitted — what the ink followed, which in relative
+   *  mode is NOT where the hand is. The cursor reads this so it sits on the
+   *  brush while painting. */
+  lastEmitted: Pt | null = null;
+  /** True between a bridge pinch start and its end. */
+  bridgePinching = false;
+
+  private anchorHand: Pt | null = null;
+  private anchorTarget: Pt | null = null;
 
   onAwake(): void {
     this.createEvent("OnStartEvent").bind(() => this.onStart());
@@ -159,18 +186,56 @@ export class GhostPinchInput extends BaseScriptComponent {
     if (!this.accepting) return;
     // A real hand from the bridge is already on the sheet plane, so the camera
     // ray projection below collapses to near-identity.
-    const p = this.project(world);
-    if (!p) return;
+    const hand = this.project(world);
+    if (!hand) return;
+
     if (phase === "start") {
+      // Relative mode: the stroke always BEGINS at the start point, however
+      // close the hand happened to be. Webcam hand position is accurate to a
+      // couple of centimetres at best, so demanding the user physically land
+      // on a 2 mm start point is a test of the tracker, not of their writing.
+      // The offset between hand and target is remembered, and from here the
+      // hand drives the brush as a delta.
+      if (this.bridgeRelativeMode && this.strokeStart) {
+        this.anchorHand = { x: hand.x, y: hand.y };
+        this.anchorTarget = { x: this.strokeStart.x, y: this.strokeStart.y };
+      } else {
+        this.anchorHand = null;
+        this.anchorTarget = null;
+      }
+      this.bridgePinching = true;
+      const p = this.applyAnchor(hand);
       this.lastPoint = p;
+      this.lastEmitted = p;
       this._onPinchStart.invoke(p);
-    } else if (phase === "move") {
-      this.lastPoint = p;
-      this._onPinchMove.invoke(p);
-    } else {
-      this._onPinchEnd.invoke(p);
-      this.lastPoint = null;
+      return;
     }
+
+    if (phase === "move") {
+      const p = this.applyAnchor(hand);
+      this.lastPoint = p;
+      this.lastEmitted = p;
+      this._onPinchMove.invoke(p);
+      return;
+    }
+
+    const p = this.applyAnchor(hand);
+    this._onPinchEnd.invoke(p);
+    this.lastPoint = null;
+    this.lastEmitted = null;
+    this.bridgePinching = false;
+    this.anchorHand = null;
+    this.anchorTarget = null;
+  }
+
+  /** Hand point -> brush point. Identity unless a relative anchor is active. */
+  private applyAnchor(hand: Pt): Pt {
+    if (!this.anchorHand || !this.anchorTarget) return hand;
+    const g = this.bridgeGain;
+    return {
+      x: this.anchorTarget.x + (hand.x - this.anchorHand.x) * g,
+      y: this.anchorTarget.y + (hand.y - this.anchorHand.y) * g,
+    };
   }
 
   // ── Projection ────────────────────────────────────────────────────────────

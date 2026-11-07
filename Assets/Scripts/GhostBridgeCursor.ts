@@ -17,6 +17,7 @@
  */
 
 import { createDot } from "./GhostInkRibbon";
+import { GhostPinchInput } from "./GhostPinchInput";
 import { WebcamHandBridge } from "./WebcamHandBridge";
 
 @component
@@ -29,6 +30,10 @@ export class GhostBridgeCursor extends BaseScriptComponent {
   @input
   @hint("The practice sheet. The dot is parented here and positioned in its local centimetres.")
   surface!: SceneObject;
+
+  @input
+  @hint("Optional. In the bridge's relative mode the brush is NOT under your hand, so while pinching the cursor follows the brush instead. Leave empty to always show the raw fingertip.")
+  pinchInput: GhostPinchInput;
   @ui.group_end
 
   @ui.separator
@@ -85,9 +90,24 @@ export class GhostBridgeCursor extends BaseScriptComponent {
       return;
     }
 
-    const st = this.surface.getTransform();
-    const local = st.getInvertedWorldTransform().multiplyPoint(tip);
-    this.dotObj.getTransform().setLocalPosition(new vec3(local.x, local.y, this.liftCm));
+    // While a bridge pinch is active in relative mode the brush is offset from
+    // the hand, so showing the raw fingertip would point at empty paper while
+    // ink appears elsewhere. Hovering (no pinch) still shows the real position.
+    let lx: number;
+    let ly: number;
+    const emitted = this.pinchInput && this.pinchInput.bridgePinching
+      ? this.pinchInput.lastEmitted
+      : null;
+    if (emitted) {
+      lx = emitted.x;
+      ly = emitted.y;
+    } else {
+      const st = this.surface.getTransform();
+      const local = st.getInvertedWorldTransform().multiplyPoint(tip);
+      lx = local.x;
+      ly = local.y;
+    }
+    this.dotObj.getTransform().setLocalPosition(new vec3(lx, ly, this.liftCm));
     if (!this.dotObj.enabled) this.dotObj.enabled = true;
 
     const pass = this.dot.mainMaterial.mainPass;

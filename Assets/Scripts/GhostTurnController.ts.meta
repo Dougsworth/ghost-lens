@@ -32,6 +32,7 @@
     inkWidthCm: false
     inputSmoothing: false
     maxLengthRatio: false
+    minDragSec: false
     minLengthRatio: false
     missesBeforeDemo: false
     pinchInput: false
@@ -58,6 +59,7 @@
       minLengthRatio: 0.450000
       maxLengthRatio: 2.200000
       startToleranceCm: !<float> 3.000000
+      minDragSec: 0.250000
       missesBeforeDemo: !<float> 3.000000
       inkWidthCm: 0.550000
       inputSmoothing: 0.500000
@@ -82,6 +84,7 @@
     - "// @input float minLengthRatio = 0.3 {\"hint\":\"The drag must be at least this fraction of the guide stroke's length, so a dab at the start point cannot pass.\", \"widget\":\"slider\", \"min\":0.1, \"max\":1, \"step\":0.05}"
     - '// @input float maxLengthRatio = 3 {"hint":"And at most this multiple of it, so scribbling cannot pass.", "widget":"slider", "min":1, "max":5, "step":0.1}'
     - "// @input float startToleranceCm = 3 {\"hint\":\"How far from the stroke's start point you may begin the drag, in cm, before that offset counts against the shape score. Forgives WHERE you start, not what you draw.\", \"widget\":\"slider\", \"min\":0, \"max\":6, \"step\":0.1}"
+    - '// @input float minDragSec = 0.25 {"hint":"A pinch shorter than this many seconds is ignored completely - not accepted, and NOT counted as a miss. Stops an accidental tap from burning one of the three tries before the ghost re-demonstrates.", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @input float missesBeforeDemo = 3 {"hint":"Misses on the same stroke before the ghost quietly demonstrates that one stroke again.", "widget":"slider", "min":1, "max":6, "step":1}'
     - "// @input float inkWidthCm = 0.55 {\"hint\":\"Thickness of the user's brush stroke, in cm.\", \"widget\":\"slider\", \"min\":0.15, \"max\":1.5, \"step\":0.05}"
     - '// @input float inputSmoothing = 0.5 {"hint":"How much the incoming pinch path is smoothed before it becomes ink. 0 = raw (every tremor shows as a lump), higher = smoother but the ink trails the finger slightly.", "widget":"slider", "min":0, "max":0.9, "step":0.05}'

@@ -31,6 +31,7 @@
     idleColor: false
     liftCm: false
     pinchColor: false
+    pinchInput: false
     radiusCm: false
     surface: false
   ScriptTypesHidden:
@@ -43,6 +44,7 @@
     []
   DefaultScriptInputs:
     - surface: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      pinchInput: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
       radiusCm: 0.450000
       idleColor: !<Vec4> {x: 0.550000, y: 0.520000, z: 0.450000, w: 1.000000}
       pinchColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
@@ -56,6 +58,7 @@
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
     - '// @ui {"widget":"group_start", "label":"References"}'
     - '// @input SceneObject surface {"hint":"The practice sheet. The dot is parented here and positioned in its local centimetres."}'
+    - "// @input AssignableType_1 pinchInput {\"hint\":\"Optional. In the bridge's relative mode the brush is NOT under your hand, so while pinching the cursor follows the brush instead. Leave empty to always show the raw fingertip.\"}"
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Appearance</span>"}'
