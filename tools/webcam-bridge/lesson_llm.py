@@ -53,8 +53,26 @@ GEMINI_COACH_THINKING = 0
 # but will move. Token COUNTS below are exact (they come back from the API);
 # the dollar figure is only ever as good as these two numbers, so check them
 # against https://ai.google.dev/pricing before quoting a cost to anyone.
-GEMINI_USD_PER_M_INPUT = 0.30
-GEMINI_USD_PER_M_OUTPUT = 2.50
+# Gemini 3.8 Flash, paid "Standard" tier, USD per MILLION tokens, read from
+# aistudio.google.com/docs/pricing on 2026-11-07.
+#
+# These rates STEP UP on 2027-01-01 to 1.50 input / 7.50 output. Change them
+# then, or every figure below silently halves.
+#
+# The output rate INCLUDES thinking tokens -- the page prices them together --
+# so the plan call's thinking budget shows up here as output, not as a free
+# extra.
+#
+# The previous values (0.30 / 2.50) were Gemini 3.5 Flash-LITE's rates, which
+# understated a lesson by about 40%. Flash and Flash-Lite are different models
+# at different prices; do not copy one's rates onto the other.
+#
+# Unverified: the pricing page never mentions the alias "gemini-flash-latest",
+# so which concrete model it resolves to is not confirmed. These are the rates
+# for the current Flash. If the alias ever points at Flash-Lite the figures
+# here OVERSTATE cost, which is the safer direction to be wrong in.
+GEMINI_USD_PER_M_INPUT = 0.75
+GEMINI_USD_PER_M_OUTPUT = 3.75
 
 
 def estimate_cost(prompt_tokens, output_tokens):
