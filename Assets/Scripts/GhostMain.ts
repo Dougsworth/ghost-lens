@@ -26,7 +26,9 @@ import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/
 import { GhostAslUI } from "./GhostAslUI";
 import { GhostAslController } from "./GhostAslController";
 import { ASL_SIGNS } from "./GhostAslPack";
-import { INTRO_LINE, lessonFor, praiseFor, tipFor } from "./GhostKanaLesson";
+import {
+  SAY_MISS, SAY_WATCH, SAY_YOUR_TURN, lessonFor, praiseFor, strokeOf, tipFor,
+} from "./GhostKanaLesson";
 import { GhostGuitarUI } from "./GhostGuitarUI";
 import { GhostGuitarController } from "./GhostGuitarController";
 import { GUITAR_CHORDS } from "./GhostGuitarPack";
@@ -153,7 +155,6 @@ export class GhostMain extends BaseScriptComponent {
   private cleanRun = 0;
   /** True while the character on the sheet has not been missed once. */
   private cleanCharacter = true;
-  private introShown = false;
   private praiseCount = 0;
   private currentChar = "";
   private lessonIndex = 0;
@@ -290,7 +291,7 @@ export class GhostMain extends BaseScriptComponent {
     this.sheetUI.setRomaji(lesson ? lesson.romaji : "");
     this.sheetUI.setHook(lesson ? lesson.hook : "");
     this.sheetUI.setProgress(this.characters.length, this.lessonIndex, this.lessonIndex);
-    this.sheetUI.setLine("");
+    this.sheetUI.clearSay();
 
     this.cleanCharacter = true;
     this.demo.setGuideStrength(this.guideStrengthNow());
@@ -318,6 +319,9 @@ export class GhostMain extends BaseScriptComponent {
     // The ghost is showing the stroke; its own brush is the marker.
     this.sheetUI.clearTurnMarkers();
     this.demo.setBrushVisible(true);
+    // Nothing to do during WATCH, so nothing to reach for.
+    this.sheetUI.setTabsVisible([]);
+    this.sheetUI.say(SAY_WATCH, 1.4);
     this.redemoIndex = -1;
     this.turn.stop();
     this.sheetUI.clearStrokeNumbers();
@@ -339,18 +343,36 @@ export class GhostMain extends BaseScriptComponent {
     this.demo.setBrushVisible(false);
     this.turn.begin(this.glyph);
     this.showTurnMarkers(0);
+    // Only what is useful mid-stroke. The brief asks for Replay and Next
+    // alone; Packs stays until rule 4's palm-up menu exists to carry it,
+    // because without it there is no way out of a lesson at all.
+    this.sheetUI.setTabsVisible(["Replay", "Next", "Packs"]);
+    this.sayTurnSequence(0);
 
-    // First lesson only: say what to do, once, then get out of the way. After
-    // that the line carries the per-stroke tip instead.
-    if (!this.introShown) {
-      this.introShown = true;
-      this.sheetUI.setLine(INTRO_LINE);
-      const clear = this.createEvent("DelayedCallbackEvent");
-      clear.bind(() => this.showStrokeTip(0));
-      clear.reset(3.0);
-      return;
-    }
-    this.showStrokeTip(0);
+  }
+
+  /**
+   * The three big words that open a stroke: YOUR TURN, which stroke it is, and
+   * how to move. One at a time, each replacing the last, so there is never a
+   * second line on screen.
+   */
+  private sayTurnSequence(strokeIndex: number): void {
+    if (!this.glyph) return;
+    this.sheetUI.say(SAY_YOUR_TURN, 1.1);
+
+    const n = this.glyph.strokeCount;
+    const which = this.createEvent("DelayedCallbackEvent");
+    which.bind(() => {
+      if (this.mode !== "turn") return;
+      this.sheetUI.say(strokeOf(strokeIndex, n), 1.1);
+      const how = this.createEvent("DelayedCallbackEvent");
+      how.bind(() => {
+        if (this.mode !== "turn") return;
+        this.showStrokeTip(strokeIndex);
+      });
+      how.reset(1.5);
+    });
+    which.reset(1.5);
   }
 
   /**
@@ -387,7 +409,9 @@ export class GhostMain extends BaseScriptComponent {
 
   /** The one line above the sheet: how to move for the stroke about to be drawn. */
   private showStrokeTip(strokeIndex: number): void {
-    this.sheetUI.setLine(tipFor(this.currentChar, strokeIndex));
+    // Hold 0: the instruction for the stroke you are about to draw stays up
+    // until something replaces it, unlike the transient WATCH / NICE words.
+    this.sheetUI.say(tipFor(this.currentChar, strokeIndex), 0);
   }
 
 
@@ -445,12 +469,20 @@ export class GhostMain extends BaseScriptComponent {
     // A word, then the next instruction. Praise alone would leave the user
     // without a next step; the tip alone would feel like silence after effort.
     const last = index >= this.glyph.strokeCount - 1;
-    this.sheetUI.setLine(praiseFor(this.praiseCount));
+    this.sheetUI.say(praiseFor(this.praiseCount), 0.9);
     this.praiseCount++;
     if (!last) {
       const then = this.createEvent("DelayedCallbackEvent");
-      then.bind(() => this.showStrokeTip(index + 1));
-      then.reset(1.1);
+      then.bind(() => {
+        if (this.mode !== "turn") return;
+        this.sheetUI.say(strokeOf(index + 1, this.glyph ? this.glyph.strokeCount : 0), 1.0);
+        const how = this.createEvent("DelayedCallbackEvent");
+        how.bind(() => {
+          if (this.mode === "turn") this.showStrokeTip(index + 1);
+        });
+        how.reset(1.4);
+      });
+      then.reset(1.3);
     }
   }
 
@@ -462,9 +494,15 @@ export class GhostMain extends BaseScriptComponent {
     this.cleanCharacter = false;
     this.cleanRun = 0;
     this.demo.setGuideStrength(1);
-    // Re-show the movement for THIS stroke. Saying nothing after a miss reads
-    // as a dead end; repeating the tip is the quietest useful answer.
-    this.showStrokeTip(info.index);
+    this.sheetUI.say(SAY_MISS, 1.0);
+    // Re-show the movement for THIS stroke once TRY AGAIN has had its moment.
+    // Saying nothing after a miss reads as a dead end; repeating the tip is
+    // the quietest useful answer.
+    const again = this.createEvent("DelayedCallbackEvent");
+    again.bind(() => {
+      if (this.mode === "turn") this.showStrokeTip(info.index);
+    });
+    again.reset(1.3);
   }
 
   private onNeedsDemo(index: number): void {
@@ -477,6 +515,8 @@ export class GhostMain extends BaseScriptComponent {
 
   private onCharacterComplete(): void {
     this.mode = "finished";
+    this.sheetUI.clearTurnMarkers();
+    this.sheetUI.showAllTabs();
     if (this.cleanCharacter) this.cleanRun++;
     this.audio.playStamp();
     this.sheet.showStamp();

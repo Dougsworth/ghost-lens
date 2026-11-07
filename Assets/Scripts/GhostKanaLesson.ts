@@ -28,27 +28,27 @@ export const KANA_LESSON: { [ch: string]: KanaLesson } = {
   "あ": {
     romaji: "a",
     hook: "an Apple with a stem",
-    tips: ["left to right", "straight down through it", "curve down and around"],
+    tips: ["LEFT TO RIGHT", "STRAIGHT DOWN", "CURVE DOWN AND AROUND"],
   },
   "い": {
     romaji: "i",
     hook: "two eels swimming",
-    tips: ["down, then flick up", "a short stroke down"],
+    tips: ["DOWN, THEN FLICK UP", "A SHORT STROKE DOWN"],
   },
   "う": {
     romaji: "u",
     hook: "a bird's beak, pointing up",
-    tips: ["a small mark on top", "across, then curve down and in"],
+    tips: ["A SMALL MARK ON TOP", "ACROSS, THEN CURVE DOWN"],
   },
   "え": {
     romaji: "e",
     hook: "an Exotic bird on a perch",
-    tips: ["a small mark on top", "across, down and out to the right"],
+    tips: ["A SMALL MARK ON TOP", "ACROSS, DOWN AND OUT"],
   },
   "お": {
     romaji: "o",
     hook: "like あ, with a tail",
-    tips: ["left to right", "down and loop around", "a short flick on the right"],
+    tips: ["LEFT TO RIGHT", "DOWN AND LOOP AROUND", "A SHORT FLICK RIGHT"],
   },
 };
 
@@ -72,7 +72,7 @@ export function tipFor(ch: string, strokeIndex: number): string {
  * Said once when a stroke is accepted. Cycled rather than random so the same
  * word never lands twice in a row, which is what makes praise feel automatic.
  */
-export const PRAISE = ["nice", "clean stroke", "that's it", "good line", "steady"];
+export const PRAISE = ["NICE", "CLEAN", "PERFECT", "GOOD LINE", "STEADY"];
 
 export function praiseFor(n: number): string {
   if (PRAISE.length === 0) return "";
@@ -81,4 +81,20 @@ export function praiseFor(n: number): string {
 }
 
 /** Shown once, the first time a lesson opens. */
-export const INTRO_LINE = "Watch the brush, then pinch to paint.";
+export const INTRO_LINE = "WATCH";
+
+/**
+ * The big words, in the one place the writing lives.
+ *
+ * Upper case on purpose: these are read at a glance, from the corner of an
+ * eye, while the hand is busy. They are not sentences and should never grow
+ * into sentences — if a word here needs a comma, it belongs in the tip instead.
+ */
+export const SAY_WATCH = "WATCH";
+export const SAY_YOUR_TURN = "YOUR TURN";
+export const SAY_MISS = "TRY AGAIN";
+
+/** "STROKE 2 OF 3", for the banner. */
+export function strokeOf(index: number, total: number): string {
+  return "STROKE " + (index + 1) + " OF " + total;
+}

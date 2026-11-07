@@ -29,6 +29,7 @@
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
     counterOffsetCm: false
+    markerColor: false
     progressCurrentColor: false
     progressDimColor: false
     progressDoneColor: false
@@ -49,7 +50,8 @@
   Attachments:
     []
   DefaultScriptInputs:
-    - tabPaperColor: !<Vec4> {x: 0.220000, y: 0.200000, z: 0.150000, w: 1.000000}
+    - markerColor: !<Vec4> {x: 1.000000, y: 0.860000, z: 0.550000, w: 1.000000}
+      tabPaperColor: !<Vec4> {x: 0.220000, y: 0.200000, z: 0.150000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
       typeColor: !<Vec4> {x: 0.780000, y: 0.740000, z: 0.660000, w: 1.000000}
       progressDoneColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
@@ -69,6 +71,7 @@
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 markerColor = "{1,0.86,0.55,1}" {"hint":"Colour of the turn markers: the numbered start dot, the direction arrow and the faint end dot. Warm amber so they read as guidance rather than as ink.", "widget":"color"}'
     - "// @input vec4 tabPaperColor = \"{0.26,0.23,0.17,1}\" {\"hint\":\"Bookmark tab paper colour. Matches GhostSheet's paperColor by default so the tabs read as the same sheet of washi, not as separate panels.\", \"widget\":\"color\"}"
     - '// @input vec4 tabHighlightColor = "{0.46,0.41,0.31,1}" {"hint":"Tab colour when the user aims at it — the same paper, lit up. Still washi, never a highlight box.", "widget":"color"}'
     - '// @input vec4 typeColor = "{0.96,0.93,0.86,1}" {"hint":"Colour of the tab labels and the stroke counter. Near-white emitted light: on the additive display the faint washi tab gives the type no dark ground to sit on, so the letters have to carry their own brightness to read at 45 cm.", "widget":"color"}'

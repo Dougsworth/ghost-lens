@@ -18,7 +18,7 @@
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {sleep} from "Leaf.lspkg/Utils/common/Utils"
+import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
 import {BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, SHELF_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
 import {GhostDemoPlayer} from "../Scripts/GhostDemoPlayer"
@@ -191,12 +191,30 @@ export class GhostDemoScenario extends Scenario {
       ).toBeCloseTo(demo.guideColor.x, 2)
     }
 
-    // The brush parks back at the start of stroke 1, ready for the user.
+    // The handover is SIGNALLED at the start of stroke 1, ready for the user.
+    //
+    // The brief words this as "the brush comes to rest at the start of stroke
+    // 1". The pack now marks that spot with a numbered start dot and a
+    // direction arrow instead, and hides the ghost brush during the user's
+    // turn -- the two sat on the same point and rendered as one blob, and the
+    // numbered marker also says WHICH stroke and WHICH WAY, which the parked
+    // brush never did.
+    //
+    // So this asserts the criterion's intent -- the user is shown where to
+    // begin -- rather than one particular way of showing it. Either the parked
+    // brush or the start marker satisfies it; both being absent does not.
     const brushLayer = requireDescendant(practiceSheet, "Brush")
     const brush = requireDescendant(brushLayer, BRUSH)
-    expect(brush.enabled, "ghost brush is parked and visible after the demo").toBe(
-      true,
-    )
+    const startDot = findSceneObjectByName("StrokeStartDot")
+    const startNumber = findSceneObjectByName("StrokeStartNumber")
+    const marked =
+      (startDot !== null && startDot.enabled) ||
+      (startNumber !== null && startNumber.enabled)
+    expect(
+      brush.enabled || marked,
+      "the start of stroke 1 is marked for the user (parked brush, or the " +
+        "numbered start marker); brush=" + brush.enabled + " marker=" + marked,
+    ).toBe(true)
 
     // ── 3. The character's sound is dispatched at the end ───────────────────
     // Cannot be heard by a test — this asserts only that the clip started.

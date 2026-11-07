@@ -34,7 +34,9 @@ import { createDot, createQuads, createWashiSheet } from "./GhostInkRibbon";
 const FONT_SIZE_SCALE = 1.0;
 const PANEL_DISTANCE_CM = 45;
 
-type TextRole = "Title1" | "Headline1" | "Body" | "Caption" | "TabThin" | "Counter" | "StrokeNum";
+type TextRole =
+  | "Title1" | "Headline1" | "Body" | "Caption" | "TabThin"
+  | "Counter" | "StrokeNum" | "Banner";
 
 // Sizes below were raised substantially after testing え on glass: the whole
 // scale was calibrated for a panel at 110 cm and then scaled DOWN for a sheet
@@ -49,6 +51,9 @@ const TYPE_SCALE: Record<TextRole, { size: number; weight: number }> = {
   Caption: { size: 38, weight: 500 },
   /** "1 / 3" at the sheet's corner — glanced at, never studied, so it has to
    *  be readable out of the corner of an eye. Over 3x its old size. */
+  /** The one big word above the sheet: WATCH, YOUR TURN, NICE. Bold and large
+   *  enough to be read without looking straight at it. */
+  Banner: { size: 118, weight: 700 },
   Counter: { size: 124, weight: 700 },
   /** The small numeral at each stroke's start point. Also over 3x. */
   StrokeNum: { size: 124, weight: 700 },
@@ -69,6 +74,10 @@ function applyTextRole(t: Text, role: TextRole, distanceCm: number = PANEL_DISTA
   t.size = roleSize(role, distanceCm);
   t.weight = TYPE_SCALE[role].weight;
 }
+
+/** Seconds for the big word to brush in, and to fade out again. */
+const BANNER_WIPE_SEC = 0.3;
+const BANNER_FADE_SEC = 0.4;
 
 const LAYOUT_Z_LIFT = 0.02;
 const BUTTON_LABEL_Z = 0.08;
@@ -160,6 +169,16 @@ export class GhostSheetUI extends BaseScriptComponent {
   private strokeNumberRoot: SceneObject | null = null;
   private strokeNumbers: SceneObject[] = [];
   private turnMarkers: SceneObject[] = [];
+
+  // ── The one big word ──────────────────────────────────────────────────────
+  private bannerText: Text | null = null;
+  private bannerFull = "";
+  private bannerT = 0;
+  private bannerHoldSec = 1.6;
+  /** "wipe" while the ink brushes in, "hold", "fade", "off". */
+  private bannerPhase = "off";
+  /** Tab cells by label, so a phase can show only the ones it needs. */
+  private tabCells: { [label: string]: SceneObject } = {};
   private tabButtons: Button[] = [];
   private tabPapers: RenderMeshVisual[] = [];
 
@@ -385,6 +404,7 @@ export class GhostSheetUI extends BaseScriptComponent {
     this.buildDotRoot();
     this.buildStrokeNumberRoot();
     this.buildTabs();
+    this.createEvent("UpdateEvent").bind(() => this.updateBanner(getDeltaTime()));
   }
 
   private buildCounter(): void {
@@ -419,6 +439,93 @@ export class GhostSheetUI extends BaseScriptComponent {
     so.enabled = false;
   }
 
+  /**
+   * Say ONE thing, big, above the sheet.
+   *
+   * The word brushes in left to right over `wipeSec` — revealed a character at
+   * a time, which at this size and speed reads as an ink wipe — holds, then
+   * fades out. Calling it again replaces whatever was there, so there is never
+   * a second line to read.
+   *
+   * @param holdSec seconds to hold at full strength. 0 holds until replaced.
+   */
+  say(text: string, holdSec: number = 1.6): void {
+    if (!this.bannerText) return;
+    this.bannerFull = text || "";
+    this.bannerHoldSec = holdSec;
+    this.bannerT = 0;
+    this.bannerPhase = this.bannerFull.length > 0 ? "wipe" : "off";
+    this.bannerText.text = "";
+    this.bannerText.textFill.color = this.typeColor;
+    this.bannerText.getSceneObject().enabled = this.bannerFull.length > 0;
+  }
+
+  /** Clear the banner immediately. */
+  clearSay(): void {
+    this.say("", 0);
+  }
+
+  private updateBanner(dt: number): void {
+    if (!this.bannerText || this.bannerPhase === "off") return;
+    this.bannerT += dt;
+
+    if (this.bannerPhase === "wipe") {
+      const f = Math.min(1, this.bannerT / BANNER_WIPE_SEC);
+      const n = Math.max(1, Math.ceil(this.bannerFull.length * f));
+      this.bannerText.text = this.bannerFull.substr(0, n);
+      if (f >= 1) {
+        this.bannerPhase = this.bannerHoldSec > 0 ? "hold" : "still";
+        this.bannerT = 0;
+      }
+      return;
+    }
+
+    if (this.bannerPhase === "hold") {
+      if (this.bannerT >= this.bannerHoldSec) {
+        this.bannerPhase = "fade";
+        this.bannerT = 0;
+      }
+      return;
+    }
+
+    if (this.bannerPhase === "fade") {
+      const f = Math.min(1, this.bannerT / BANNER_FADE_SEC);
+      // Additive display: fading toward black IS fading toward invisible.
+      const k = 1 - f;
+      this.bannerText.textFill.color = this.fade(this.typeColor, k);
+      if (f >= 1) {
+        this.bannerPhase = "off";
+        this.bannerText.getSceneObject().enabled = false;
+      }
+    }
+  }
+
+  /**
+   * Show only the tabs this moment needs.
+   *
+   * Pass the labels to keep; everything else is hidden. The brief's rule is to
+   * remove what is not needed right now — during the ghost's demonstration
+   * there is nothing to do, and during the user's turn only Replay and Next
+   * are worth the space.
+   */
+  setTabsVisible(labels: string[]): void {
+    for (let i = 0; i < TAB_LABELS.length; i++) {
+      const label = TAB_LABELS[i];
+      const cell = this.tabCells[label];
+      if (!cell) continue;
+      let on = false;
+      for (let k = 0; k < labels.length; k++) {
+        if (labels[k] === label) { on = true; break; }
+      }
+      cell.enabled = on;
+    }
+  }
+
+  /** Every tab back on. */
+  showAllTabs(): void {
+    this.setTabsVisible(TAB_LABELS);
+  }
+
   /** A text object under (or above) the sheet, centred, hidden until set. */
   private buildText(
     name: string, y: number, role: TextRole, halfWidth: number, halfHeight: number = 1.6
@@ -448,12 +555,30 @@ export class GhostSheetUI extends BaseScriptComponent {
     this.romajiText = this.buildText("SheetRomaji", -8.4, "Title1", 8, 1.7);
   }
 
+  /**
+   * The memory hook is no longer drawn.
+   *
+   * It was the seventh thing on a sheet the brief wants down to a handful, it
+   * duplicated the romaji's job loosely, and after the type got bigger it
+   * spilled past the measured -11 cm floor of the SPECS frame. setHook is kept
+   * as a no-op so the lesson data and GhostMain do not have to change to put
+   * it back.
+   */
   private buildHook(): void {
-    this.hookText = this.buildText("SheetHook", -10.2, "Body", 12, 1.0);
+    this.hookText = null;
   }
 
+  /**
+   * The one big word, centred just above the sheet.
+   *
+   * This REPLACES the old small tip line. The brief's rule is one instruction
+   * on screen at a time, read instantly — a sentence in body type above a sheet
+   * you are concentrating on is not read at all, so the channel became a single
+   * large word or short phrase that brushes in and gets out of the way.
+   */
   private buildLine(): void {
-    this.lineText = this.buildText("SheetLine", 9.3, "Body", 11, 1.1);
+    this.lineText = this.buildText("SheetBanner", 9.3, "Banner", 16, 1.2);
+    this.bannerText = this.lineText;
   }
 
   private buildDotRoot(): void {
@@ -482,6 +607,7 @@ export class GhostSheetUI extends BaseScriptComponent {
     for (let i = 0; i < TAB_LABELS.length; i++) {
       const label = TAB_LABELS[i];
       items.push(this.flexChild(column, w, h, (cell) => {
+        this.tabCells[label] = cell;
         const btn = cell.createComponent(Button.getTypeName()) as Button;
         btn.setVariant({ theme: "SnapOS2", shape: "Rectangle", style: "PrimaryNeutral" });
         btn.size = new vec3(w, h, 1);

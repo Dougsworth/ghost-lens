@@ -1112,6 +1112,7 @@
   Enabled: true
   ScriptAsset: !<reference> f7e255b9-1cc8-4ec7-8e84-d1bfd5e8047d
   ScriptInputsDefault:
+    markerColor: true
     progressDoneColor: true
     progressCurrentColor: true
     progressDimColor: true
@@ -1123,6 +1124,7 @@
     {}
   ScriptInputs:
     "":
+      markerColor: !<Vec4> {x: 1.000000, y: 0.860000, z: 0.550000, w: 1.000000}
       tabPaperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
       typeColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}

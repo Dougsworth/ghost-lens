@@ -512,6 +512,54 @@ export class InkRibbon {
   }
 }
 
+/**
+ * A thin ring, used as the splash that blooms out of a finished stroke.
+ *
+ * Built as a triangle strip around an annulus rather than as a disc with a
+ * hole: on an ADDITIVE display there is no way to punch a hole, because paper
+ * drawn over ink only adds light. The hole has to be an absence of geometry.
+ */
+export function createRing(
+  parent: SceneObject,
+  name: string,
+  radiusCm: number,
+  thicknessCm: number,
+  color: vec4,
+  z: number,
+  segments: number = 32
+): RenderMeshVisual {
+  const rmv = makeVisual(parent, name, z, color);
+  const builder = new MeshBuilder(LAYOUT);
+  builder.topology = MeshTopology.Triangles;
+  builder.indexType = MeshIndexType.UInt16;
+
+  const inner = Math.max(0.01, radiusCm - thicknessCm * 0.5);
+  const outer = radiusCm + thicknessCm * 0.5;
+  const verts: number[] = [];
+  const idx: number[] = [];
+
+  for (let i = 0; i < segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    verts.push(c * inner, sn * inner, 0, 0, 0, 1, i / segments, 0);
+    verts.push(c * outer, sn * outer, 0, 0, 0, 1, i / segments, 1);
+  }
+  for (let i = 0; i < segments; i++) {
+    const a0 = i * 2;
+    const a1 = ((i + 1) % segments) * 2;
+    // Counter-clockwise from +Z, matching every other surface in this file.
+    idx.push(a0, a1, a1 + 1);
+    idx.push(a0, a1 + 1, a0 + 1);
+  }
+
+  builder.appendVerticesInterleaved(verts);
+  builder.appendIndices(idx);
+  rmv.mesh = builder.getMesh();
+  builder.updateMesh();
+  return rmv;
+}
+
 /** Deterministic jitter so the sheet's uneven edge is stable between runs. */
 function lcg(seed: number): () => number {
   let s = seed >>> 0;
