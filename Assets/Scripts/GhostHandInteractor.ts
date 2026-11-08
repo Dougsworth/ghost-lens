@@ -62,6 +62,10 @@ export class GhostHandInteractor extends BaseInteractor {
   reachCm: number = 200;
 
   @input
+  @hint("Log what the hand is pointing at. Turn on if pinching selects nothing: the log says whether the hand is seen at all, whether the ray hits anything, and what Interactable it found.")
+  debugHand: boolean = false;
+
+  @input
   @hint("Ignore a new pinch within this many seconds of the last one ending. Hand tracking flickers at the threshold, and without this one physical pinch can fire a button twice.")
   @widget(new SliderWidget(0, 0.6, 0.05))
   debounceSec: number = 0.25;
@@ -75,6 +79,10 @@ export class GhostHandInteractor extends BaseInteractor {
   private hitPoint: vec3 | null = null;
   /** When the last trigger ended, so a flicker cannot re-fire immediately. */
   private lastReleaseAt = -1;
+  /** Last raycast result, applied at the TOP of the next frame. See onUpdate. */
+  private pendingTarget: Interactable | null = null;
+  private pendingHit: vec3 | null = null;
+  private lastDebug = "";
   private triggerHeld = false;
 
   constructor() {
@@ -121,7 +129,34 @@ export class GhostHandInteractor extends BaseInteractor {
   private onUpdate(): void {
     if (!this.hooked) this.hookBridge();
 
+    // Apply the PREVIOUS frame's raycast first.
+    //
+    // Probe.rayCast is documented to call back "after simulation update, which
+    // occurs after script Update but prior to LateUpdate" - so a target set
+    // inside the callback lands after SIK has already rolled current into
+    // previous for this frame, and the hover/trigger transitions it computes
+    // are against stale state. Applying the result here, during Update,
+    // trades one frame of latency for transitions that are actually correct.
+    this.applyPending();
+
+    // Aim with the hand EVERY frame, not only while pinching: you have to be
+    // able to hover a control (and see it highlight) before you press it.
+    // The pinch callbacks only fire during a pinch, so read the bridge's live
+    // fingertip directly and fall back to the last pinch point.
+    if (this.bridge) {
+      const live = this.bridge.fingertipWorld;
+      this.handPoint = live ? live : (this.pinching ? this.handPoint : null);
+      if (!live && this.pinching && !this.bridge.isPinching) this.pinching = false;
+    }
+
     if (!this.handDrivesUI || !this.handPoint) {
+      if (this.debugHand && this.lastDebug !== "(no hand)") {
+        this.lastDebug = "(no hand)";
+        print("[GhostHandInteractor] no hand in frame" +
+          (this.bridge ? "" : " (bridge not hooked)"));
+      }
+      this.pendingTarget = null;
+      this.pendingHit = null;
       this.clearTarget();
       return;
     }
@@ -139,13 +174,38 @@ export class GhostHandInteractor extends BaseInteractor {
 
     this.probe.rayCast(eye, end, (hit: any) => {
       if (!hit || !hit.collider) {
-        this.clearTarget();
+        this.pendingTarget = null;
+        this.pendingHit = null;
+        if (this.debugHand && this.lastDebug !== "(nothing)") {
+          this.lastDebug = "(nothing)";
+          print("[GhostHandInteractor] hand is seen, but the ray hits nothing");
+        }
         return;
       }
-      this.hitPoint = hit.position;
-      const found = this.findInteractable(hit.collider.getSceneObject());
-      this.setTarget(found);
+      this.pendingHit = hit.position;
+      this.pendingTarget = this.findInteractable(hit.collider.getSceneObject());
+      if (this.debugHand) {
+        const got = this.pendingTarget
+          ? this.pendingTarget.getSceneObject().name
+          : "(collider has no Interactable above it)";
+        const line = hit.collider.getSceneObject().name + " -> " + got;
+        if (line !== this.lastDebug) {
+          this.lastDebug = line;
+          print("[GhostHandInteractor] ray hit " + line);
+        }
+      }
     });
+  }
+
+  /** Put the last raycast result into SIK's hands, during Update. */
+  private applyPending(): void {
+    this.hitPoint = this.pendingHit;
+    this.setTarget(this.pendingTarget);
+    if (this.debugHand && this.pinching && this.pendingTarget) {
+      print("[GhostHandInteractor] pinch on " +
+        this.pendingTarget.getSceneObject().name +
+        " trigger=" + (this.currentTrigger !== InteractorTriggerType.None));
+    }
   }
 
   /** The Interactable on this object, or the nearest one above it. */

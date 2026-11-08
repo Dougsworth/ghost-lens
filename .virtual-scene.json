@@ -978,6 +978,13 @@
               "uiInfo": "{\"label\":\"Indirect Drag Threshold\", \"hint\":\"Controls the minimum distance (in cm) the hand must move during indirect interaction to be considered a drag. When the distance between the interaction origin position and current position exceeds this threshold, dragging behavior is detected and tracked. Lower values make dragging more sensitive and easier to trigger, while higher values require more deliberate movement before dragging begins.\"}",
               "defaultValue": "10"
             },
+            "reachCm": {
+              "isScriptInput": true,
+              "value": 200,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.\", \"widget\":\"slider\", \"min\":50, \"max\":400, \"step\":10}",
+              "defaultValue": "200"
+            },
             "handDrivesUI": {
               "isScriptInput": true,
               "value": true,
@@ -985,19 +992,18 @@
               "uiInfo": "{\"hint\":\"Let the webcam bridge's hand drive the UI. Off leaves the mouse and real SIK hands completely untouched — this component then reports nothing at all.\"}",
               "defaultValue": "true"
             },
+            "debugHand": {
+              "isScriptInput": true,
+              "value": true,
+              "type": "bool",
+              "uiInfo": "{\"hint\":\"Log what the hand is pointing at. Turn on if pinching selects nothing: the log says whether the hand is seen at all, whether the ray hits anything, and what Interactable it found.\"}"
+            },
             "debounceSec": {
               "isScriptInput": true,
               "value": 0.25,
               "type": "float",
               "uiInfo": "{\"hint\":\"Ignore a new pinch within this many seconds of the last one ending. Hand tracking flickers at the threshold, and without this one physical pinch can fire a button twice.\", \"widget\":\"slider\", \"min\":0, \"max\":0.6, \"step\":0.05}",
               "defaultValue": "0.25"
-            },
-            "reachCm": {
-              "isScriptInput": true,
-              "value": 200,
-              "type": "float",
-              "uiInfo": "{\"hint\":\"How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.\", \"widget\":\"slider\", \"min\":50, \"max\":400, \"step\":10}",
-              "defaultValue": "200"
             },
             "_drawDebug": {
               "isScriptInput": true,
@@ -1008,9 +1014,10 @@
             "scriptAsset": "@asset:Scripts/GhostHandInteractor.ts",
             "inputNames.0": "_drawDebug",
             "inputNames.1": "debounceSec",
-            "inputNames.2": "handDrivesUI",
-            "inputNames.3": "indirectDragThreshold",
-            "inputNames.4": "reachCm",
+            "inputNames.2": "debugHand",
+            "inputNames.3": "handDrivesUI",
+            "inputNames.4": "indirectDragThreshold",
+            "inputNames.5": "reachCm",
             "name": "GhostHandInteractor",
             "enabled": true,
             "sceneObject": "@sceneObject:GhostHandInteractor",

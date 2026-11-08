@@ -1728,6 +1728,7 @@
       _drawDebug: false
       handDrivesUI: true
       reachCm: !<float> 200.000000
+      debugHand: true
       debounceSec: 0.250000
   ScriptTypes:
     "":

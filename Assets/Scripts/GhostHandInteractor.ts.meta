@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     _drawDebug: false
     debounceSec: false
+    debugHand: false
     handDrivesUI: false
     indirectDragThreshold: false
     reachCm: false
@@ -46,6 +47,7 @@
       _drawDebug: false
       handDrivesUI: true
       reachCm: !<float> 200.000000
+      debugHand: false
       debounceSec: 0.250000
   ScriptTypes:
     -
@@ -65,5 +67,6 @@
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - "// @input bool handDrivesUI = true {\"hint\":\"Let the webcam bridge's hand drive the UI. Off leaves the mouse and real SIK hands completely untouched — this component then reports nothing at all.\"}"
     - '// @input float reachCm = 200 {"hint":"How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.", "widget":"slider", "min":50, "max":400, "step":10}'
+    - '// @input bool debugHand {"hint":"Log what the hand is pointing at. Turn on if pinching selects nothing: the log says whether the hand is seen at all, whether the ray hits anything, and what Interactable it found."}'
     - '// @input float debounceSec = 0.25 {"hint":"Ignore a new pinch within this many seconds of the last one ending. Hand tracking flickers at the threshold, and without this one physical pinch can fire a button twice.", "widget":"slider", "min":0, "max":0.6, "step":0.05}'
     - '// @ui {"widget":"group_end"}'
