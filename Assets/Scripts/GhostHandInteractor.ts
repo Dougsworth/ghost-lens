@@ -60,6 +60,11 @@ export class GhostHandInteractor extends BaseInteractor {
   @hint("How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.")
   @widget(new SliderWidget(50, 400, 10))
   reachCm: number = 200;
+
+  @input
+  @hint("Ignore a new pinch within this many seconds of the last one ending. Hand tracking flickers at the threshold, and without this one physical pinch can fire a button twice.")
+  @widget(new SliderWidget(0, 0.6, 0.05))
+  debounceSec: number = 0.25;
   @ui.group_end
 
   private bridge: WebcamHandBridge | null = null;
@@ -68,6 +73,9 @@ export class GhostHandInteractor extends BaseInteractor {
   private hooked = false;
   private probe: any = null;
   private hitPoint: vec3 | null = null;
+  /** When the last trigger ended, so a flicker cannot re-fire immediately. */
+  private lastReleaseAt = -1;
+  private triggerHeld = false;
 
   constructor() {
     super();
@@ -162,13 +170,41 @@ export class GhostHandInteractor extends BaseInteractor {
    */
   private setTarget(interactable: Interactable | null): void {
     this.currentInteractable = interactable;
-    this.currentTrigger = (interactable && this.pinching)
-      ? InteractorTriggerType.Pinch
-      : InteractorTriggerType.None;
+
+    // Debounce the RISING edge only.
+    //
+    // Hand tracking does not report a clean pinch: it flickers around the
+    // threshold, so one physical pinch can close, open and close again within
+    // a few frames. SIK faithfully turns each of those into a trigger, and a
+    // button fires twice. Holding a pinch is unaffected — once a trigger is
+    // live it stays live until the hand genuinely opens — and the release is
+    // never debounced, because a release that gets swallowed leaves a control
+    // stuck down, which is far worse than a double press.
+    const now = getTime();
+    let want = !!interactable && this.pinching;
+
+    if (want && !this.triggerHeld) {
+      if (this.lastReleaseAt >= 0 && now - this.lastReleaseAt < this.debounceSec) {
+        want = false;
+      }
+    }
+    if (!want && this.triggerHeld) {
+      this.lastReleaseAt = now;
+    }
+    this.triggerHeld = want;
+
+    this.currentTrigger = want ? InteractorTriggerType.Pinch : InteractorTriggerType.None;
   }
 
   private clearTarget(): void {
     this.hitPoint = null;
+    // Tracking dropped or the hand left the frame. Release rather than leaving
+    // a control held down forever; the tracker's own 150 ms grace means this
+    // only fires when the hand is really gone.
+    if (this.triggerHeld) {
+      this.triggerHeld = false;
+      this.lastReleaseAt = getTime();
+    }
     if (this.currentInteractable !== null) this.currentInteractable = null;
     if (this.currentTrigger !== InteractorTriggerType.None) {
       this.currentTrigger = InteractorTriggerType.None;

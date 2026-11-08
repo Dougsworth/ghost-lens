@@ -25,8 +25,9 @@
 
 import { bankLessonFor, BANK_KEYS, LESSON_BANK } from "./GhostLessonBank";
 import { Lesson, validateLesson } from "./GhostLessonSchema";
+import { recallLesson, rememberLesson, rememberedSkills } from "./GhostLessonStore";
 
-export type LessonOrigin = "gateway" | "bridge" | "bank";
+export type LessonOrigin = "gateway" | "bridge" | "bank" | "saved";
 
 export type LessonResult = {
   lesson: Lesson;
@@ -72,9 +73,31 @@ export class GhostLessonSource extends BaseScriptComponent {
     return bankLessonFor(skill) || LESSON_BANK[BANK_KEYS[0]];
   }
 
-  /** Skills offered when nothing can be planned. */
+  /**
+   * What to offer on the front door: your own notebook first, then the
+   * bundled set. Yours are the ones you are likely to want again, and they
+   * are also the ones that open instantly.
+   */
   offlineSkills(): string[] {
-    return BANK_KEYS;
+    const mine = rememberedSkills();
+    const out: string[] = [];
+    for (let i = 0; i < mine.length; i++) out.push(mine[i]);
+    for (let i = 0; i < BANK_KEYS.length; i++) {
+      let dup = false;
+      for (let k = 0; k < out.length; k++) {
+        if (out[k].trim().toLowerCase() === BANK_KEYS[i].trim().toLowerCase()) {
+          dup = true;
+          break;
+        }
+      }
+      if (!dup) out.push(BANK_KEYS[i]);
+    }
+    return out;
+  }
+
+  /** Skills you have actually learnt, most recent first. */
+  learntSkills(): string[] {
+    return rememberedSkills();
   }
 
   get busy(): boolean {
@@ -108,6 +131,14 @@ export class GhostLessonSource extends BaseScriptComponent {
 
     // A hard deadline, independent of the request itself: a socket that never
     // errors and never answers would otherwise leave the learner on a spinner.
+    // Tier 0: already in the notebook. Re-opening a skill should be instant
+    // and free, not two more LLM calls for a lesson we already have.
+    const saved = recallLesson(skill);
+    if (saved) {
+      finish({ lesson: saved, origin: "saved", note: "from your notebook" });
+      return { cancel: () => { cancelled = true; this.inFlight = false; } };
+    }
+
     const deadline = this.createEvent("DelayedCallbackEvent");
     deadline.bind(() => toBank("the planner took too long"));
     deadline.reset(this.timeoutSec);
@@ -172,6 +203,16 @@ export class GhostLessonSource extends BaseScriptComponent {
       finish({ lesson: l, origin: "bank", note: note });
     };
 
+    // Tier 0, same as request(): if it is already in the notebook there is
+    // nothing to plan, nothing to wait for and nothing to pay for. onPlanned
+    // still fires so the caller's outline code path is identical either way.
+    const saved = recallLesson(skill);
+    if (saved) {
+      onPlanned(saved);
+      finish({ lesson: saved, origin: "saved", note: "from your notebook" });
+      return { cancel: () => { cancelled = true; this.inFlight = false; } };
+    }
+
     const deadline = this.createEvent("DelayedCallbackEvent");
     deadline.bind(() => toBank("the planner took too long"));
     deadline.reset(this.timeoutSec);
@@ -194,12 +235,21 @@ export class GhostLessonSource extends BaseScriptComponent {
         this.askStage(
           "/lesson/review",
           { skill: skill, lesson: planned },
-          (reviewed) => finish({
-            lesson: reviewed,
-            origin: "bridge",
-            note: reviewed.reviewed ? "planned and checked" : "planned",
-          }),
-          () => finish({ lesson: planned, origin: "bridge", note: "planned" })
+          (reviewed) => {
+            // Into the notebook, so it reopens instantly and survives a
+            // restart. Only the reviewed version is kept: the planned one is
+            // a draft that existed for about seven seconds.
+            rememberLesson(skill, reviewed);
+            finish({
+              lesson: reviewed,
+              origin: "bridge",
+              note: reviewed.reviewed ? "planned and checked" : "planned",
+            });
+          },
+          () => {
+            rememberLesson(skill, planned);
+            finish({ lesson: planned, origin: "bridge", note: "planned" });
+          }
         );
       },
       (why) => toBank(why)
