@@ -38,6 +38,10 @@ import { GhostHand } from "./GhostHands";
 import { HandPose } from "./GhostAslPack";
 import { createDot } from "./GhostInkRibbon";
 import { GhostChordBox } from "./GhostChordBox";
+import { WebcamHandBridge } from "./WebcamHandBridge";
+
+/** MediaPipe fingertip landmark for fingers 1..4 (index, middle, ring, little). */
+const TIP_LANDMARK = [0, 8, 12, 16, 20];
 
 /**
  * Fingertip position in GhostHand's own local centimetres, fully extended, for
@@ -129,7 +133,25 @@ export class GhostGuitarController extends BaseScriptComponent {
   @hint("How close a real fingertip must come to a dot to count as placed, in cm. Only used on device and over the webcam bridge; a pinch needs no radius.")
   @widget(new SliderWidget(1, 6, 0.1))
   fingertipReachCm: number = 2.6;
+
+  @input
+  @hint("Seconds the right finger must rest on its circle before it counts. Long enough that sweeping past a circle does not place it, short enough to feel instant.")
+  @widget(new SliderWidget(0, 1, 0.05))
+  fingerDwellSec: number = 0.25;
+
+  @input
+  @hint("Show the small chord-chart diagram beside the neck. Off by default: it draws the same chord a second time, turned the other way, which made people translate between the two.")
+  showChordBox: boolean = false;
   @ui.group_end
+
+  /**
+   * Your real finger on the board, during your turn: the webcam's tip of the
+   * finger the current step asks for. Dim while searching, bright on target.
+   */
+  private fingerCursor: SceneObject | null = null;
+  private fingerCursorPass: Pass | null = null;
+  private fingerLocal: vec3 | null = null;
+  private dwellT = 0;
 
   private hand: GhostHand | null = null;
   private dots: GhostChordDot[] = [];
@@ -255,6 +277,60 @@ export class GhostGuitarController extends BaseScriptComponent {
       new vec3(this.chordBoxAtCm.x, this.chordBoxAtCm.y, this.chordBoxAtCm.z)
     );
     this.chordBox.buildStringNames();
+    this.chordBox.root.enabled = this.showChordBox;
+
+    const cursor = createDot(board, "FingerCursor", 0.55, this.handColor, 0.4, 20);
+    this.fingerCursor = cursor.getSceneObject();
+    this.fingerCursorPass = cursor.mainMaterial.mainPass;
+    this.fingerCursor.enabled = false;
+  }
+
+  /**
+   * Your turn, with a real hand: follow the fingertip the current step asks
+   * for and place it when it rests on its circle. Uses the webcam bridge in
+   * the preview; on device, SIK's hand would feed checkFingertip instead.
+   */
+  private trackRealFinger(dt: number): void {
+    const target = this.currentTarget;
+    const bridge = WebcamHandBridge.instance;
+    const world = target && bridge && bridge.connected
+      ? bridge.uiWorldOf(TIP_LANDMARK[Math.max(1, Math.min(4, target.finger))])
+      : null;
+    const live = this.liveDot();
+    if (!world || !live || !this.fretboard || !this.fingerCursor) {
+      if (this.fingerCursor) this.fingerCursor.enabled = false;
+      this.fingerLocal = null;
+      this.dwellT = 0;
+      return;
+    }
+
+    // The fingertip point sits on the paper's plane; the board is pitched, so
+    // follow the line from the eye through the fingertip onto the board.
+    const bt = this.fretboard.boardRoot.getTransform();
+    const eye = WorldCameraFinderProvider.getInstance().getComponent().getTransform().getWorldPosition();
+    const normal = bt.getWorldTransform().multiplyDirection(new vec3(0, 0, 1)).normalize();
+    const dir = world.sub(eye);
+    const denom = normal.dot(dir);
+    if (Math.abs(denom) < 1e-5) return;
+    const hit = eye.add(dir.uniformScale(normal.dot(bt.getWorldPosition().sub(eye)) / denom));
+    const raw = bt.getInvertedWorldTransform().multiplyPoint(hit);
+    this.fingerLocal = this.fingerLocal ? vec3.lerp(raw, this.fingerLocal, 0.3) : raw;
+
+    const p = this.fingerLocal;
+    this.fingerCursor.getTransform().setLocalPosition(new vec3(p.x, p.y, 0.4));
+    this.fingerCursor.enabled = true;
+
+    const onTarget = live.distanceTo(p.x, p.y) <= this.fingertipReachCm;
+    if (this.fingerCursorPass) {
+      this.fingerCursorPass.baseColor = onTarget
+        ? new vec4(0.55, 0.95, 1.0, 1)
+        : new vec4(this.handColor.x * 0.6, this.handColor.y * 0.6, this.handColor.z * 0.6, 1);
+    }
+    this.dwellT = onTarget ? this.dwellT + dt : 0;
+    if (onTarget && this.dwellT >= this.fingerDwellSec) {
+      this.dwellT = 0;
+      this.satisfyTarget(live.finger);
+    }
   }
 
   /**
@@ -608,9 +684,11 @@ export class GhostGuitarController extends BaseScriptComponent {
     for (let i = 0; i < this.dots.length; i++) this.dots[i].update(dt);
 
     if (this.phase === "turn") {
+      this.trackRealFinger(dt);
       this.trackStrum();
       return;
     }
+    if (this.fingerCursor && this.fingerCursor.enabled) this.fingerCursor.enabled = false;
     if (this.phase === "idle" || this.phase === "done") return;
 
     this.phaseT += dt;

@@ -34,7 +34,7 @@ export function lineFor(id: string): string {
 }
 
 /** Shown once, the first time the guitar notebook opens. */
-export const GUITAR_INTRO_LINE = "Watch the hand, then pinch each circle in order.";
+export const GUITAR_INTRO_LINE = "Watch the hand, then put each finger on its circle.";
 
 /** Shown when every circle is placed and only the strum is left. */
 export const GUITAR_STRUM_LINE = "Strum all strings";
@@ -60,10 +60,12 @@ export function stepLine(
 ): string {
   const who = fingerName(finger);
   const where = "the " + stringName + " string, fret " + fret;
+  // Lead with the finger by NAME and the circle's number, which is what the
+  // eye finds on the board; string and fret follow for anyone with a guitar.
   if (ordinal === 0) {
-    return chordName + ": put finger " + finger + " (" + who + ") on " + where;
+    return chordName + ": your " + who + " finger on circle " + finger + " (" + where + ")";
   }
-  return "Now finger " + finger + " (" + who + ") on " + where;
+  return "Now your " + who + " finger on circle " + finger + " (" + where + ")";
 }
 
 /** Which finger is coming next, in words. Index 1..4. */

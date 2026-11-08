@@ -351,6 +351,18 @@ export class WebcamHandBridge extends BaseScriptComponent {
   // crosses the writing area. The returned point lies ON the sheet plane, which
   // also makes GhostPinchInput's camera-ray projection a no-op rather than
   // re-projecting a point that was floating somewhere else in space.
+  /**
+   * World position of any hand landmark (MediaPipe index: 8 index tip,
+   * 12 middle, 16 ring, 20 little), mapped the same way as the UI aim, so a
+   * finger lands where the cursor would. Unsmoothed. Null with no hand.
+   */
+  uiWorldOf(landmark: number): vec3 | null {
+    const p = this.hand && this.hand.points ? this.hand.points[landmark] : null;
+    if (!p) return null;
+    const k = Math.max(1, this.uiReach);
+    return this.toWorld(0.5 + (p[0] - 0.5) * k, 0.5 + (p[1] - 0.5) * k);
+  }
+
   private toWorld(x: number, y: number): vec3 {
     if (this.surface) {
       const st = this.surface.getTransform();

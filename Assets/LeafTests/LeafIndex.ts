@@ -8,6 +8,7 @@ import {ScenarioMetadata} from "Leaf.lspkg/Scenarios/scenario/ScenarioMetadata"
 import {GhostDemoScenario} from "./GhostDemoScenario"
 import {GhostShelfToSheetScenario} from "./GhostShelfToSheetScenario"
 import {GhostHandPinchScenario} from "./GhostHandPinchScenario"
+import {GhostGuitarFingersScenario} from "./GhostGuitarFingersScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -24,6 +25,10 @@ export class LeafIndex extends BaseScriptComponent {
     {
       id: "ghost-hand-pinch-selects",
       typename: GhostHandPinchScenario.getTypeName(),
+    },
+    {
+      id: "ghost-guitar-fingers",
+      typename: GhostGuitarFingersScenario.getTypeName(),
     },
   ]
 }

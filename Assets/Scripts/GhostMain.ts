@@ -1575,6 +1575,10 @@ export class GhostMain extends BaseScriptComponent {
     this.lessonRoot.enabled = false;
     this.askRoot.enabled = false;
     this.aslRoot.enabled = false;
+    // The front door too: guitar is often opened FROM it (a planned "play an
+    // em chord" lesson, or the Guitar tile), and leaving it on drew its title
+    // and step list straight across the fretboard.
+    this.frontRoot.enabled = false;
     this.guitarRoot.enabled = true;
     this.anchorInFrontOfUser();
 
