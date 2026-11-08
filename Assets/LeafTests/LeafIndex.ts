@@ -9,6 +9,7 @@ import {GhostDemoScenario} from "./GhostDemoScenario"
 import {GhostShelfToSheetScenario} from "./GhostShelfToSheetScenario"
 import {GhostHandPinchScenario} from "./GhostHandPinchScenario"
 import {GhostGuitarFingersScenario} from "./GhostGuitarFingersScenario"
+import {GhostGameScenario} from "./GhostGameScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -29,6 +30,10 @@ export class LeafIndex extends BaseScriptComponent {
     {
       id: "ghost-guitar-fingers",
       typename: GhostGuitarFingersScenario.getTypeName(),
+    },
+    {
+      id: "ghost-game",
+      typename: GhostGameScenario.getTypeName(),
     },
   ]
 }

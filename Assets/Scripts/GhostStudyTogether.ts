@@ -224,6 +224,17 @@ export class GhostStudyTogether extends BaseScriptComponent {
     this._onScores.invoke("RACE\n" + ordered.map((id, i) =>
       (i + 1) + ". " + this.displayName(id) + "  " + this.scores[id]).join("\n"));
   }
+  /** Whoever leads the race right now, or null before anyone scores. */
+  leader(): {id: string; name: string; score: number; isMe: boolean} | null {
+    let best: string | null = null;
+    for (const id of Object.keys(this.scores)) {
+      if (best === null || this.scores[id] > this.scores[best]) best = id;
+    }
+    if (best === null) return null;
+    return {id: best, name: this.displayName(best), score: this.scores[best],
+      isMe: best === this.participantId};
+  }
+
   /** "You", the learner's name, or the short preview tag (lens-a-x7k2 -> x7k2). */
   displayName(id: string): string {
     if (id === this.participantId) return "You";

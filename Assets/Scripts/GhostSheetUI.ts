@@ -41,7 +41,7 @@ const CHEER_TOTAL = 3.2;
 /** Seconds a room note stays (fade in, hold, fade out); long enough to read mid-task. */
 const NOTE_TOTAL = 5.0;
 
-type TextRole =
+export type TextRole =
   | "Title1" | "Headline1" | "Body" | "Caption" | "TabThin"
   | "Counter" | "StrokeNum" | "Banner";
 
@@ -77,7 +77,7 @@ function roleSize(role: TextRole, distanceCm: number = PANEL_DISTANCE_CM): numbe
   return TYPE_SCALE[role].size * FONT_SIZE_SCALE * (distanceCm / 110);
 }
 
-function applyTextRole(t: Text, role: TextRole, distanceCm: number = PANEL_DISTANCE_CM): void {
+export function applyTextRole(t: Text, role: TextRole, distanceCm: number = PANEL_DISTANCE_CM): void {
   t.size = roleSize(role, distanceCm);
   t.weight = TYPE_SCALE[role].weight;
 }

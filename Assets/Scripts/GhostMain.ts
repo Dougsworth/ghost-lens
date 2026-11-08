@@ -40,6 +40,10 @@ import { GhostCoach } from "./GhostCoach";
 import { GhostSpeech } from "./GhostSpeech";
 import { GhostStudyTogether, RoomPeer } from "./GhostStudyTogether";
 import { GhostARActivities } from "./GhostARActivities";
+import { GhostGame } from "./GhostGame";
+
+/** Race points (accepted strokes) that win a Study Together race. */
+const RACE_TARGET = 10;
 import { Lesson } from "./GhostLessonSchema";
 import { BANK_KEYS } from "./GhostLessonBank";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
@@ -163,6 +167,11 @@ export class GhostMain extends BaseScriptComponent {
   private peerLive: {[key: string]: InkRibbon} = {};
   private peerLiveIds: {[key: string]: number} = {};
   private raceScores: {[key: string]: number} = {};
+  /** Points, combo, levels, badges and celebrations. See GhostGame. */
+  game: GhostGame | null = null;
+  private hudShown = true;
+  /** The race in this room has been decided; one winner per room. */
+  private raceDecided = false;
   private raceLabel = "";
   private sharedLessonToken = "";
 
@@ -292,6 +301,15 @@ export class GhostMain extends BaseScriptComponent {
    * they are on, faintly — the current target, not the whole path.
    */
   private onUpdate(): void {
+    if (this.game) {
+      this.game.update(getDeltaTime());
+      // The HUD belongs to lessons; the front door and Ask stay uncluttered.
+      const hud = this.mode !== "front" && this.mode !== "ask";
+      if (hud !== this.hudShown) {
+        this.hudShown = hud;
+        this.game.setHudVisible(hud);
+      }
+    }
     if (this.mode !== "turn" || this.hintShown || !this.glyph || !this.turn || !this.demo) return;
     if (this.demo.currentGuideStrength > 0.01) return;
     if (this.turn.idleSeconds < this.hintAfterSec) return;
@@ -332,6 +350,7 @@ export class GhostMain extends BaseScriptComponent {
         if (this.mode === "front") this.frontUI.setWaiting("Activity complete! Ask for another lesson.");
       });
     }
+    this.game = new GhostGame(this.sceneObject, this.audio);
     this.characters = this.parseLesson(this.lessonSequence);
     if (this.characters.length === 0) {
       print("[GhostMain] ERROR: no usable characters in lessonSequence.");
@@ -385,6 +404,11 @@ export class GhostMain extends BaseScriptComponent {
       this.studyTogether.onScores.add((label: string) => {
         this.raceLabel = label;
         if (this.mode !== "front" && this.sheetUI) this.sheetUI.setScoreboard(label);
+        const lead = this.studyTogether.leader();
+        if (!this.raceDecided && lead && lead.score >= RACE_TARGET && this.game) {
+          this.raceDecided = true;
+          this.game.raceOver(lead.isMe, lead.name);
+        }
       });
       this.studyTogether.onPresence.add((summary: string) => {
         // Avoid overwriting active lesson UI; presence is available in Logger.
@@ -753,6 +777,10 @@ export class GhostMain extends BaseScriptComponent {
       this.studyTogether.sendRacePoint(this.raceScores["me"]);
     }
     if (!this.glyph) return;
+    if (this.game) {
+      const end = this.glyph.strokes[index] ? this.glyph.strokes[index].end : null;
+      this.game.strokeClean(end ? new vec3(end.x, end.y, 0.5) : new vec3(0, 0, 0.5));
+    }
     // The stuck-hint was for the stroke just finished; the next starts unaided.
     this.clearHint();
     this.audio.playInkDry();
@@ -790,6 +818,7 @@ export class GhostMain extends BaseScriptComponent {
     if (this.studyTogether) this.studyTogether.finishLivePath();
     // No harsh error and no red X — a soft sound, and the missed part pulses.
     this.audio.playMiss();
+    if (this.game) this.game.strokeMissed();
     // Struggling: give the outline straight back, at full strength, and start
     // earning the fade again. Guidance that only ever goes away is a trap.
     this.cleanCharacter = false;
@@ -823,6 +852,8 @@ export class GhostMain extends BaseScriptComponent {
     this.sheetUI.clearTurnMarkers();
     this.sheetUI.showAllTabs();
     if (this.cleanCharacter) this.cleanRun++;
+    // The stamp lands bottom-right of the sheet; the burst comes from there.
+    if (this.game) this.game.characterDone(this.cleanCharacter, new vec3(4.6, -4.6, 0.6));
     // Tell the room: every peer's sheet gets a cheer stamp.
     if (this.studyTogether) this.studyTogether.sendCheer();
     // Tell the coach this built-in character is done, so it can schedule its
@@ -1032,6 +1063,7 @@ export class GhostMain extends BaseScriptComponent {
 
   private onAslGotIt(): void {
     this.audio.playGotIt();
+    if (this.game) this.game.signDone(new vec3(0, 2, 1.2));
     this.aslUI.setGotItVisible(false);
     this.openAsl(this.aslIndex + 1);
   }
@@ -1502,6 +1534,10 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private onRoomJoined(code: string): void {
+    // A new room is a new race.
+    this.raceDecided = false;
+    this.raceScores = {};
+    if (this.game) this.game.joinedRoom();
     if (this.mode !== "front") return;
     this.audio.playUnroll();
     // The room just joined is no longer something to join.
@@ -1624,6 +1660,7 @@ export class GhostMain extends BaseScriptComponent {
   private onFingerPlaced(finger: number): void {
     if (this.mode !== "guitar") return;
     this.audio.playInkDry();
+    if (this.game && !this.guitar.isDemonstrating) this.game.fingerPlaced(new vec3(0, 3, 1));
     // The words are not written here: onStepChanged fires straight after this
     // and replaces the line with the NEXT instruction, so a praise word written
     // here would be overwritten within the same frame. Praise rides along with
@@ -1669,6 +1706,7 @@ export class GhostMain extends BaseScriptComponent {
   private onChordPlayed(id: string): void {
     if (this.mode !== "guitar") return;
     this.audio.playChord(id);
+    if (this.game) this.game.chordPlayed(id, new vec3(0, 0, 1.2));
     this.guitarUI.setStep(guitarPraiseFor(this.guitarPraiseCount));
 
     const stamp = this.createEvent("DelayedCallbackEvent");

@@ -21,6 +21,12 @@ const CLIP_MISS = requireAsset("../GeneratedSFX/StrokeMiss.wav") as AudioTrackAs
 const CLIP_STAMP = requireAsset("../GeneratedSFX/Stamp.wav") as AudioTrackAsset;
 const CLIP_PAGE = requireAsset("../GeneratedSFX/PageTurn.wav") as AudioTrackAsset;
 const CLIP_GOT_IT = requireAsset("../GeneratedSFX/GotIt.wav") as AudioTrackAsset;
+// Game layer (GhostGame): synthesized for GHOST, see tools in the commit log.
+const CLIP_GAME_TICK = requireAsset("../GeneratedSFX/GameTick.wav") as AudioTrackAsset;
+const CLIP_GAME_COMBO = requireAsset("../GeneratedSFX/GameCombo.wav") as AudioTrackAsset;
+const CLIP_GAME_LEVEL = requireAsset("../GeneratedSFX/GameLevelUp.wav") as AudioTrackAsset;
+const CLIP_GAME_BADGE = requireAsset("../GeneratedSFX/GameBadge.wav") as AudioTrackAsset;
+const CLIP_GAME_WIN = requireAsset("../GeneratedSFX/GameWin.wav") as AudioTrackAsset;
 
 /**
  * The guitar pack's chords. One pre-rendered nylon strum each, with the
@@ -71,6 +77,11 @@ export class GhostAudio extends BaseScriptComponent {
   private stamp!: AudioComponent;
   private page!: AudioComponent;
   private gotIt!: AudioComponent;
+  private gameTick!: AudioComponent;
+  private gameCombo!: AudioComponent;
+  private gameLevel!: AudioComponent;
+  private gameBadge!: AudioComponent;
+  private gameWin!: AudioComponent;
   /** One reusable source whose track is swapped per character. */
   private voice!: AudioComponent;
   /** One reusable source whose track is swapped per chord. */
@@ -88,6 +99,11 @@ export class GhostAudio extends BaseScriptComponent {
     this.stamp = this.makeSource("SfxStamp", CLIP_STAMP, this.sfxVolume, true);
     this.page = this.makeSource("SfxPageTurn", CLIP_PAGE, this.sfxVolume, true);
     this.gotIt = this.makeSource("SfxGotIt", CLIP_GOT_IT, this.sfxVolume, true);
+    this.gameTick = this.makeSource("SfxGameTick", CLIP_GAME_TICK, this.sfxVolume * 0.5, true);
+    this.gameCombo = this.makeSource("SfxGameCombo", CLIP_GAME_COMBO, this.sfxVolume * 0.7, true);
+    this.gameLevel = this.makeSource("SfxGameLevel", CLIP_GAME_LEVEL, this.sfxVolume * 0.8, true);
+    this.gameBadge = this.makeSource("SfxGameBadge", CLIP_GAME_BADGE, this.sfxVolume * 0.7, true);
+    this.gameWin = this.makeSource("SfxGameWin", CLIP_GAME_WIN, this.sfxVolume * 0.85, true);
     this.voice = this.makeSource("SfxVoice", null, this.voiceVolume, false);
     // A chord answers the user's own strum, so it takes the low-latency path:
     // a strum you hear late does not feel like the strum you just made.
@@ -134,6 +150,21 @@ export class GhostAudio extends BaseScriptComponent {
   }
   playGotIt(): void {
     if (this.gotIt) this.gotIt.play(1);
+  }
+  playGameTick(): void {
+    if (this.gameTick) this.gameTick.play(1);
+  }
+  playGameCombo(): void {
+    if (this.gameCombo) this.gameCombo.play(1);
+  }
+  playGameLevelUp(): void {
+    if (this.gameLevel) this.gameLevel.play(1);
+  }
+  playGameBadge(): void {
+    if (this.gameBadge) this.gameBadge.play(1);
+  }
+  playGameWin(): void {
+    if (this.gameWin) this.gameWin.play(1);
   }
 
   /**
