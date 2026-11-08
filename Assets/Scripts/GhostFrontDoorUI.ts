@@ -514,12 +514,9 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
           this.stripPlate(btn);
         });
         btn.onTriggerUp.add(() => {
-          print("[UIKIT-PROBE] onTriggerUp on suggestion " + index);
           const s = this.suggestions[index];
           if (s) this._onSkillPicked.invoke(s);
         });
-        // TEMP PROBE - settles whether SIK dispatches to UIKit at all.
-        btn.onTriggerDown.add(() => print("[UIKIT-PROBE] onTriggerDown on suggestion " + index));
 
         // At rest there is NO panel behind the line — just ink on the sheet,
         // because the spec rules out chips and a filled bar under every row is
@@ -529,7 +526,6 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
         const wash = createQuads(cell, "SuggestionWash",
           [{ x: 0, y: 0, w: w, h: h }], REST, -0.01);
         btn.onHoverEnter.add(() => {
-          print("[UIKIT-PROBE] onHoverEnter on suggestion " + index);
           wash.mainMaterial.mainPass.baseColor = this.fade(this.hoverColor, 0.55);
         });
         btn.onHoverExit.add(() => {

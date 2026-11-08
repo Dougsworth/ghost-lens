@@ -243,11 +243,24 @@ through the bridge.
   Four fixes deep, all four sound, none of them the last one. Treat hand-press
   as out of scope for the demo and use the mouse.
 
-  Where to pick it up: the one layer nobody has instrumented is the
-  Interactable's OWN `onTriggerStart`/`onTriggerEnd`. That separates "SIK
-  never dispatched" from "UIKit received it and did nothing" — every fix so
-  far has assumed the former without proving it. Prove that first. SIK also
-  filters hover and trigger events through
+  **That layer has now been instrumented, and the answer reframes the whole
+  chase.** Probes were put on the suggestion button's own `onHoverEnter`,
+  `onTriggerDown` and `onTriggerUp`, and on `updateState`. Result:
+
+  - `updateState IS being called by InteractionManager` — the interactor is
+    registered and driven. Not a registration problem.
+  - Our interactor targets the Interactable (`ray hit Collider -> Item`).
+  - UIKit receives **nothing** — not even `onHoverEnter`.
+
+  So SIK dispatches no HOVER, never mind a trigger. All four fixes above tuned
+  the trigger edge; hover is missing too, which means the fault sits earlier
+  than any of them addressed. Do not start from the trigger again.
+
+  Next candidates, in order: whether `processEvents` is bailing at its
+  `if (!interactor.enabled)` gate; whether the Interactable's own
+  `hoveringInteractor` mask admits `InteractorInputType.CustomController`; and
+  whether `isActive()`/`isTargeting()` are being consulted the way SIK expects.
+  SIK also filters hover and trigger events through
   `interactor.inputType & interactable.hoveringInteractor`, and
   `hoveringInteractor` is only set once a HoverStart has been dispatched. The
   next thing to check is whether HoverStart is firing at all — if it is not,
