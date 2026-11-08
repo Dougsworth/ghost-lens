@@ -18,8 +18,12 @@ import asyncio, http.server, json, os, threading, time, webbrowser
 import websockets
 
 import lesson_llm
+import room_relay
 
 HOST, WS_PORT, HTTP_PORT = "127.0.0.1", 8765, 8766
+# Study Together clients may come from another laptop: bind the websocket on
+# all interfaces when GHOST_LAN=1 (or when tunnelling with ngrok).
+WS_BIND = "0.0.0.0" if os.environ.get("GHOST_LAN") else HOST
 HERE = os.path.dirname(os.path.abspath(__file__))
 lenses, sources = set(), set()
 
@@ -102,12 +106,18 @@ class Speech(object):
 
 _speech = Speech()
 
+_rooms = room_relay.Relay()
+
 async def handler(ws):
     role = "lens"
     try:
         first = await asyncio.wait_for(ws.recv(), timeout=1.0)
         if first == "source":
             role = "source"
+        elif first == "room":
+            # Study Together: hand the whole connection to the room relay.
+            await _rooms.serve(ws)
+            return
     except asyncio.TimeoutError:
         pass
     except websockets.ConnectionClosed:
@@ -151,6 +161,9 @@ def serve_http():
                 return self._json(200, {"text": _speech.take_heard(),
                                         "listening": _speech.listening})
 
+            if self.path == "/rooms":
+                return self._json(200, {"rooms": _rooms.status()})
+
             if self.path == "/status":
                 # "llm" is the provider NAME only -- never the key, and never
                 # anything derived from it.
@@ -160,6 +173,7 @@ def serve_http():
                     "llm": name or "none",
                     "model": lesson_llm.model_name() if name else None,
                     "spend": _spend.as_dict(),
+                    "rooms": len(_rooms.status()),
                 })
             return super().do_GET()
 
@@ -300,7 +314,7 @@ def serve_http():
 
 async def main():
     threading.Thread(target=serve_http, daemon=True).start()
-    async with websockets.serve(handler, HOST, WS_PORT):
+    async with websockets.serve(handler, WS_BIND, WS_PORT):
         url = f"http://{HOST}:{HTTP_PORT}"
         print(f"Relay on ws://{HOST}:{WS_PORT}. Open {url} in Chrome and allow the camera.")
         try: webbrowser.get("chrome").open(url)
