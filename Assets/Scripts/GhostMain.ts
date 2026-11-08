@@ -1504,6 +1504,8 @@ export class GhostMain extends BaseScriptComponent {
   private onRoomJoined(code: string): void {
     if (this.mode !== "front") return;
     this.audio.playUnroll();
+    // The room just joined is no longer something to join.
+    this.joinableRooms = this.joinableRooms.filter((row) => row.split(" ")[1] !== code);
     this.frontUI.setRoomScreen(code, this.joinableRooms,
       "In room " + code + ". Pick a skill and you both learn it.");
   }
@@ -1718,9 +1720,16 @@ export class GhostMain extends BaseScriptComponent {
     if (flat.length < 1e-4) return;
     const dir = flat.normalize();
 
+    // Height follows the gaze too, not just eye level: someone looking down at
+    // their hands gets the sheet there, instead of above the top of the view
+    // (which hid the upper bookmark tabs). Clamped so a glance at the floor or
+    // ceiling at the moment of opening cannot put it somewhere absurd.
+    const pitch = Math.max(-0.6, Math.min(0.25, fwd.normalize().y));
     const t = this.sceneObject.getTransform();
     t.setWorldPosition(
-      new vec3(eye.x + dir.x * this.anchorDistanceCm, eye.y, eye.z + dir.z * this.anchorDistanceCm)
+      new vec3(eye.x + dir.x * this.anchorDistanceCm,
+               eye.y + pitch * this.anchorDistanceCm,
+               eye.z + dir.z * this.anchorDistanceCm)
     );
     // GHOST is authored sitting at -Z and facing BACK toward the camera, so its
     // local +Z must end up pointing along -dir. Yaw = atan2(-dir.x, -dir.z);

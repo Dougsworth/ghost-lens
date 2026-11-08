@@ -22,6 +22,7 @@ import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
 import {BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, FRONT_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
 import {GhostDemoPlayer} from "../Scripts/GhostDemoPlayer"
+import {GhostSheetUI} from "../Scripts/GhostSheetUI"
 import {buildGlyphPath} from "../Scripts/GhostKanaPath"
 
 /**
@@ -96,6 +97,16 @@ export class GhostDemoScenario extends Scenario {
       voiceWasPlaying = voice.isPlaying()
     })
 
+    // LEAF's simulated press sometimes never resolves when the button it
+    // pressed hides its own page (the front door closes as the lesson opens).
+    // The press has already worked by then, so move on once its effect is
+    // visible instead of waiting on the press promise forever.
+    const press = async (doPress: Promise<void>, worked: () => boolean, what: string): Promise<void> => {
+      let done = false
+      doPress.then(() => { done = true }, () => { done = true })
+      await waitUntil(() => done || worked(), 8000, () => `${what}: the press did nothing`)
+    }
+
     const awaitDemo = async (what: string, timeoutMs: number): Promise<void> => {
       await waitUntil(
         () => finishedAt > 0,
@@ -134,7 +145,7 @@ export class GhostDemoScenario extends Scenario {
         5000,
         () => `waiting for the front door; FrontDoor.enabled=${front.enabled}`,
       )
-      await interactor.pinchNotebook("Japanese")
+      await press(interactor.pinchNotebook("Japanese"), () => lesson.enabled, "pinch Japanese")
     }
     await waitUntil(
       () => lesson.enabled,
@@ -229,7 +240,7 @@ export class GhostDemoScenario extends Scenario {
 
     // ── 4. Pinching Replay replays it ───────────────────────────────────────
     resetRecorders()
-    await interactor.pinchTab("Replay")
+    await press(interactor.pinchTab("Replay"), () => firstStrokeAt > 0, "pinch Replay")
     await awaitDemo("the Replay demonstration", 30000)
     assertOneWriting("Replay")
     const normalMs = (finishedAt - firstStrokeAt) * 1000
@@ -239,8 +250,16 @@ export class GhostDemoScenario extends Scenario {
     ).toBeGreaterThan(0)
 
     // ── 5. Pinching Slower replays it at half speed ─────────────────────────
+    // Slower is hidden by design during the user's turn (tabs by phase: only
+    // Replay / Next / Packs mid-stroke); it comes back with every tab once a
+    // character is finished. Bring the tabs back the way finishing does, so
+    // this still tests the real Slower button rather than calling onSlower.
+    const sheetUI = findComponent(GhostSheetUI.getTypeName()) as GhostSheetUI | null
+    if (!sheetUI) throw new Error("GhostSheetUI not found in the scene")
+    sheetUI.showAllTabs()
+    await sleep(300)
     resetRecorders()
-    await interactor.pinchTab("Slower")
+    await press(interactor.pinchTab("Slower"), () => firstStrokeAt > 0, "pinch Slower")
     await awaitDemo("the Slower demonstration", 60000)
     assertOneWriting("Slower")
     const slowMs = (finishedAt - firstStrokeAt) * 1000
@@ -257,4 +276,22 @@ export class GhostDemoScenario extends Scenario {
       `Slower is about double, not more: ${slowMs.toFixed(0)} ms vs ${normalMs.toFixed(0)} ms (ratio ${(slowMs / normalMs).toFixed(2)})`,
     ).toBe(true)
   }
+}
+
+/** First component of this script type anywhere in the scene. */
+function findComponent(typeName: any): any {
+  const visit = (o: SceneObject): any => {
+    const c = o.getComponent(typeName as any)
+    if (c) return c
+    for (let i = 0; i < o.getChildrenCount(); i++) {
+      const hit = visit(o.getChild(i))
+      if (hit) return hit
+    }
+    return null
+  }
+  for (let i = 0; i < global.scene.getRootObjectsCount(); i++) {
+    const hit = visit(global.scene.getRootObject(i))
+    if (hit) return hit
+  }
+  return null
 }

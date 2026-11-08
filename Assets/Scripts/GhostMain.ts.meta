@@ -51,10 +51,8 @@
     lessonRoot: false
     lessonSequence: false
     lessonSource: false
-    peerInkColor: false
     pinchInput: false
     reanchorOnOpen: false
-    room: false
     sheet: false
     sheetUI: false
     shelfRoot: false
@@ -134,7 +132,7 @@
     - '// @input AssignableType_13 lessonSource {"hint":"Plans a lesson, or falls back to a bundled one. Never fails."}'
     - '// @input AssignableType_14 coach {"hint":"One short line after each attempt. Never blocks the lesson."}'
     - '// @input AssignableType_15 speech {"hint":"Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback."}'
-    - '// @input AssignableType_16 studyTogether {"hint":"Optional local Study Together relay. Wire this component to enable multiplayer presence and lesson/step updates."}'
+    - '// @input AssignableType_16 studyTogether {"hint":"Study Together: rooms, live peer ink, shared lesson, race and cheers, through the bridge (and Supabase across desktops). Optional; without it the solo lesson is unaffected."}'
     - '// @input AssignableType_17 arActivities {"hint":"Optional native pinchable 3D/quiz/matching activity component. Wire in Lens Studio."}'
     - '// @input string learnerId = "learner-a" {"hint":"Stable local learner ID for saved course progress. Set a different ID for each learner."}'
     - '// @input AssignableType_18 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
@@ -149,6 +147,5 @@
     - '// @input float hintAfterSec = 2.5 {"hint":"Once the guide has faded away completely, show just the current stroke as a hint after the user has been idle this many seconds. Help when stuck, never before.", "widget":"slider", "min":0.5, "max":8, "step":0.5}'
     - '// @input float hintGuideStrength = 0.5 {"hint":"Brightness of that one-stroke hint, 0..1 of the full outline.", "widget":"slider", "min":0.1, "max":1, "step":0.05}'
     - '// @input float stampHoldSec = 1.1 {"hint":"Seconds the finished sheet rests with its stamp before the page turns.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
-    - "// @input vec4 peerInkColor = \"{0.52,0.58,1,1}\" {\"hint\":\"A peer's ink. Indigo so it reads as someone else's hand without competing with your own warm ink; additive display, so it is an emitted blue.\", \"widget\":\"color\"}"
     - '// @input bool debugColliders {"hint":"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart."}'
     - '// @ui {"widget":"group_end"}'
