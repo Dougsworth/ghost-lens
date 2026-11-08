@@ -41,6 +41,7 @@ import { GhostSpeech } from "./GhostSpeech";
 import { GhostStudyTogether, RoomPeer } from "./GhostStudyTogether";
 import { GhostARActivities } from "./GhostARActivities";
 import { GhostGame } from "./GhostGame";
+import { GhostGlove } from "./GhostGlove";
 
 /** Race points (accepted strokes) that win a Study Together race. */
 const RACE_TARGET = 10;
@@ -169,6 +170,10 @@ export class GhostMain extends BaseScriptComponent {
   private raceScores: {[key: string]: number} = {};
   /** Points, combo, levels, badges and celebrations. See GhostGame. */
   game: GhostGame | null = null;
+  /** The glove the user picked: their cursor, and their colour. */
+  glove: GhostGlove | null = null;
+  /** The front door is showing the glove picker. */
+  private choosingGlove = false;
   private hudShown = true;
   /** The race in this room has been decided; one winner per room. */
   private raceDecided = false;
@@ -301,6 +306,7 @@ export class GhostMain extends BaseScriptComponent {
    * they are on, faintly — the current target, not the whole path.
    */
   private onUpdate(): void {
+    if (this.glove) this.glove.update(getDeltaTime());
     if (this.game) {
       this.game.update(getDeltaTime());
       // The HUD belongs to lessons; the front door and Ask stay uncluttered.
@@ -351,6 +357,11 @@ export class GhostMain extends BaseScriptComponent {
       });
     }
     this.game = new GhostGame(this.sceneObject, this.audio);
+    this.glove = new GhostGlove();
+    if (this.glove.chosen) {
+      this.game.setAccent(this.glove.color);
+      this.game.setGlove(this.glove.name);
+    }
     this.characters = this.parseLesson(this.lessonSequence);
     if (this.characters.length === 0) {
       print("[GhostMain] ERROR: no usable characters in lessonSequence.");
@@ -1115,6 +1126,64 @@ export class GhostMain extends BaseScriptComponent {
     this.libraryOpen = false;
     this.frontUI.setSuggestions(this.pickSuggestions());
     this.frontUI.showPicker();
+    // First launch: pick a glove before anything else. After that, a welcome
+    // that knows who you are.
+    if (this.glove && !this.glove.chosen) this.openGlovePicker();
+    else this.greet();
+  }
+
+  // ── Your glove ────────────────────────────────────────────────────────────
+
+  /**
+   * "Choose your glove": a try-on. The big glove in the middle and the glove
+   * on your hand wear the one being tried; its name is the title. Two rows,
+   * because the front door has two: keep it, or try the next.
+   */
+  private openGlovePicker(): void {
+    if (!this.glove) return;
+    this.choosingGlove = true;
+    const g = this.glove.startTryOn(this.sceneObject, new vec3(0, 0.6, 1.2));
+    this.showTryOn(g.name);
+  }
+
+  private showTryOn(name: string): void {
+    this.frontUI.setRoomScreen(name, ["Keep this glove", "Try another glove"],
+      "Choose your glove. It becomes your hand in GHOST.");
+  }
+
+  private onGloveRow(label: string): void {
+    if (!this.glove) return;
+    if (label === "Try another glove") {
+      this.audio.playTap();
+      this.showTryOn(this.glove.tryNext().name);
+      return;
+    }
+    if (label === "Keep this glove") {
+      const name = this.glove.trying ? this.glove.trying.name : "";
+      this.pickGlove(name);
+    }
+  }
+
+  private pickGlove(label: string): void {
+    if (!this.glove) return;
+    this.glove.endTryOn();
+    if (!this.glove.chooseByName(label)) return;
+    this.choosingGlove = false;
+    this.audio.playGameBadge();
+    if (this.game) {
+      this.game.setAccent(this.glove.color);
+      this.game.setGlove(this.glove.name);
+      this.game.burst(new vec3(0, 2, 2), 30, 1.2);
+    }
+    this.frontUI.leaveRoomScreen();
+    this.frontUI.setSuggestions(this.pickSuggestions());
+    this.frontUI.setWaiting("");
+  }
+
+  /** The profile line above the title says who you are; refresh it. */
+  private greet(): void {
+    if (!this.glove || !this.glove.chosen || !this.game) return;
+    this.game.setGlove(this.glove.name);
   }
 
   /**
@@ -1178,6 +1247,12 @@ export class GhostMain extends BaseScriptComponent {
   private onHeard(text: string): void {
     if (this.mode !== "front") return;
     this.frontUI.setWaiting("");
+    // "change glove", "new glove", "neon glove" ...
+    if (/glove/i.test(text || "")) {
+      if (this.glove && this.glove.chooseByName(text)) this.pickGlove(text);
+      else this.openGlovePicker();
+      return;
+    }
     this.onSkillPicked(text);
   }
 
@@ -1199,6 +1274,10 @@ export class GhostMain extends BaseScriptComponent {
    * moving and never lies about how far along the work is.
    */
   private onSkillPicked(skill: string): void {
+    if (this.choosingGlove) {
+      this.onGloveRow(skill);
+      return;
+    }
     // On the Study Together screen the suggestion rows are rooms, not skills.
     if (this.tryJoinFromRow(skill)) return;
     if (this.libraryOpen) {

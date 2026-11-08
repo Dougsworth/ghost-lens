@@ -106,6 +106,8 @@ type Floater = { text: Text; age: number; from: vec3 };
 
 export class GhostGame {
   private s: Saved;
+  /** The player's glove colour: leads the sparks and the level line. */
+  private accent: vec4 = GOLD;
   private combo = 0;
   private cleanRunChars = 0;
   /** Points the HUD counter shows; it counts up toward the real total. */
@@ -128,6 +130,9 @@ export class GhostGame {
   /** Badges toast quietly in the left column; the centre banner is kept for
    *  level ups and wins, so earning three badges at once never covers the
    *  sheet mid-stroke. */
+  /** Front door only: who you are here. "Neon Glove  -  LV 3 Student  -  5/13 badges". */
+  private profileText: Text;
+  private gloveName = "";
   private toastHead: Text;
   private toastName: Text;
   private toastT = -1;
@@ -158,6 +163,10 @@ export class GhostGame {
     this.toastName = this.text(this.hud, "GameToastName", new vec3(HUD_X, -9.5, 0.05), "Headline1", CYAN);
     this.toastHead.getSceneObject().enabled = false;
     this.toastName.getSceneObject().enabled = false;
+
+    // Above the front door's title, so it never meets the notebook row.
+    this.profileText = this.text(this.root, "GameProfile", new vec3(0, 12.6, 0.05), "Body", GOLD);
+    this.profileText.getSceneObject().enabled = false;
 
     // Banner: the one big moment (level up, badge, win), over the sheet.
     this.banner = this.text(this.root, "GameBanner", new vec3(0, 1.0, 2.2), "Title1", GOLD);
@@ -271,8 +280,30 @@ export class GhostGame {
   /** Show the HUD on lesson screens; hide it on the front door. */
   setHudVisible(on: boolean): void {
     this.hud.enabled = on;
+    this.refreshProfile();
     if (!on) this.combo = 0;
     this.refreshHud(true);
+  }
+
+  /** Colour the celebrations and the level line with the player's glove. */
+  setAccent(c: vec4): void {
+    this.accent = c;
+    this.levelText.textFill.color = c;
+    this.profileText.textFill.color = c;
+  }
+
+  /** Name the player's glove for the front-door profile line. */
+  setGlove(name: string): void {
+    this.gloveName = name;
+    this.refreshProfile();
+  }
+
+  private refreshProfile(): void {
+    this.profileText.text = this.gloveName
+      ? this.gloveName + "   LV " + this.s.level + " " + titleFor(this.s.level) +
+        "   " + this.s.badges.length + "/" + BADGES.length + " badges"
+      : "";
+    this.profileText.getSceneObject().enabled = !this.hud.enabled && this.gloveName.length > 0;
   }
 
   /** Wipe saved progress (tests, or a "start over" button). */
@@ -367,7 +398,9 @@ export class GhostGame {
       p.vel = new vec3(Math.cos(a) * sp, Math.sin(a) * sp + 6 * power, (Math.random() - 0.3) * 6);
       p.age = 0;
       p.life = 0.8 + Math.random() * 0.6;
-      p.color = BURST_COLORS[Math.floor(Math.random() * BURST_COLORS.length)];
+      // Half the sparks are the player's own colour, so a burst feels like theirs.
+      p.color = Math.random() < 0.5 ? this.accent
+        : BURST_COLORS[Math.floor(Math.random() * BURST_COLORS.length)];
       p.obj.enabled = true;
       used++;
     }

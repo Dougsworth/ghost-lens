@@ -129,6 +129,8 @@ export class WebcamHandBridge extends BaseScriptComponent {
   private attempts = 0;
   private gaveUp = false;
   private marker: RenderMeshVisual | null = null;
+  /** Set by GhostGlove once the user has a glove: the glove IS the cursor. */
+  suppressMarker = false;
   private markerObj: SceneObject | null = null;
   private startedAt = 0;
   private loggedHand = false;
@@ -168,6 +170,10 @@ export class WebcamHandBridge extends BaseScriptComponent {
 
   private updateMarker(): void {
     if (!this.marker || !this.markerObj) return;
+    if (this.suppressMarker) {
+      this.markerObj.enabled = false;
+      return;
+    }
     const pass = this.marker.mainMaterial.mainPass;
     if (getTime() - this.startedAt < 4) {
       // Startup point: always drawn, no hand needed.
