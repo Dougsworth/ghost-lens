@@ -14,7 +14,7 @@ The LLM provider is chosen by lesson_llm from the environment: GEMINI_API_KEY,
 then ANTHROPIC_API_KEY, then OPENAI_API_KEY, then GHOST's bundled lessons.
 Copy credentials.env.example to credentials.env (gitignored) and source it.
 """
-import asyncio, http.server, json, os, threading, time, webbrowser
+import asyncio, http.server, json, os, socket, threading, time, webbrowser
 import websockets
 
 import lesson_llm
@@ -24,6 +24,29 @@ HOST, WS_PORT, HTTP_PORT = "127.0.0.1", 8765, 8766
 # Study Together clients may come from another laptop: bind the websocket on
 # all interfaces when GHOST_LAN=1 (or when tunnelling with ngrok).
 WS_BIND = "0.0.0.0" if os.environ.get("GHOST_LAN") else HOST
+
+
+def join_address():
+    """The ws:// address a SECOND machine should point GhostRoom.url at.
+
+    Only meaningful when bound to all interfaces; on a loopback bind the honest
+    answer is that nobody else can reach this, so say so rather than printing a
+    127.0.0.1 address that will silently fail for them.
+    """
+    if not os.environ.get("GHOST_LAN"):
+        return None
+    try:
+        # No traffic is sent; this just asks the OS which interface it would
+        # use to reach the outside, which is the one a peer can see.
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            probe.connect(("8.8.8.8", 80))
+            ip = probe.getsockname()[0]
+        finally:
+            probe.close()
+        return "ws://%s:%d" % (ip, WS_PORT)
+    except Exception:
+        return None
 HERE = os.path.dirname(os.path.abspath(__file__))
 lenses, sources = set(), set()
 
@@ -173,6 +196,9 @@ def serve_http():
                     "llm": name or "none",
                     "model": lesson_llm.model_name() if name else None,
                     "spend": _spend.as_dict(),
+                    # Where a second machine points GhostRoom.url. null means
+                    # loopback-only: start with GHOST_LAN=1 to share.
+                    "join": join_address(),
                     "rooms": len(_rooms.status()),
                 })
             return super().do_GET()
@@ -317,6 +343,12 @@ async def main():
     async with websockets.serve(handler, WS_BIND, WS_PORT):
         url = f"http://{HOST}:{HTTP_PORT}"
         print(f"Relay on ws://{HOST}:{WS_PORT}. Open {url} in Chrome and allow the camera.")
+        shared = join_address()
+        if shared:
+            print(f"Study Together from another machine: point GhostRoom.url at {shared}")
+        else:
+            print("Study Together is loopback-only. Restart with GHOST_LAN=1 to let "
+                  "another machine join.")
         try: webbrowser.get("chrome").open(url)
         except Exception:
             try: os.system(f'open -a "Google Chrome" {url}')

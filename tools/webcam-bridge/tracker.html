@@ -19,6 +19,7 @@ canvas{position:absolute;left:0;top:16px}
   <button id="mic" style="font-size:20px;padding:10px 20px;border-radius:999px;border:1px solid #888;background:#fff;cursor:pointer">Hold a skill &mdash; tap to speak</button>
   <span id="speech" style="margin-left:14px;font-size:19px;color:#444"></span>
 </div>
+<div id="join" style="margin-top:10px;font-size:19px;color:#444"></div>
 <div id="stat">starting</div>
 </main>
 <script type="module">
@@ -46,7 +47,17 @@ let lastHands=[], lastSeen=-1e9, prevTip=null, pinchOn=false, pinchCnt=0; let ws
 const lastDbg=[null];
 function connect(){ ws=new WebSocket('ws://127.0.0.1:8765'); ws.onopen=()=>{open=true; ws.send('source')}; ws.onclose=()=>{open=false; setTimeout(connect,1000)}; ws.onerror=()=>{}; }
 connect();
-setInterval(async()=>{try{lenses=(await (await fetch('/status')).json()).lenses}catch(e){}},1000);
+const joinEl=document.getElementById('join');
+setInterval(async()=>{try{
+  const st=await (await fetch('/status')).json();
+  lenses=st.lenses;
+  // Where a SECOND machine points GhostRoom.url. Null means this bridge is
+  // loopback-only, which is the normal case and is fine for two Preview
+  // panels on one Mac - they share this relay already and need no address.
+  joinEl.textContent = st.join
+    ? 'Study Together from another machine: ' + st.join
+    : 'Study Together: this machine only (restart the bridge with GHOST_LAN=1 to share)';
+}catch(e){}},1000);
 
 // ── Speech ──────────────────────────────────────────────────────────────────
 // The Lens cannot open a microphone in the Lens Studio preview, and this page
