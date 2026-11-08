@@ -351,6 +351,15 @@ export class GhostMain extends BaseScriptComponent {
       return;
     }
 
+    // Optional components are checked for their API, not just for being
+    // wired: if Lens Studio resets the preview mid-compile, a wired component
+    // can arrive before its script has started, and touching its events then
+    // threw here and stopped the whole Lens from starting.
+    if (this.arActivities && !this.arActivities.onFinished) this.arActivities = null as any;
+    if (this.studyTogether && !this.studyTogether.onJoined) {
+      print("[GhostMain] Study Together not ready; continuing solo.");
+      this.studyTogether = null as any;
+    }
     if (this.arActivities) {
       this.arActivities.onFinished.add(() => {
         if (this.mode === "front") this.frontUI.setWaiting("Activity complete! Ask for another lesson.");
