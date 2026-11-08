@@ -7,6 +7,9 @@
 // NOTE FOR CLAD: verify the InternetModule WebSocket API against the current
 // Spectacles docs and fix anything that does not compile.
 
+import { createDot } from "./GhostInkRibbon";
+import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider";
+
 export type BridgeHand = {
   side: string;
   pinch: boolean;
@@ -24,6 +27,15 @@ export class WebcamHandBridge extends BaseScriptComponent {
   @input planeWidth: number = 30;    // cm covered by the webcam width (fallback only)
   @input planeHeight: number = 22;   // cm covered by the webcam height (fallback only)
   @input smoothing: number = 0.5;    // 0 = raw, closer to 1 = smoother
+
+  @input
+  @hint("How much of the webcam frame your hand needs to cover. 1 = the whole frame. 2 = only the middle half of the frame, so small moves reach every edge of the view and your hand never has to leave the camera.")
+  @widget(new SliderWidget(1, 3, 0.1))
+  reachGain: number = 2.0;
+
+  @input
+  @hint("Draw a debug dot on screen where the bridge thinks your index fingertip is. A cyan dot sits in the middle for the first 4 seconds (proves drawing works), then a magenta dot follows your finger and turns white while pinching. It is attached to the camera, so it shows on every screen, not just the practice sheet.")
+  showMarker: boolean = true;
 
   @input
   @hint("The practice sheet. The webcam frame is mapped onto THIS surface, so the middle of the camera view is the middle of the sheet and a hand sweep crosses the paper. Leave empty to fall back to a plane in front of the camera.")
@@ -112,6 +124,10 @@ export class WebcamHandBridge extends BaseScriptComponent {
   private retryAt = 0;
   private attempts = 0;
   private gaveUp = false;
+  private marker: RenderMeshVisual | null = null;
+  private markerObj: SceneObject | null = null;
+  private startedAt = 0;
+  private loggedHand = false;
 
   /** Retries before the bridge stops and explains itself once. */
   private static readonly MAX_ATTEMPTS = 3;
@@ -120,7 +136,60 @@ export class WebcamHandBridge extends BaseScriptComponent {
     WebcamHandBridge.instance = this;
     if (!this.enabledInPreview) return;
     this.connect();
+    this.createEvent("OnStartEvent").bind(() => this.makeMarker());
     this.createEvent("UpdateEvent").bind(() => this.update());
+  }
+
+  /** Debug dot, parented to the camera so it is visible whatever screen is up. */
+  private makeMarker(): void {
+    this.startedAt = getTime();
+    if (!this.showMarker) return;
+    try {
+      const camObj = WorldCameraFinderProvider.getInstance().getComponent().getSceneObject();
+      this.marker = createDot(camObj, "BridgeHandMarker", 0.5, new vec4(0.2, 0.9, 1, 1), 0);
+      this.markerObj = this.marker.getSceneObject();
+      this.markerObj.layer = camObj.layer;
+      this.markerObj.getTransform().setLocalPosition(new vec3(0, 0, -this.planeDistance));
+      print("[GHOST bridge] debug marker created: a cyan dot in the middle of the view for 4 seconds, then it follows your fingertip.");
+    } catch (e) {
+      print("[GHOST bridge] could not create the debug marker: " + String(e));
+    }
+  }
+
+  /** Stretch the middle of the webcam frame out to the edges, then clamp. */
+  private reach(v: number): number {
+    const g = Math.max(1, this.reachGain || 1);
+    return Math.min(1, Math.max(0, (v - 0.5) * g + 0.5));
+  }
+
+  private updateMarker(): void {
+    if (!this.marker || !this.markerObj) return;
+    const pass = this.marker.mainMaterial.mainPass;
+    if (getTime() - this.startedAt < 4) {
+      // Startup point: always drawn, no hand needed.
+      this.markerObj.getTransform().setLocalPosition(new vec3(0, 0, -this.planeDistance));
+      pass.baseColor = new vec4(0.2, 0.9, 1, 1);
+      this.markerObj.enabled = true;
+      return;
+    }
+    // Draw the dot on the SAME line the hand interactor aims along: from the
+    // camera through fingertipWorld. Using its own camera-plane mapping put the
+    // dot somewhere other than what the hand was actually pointing at.
+    const w = this.connected ? this.fingertipWorld : null;
+    const camObj = this.markerObj.getParent();
+    if (!w || !camObj) {
+      this.markerObj.enabled = false;
+      return;
+    }
+    const local = camObj.getTransform().getInvertedWorldTransform().multiplyPoint(w);
+    if (local.z > -0.01) {
+      this.markerObj.enabled = false;
+      return;
+    }
+    const k = this.planeDistance / -local.z;
+    this.markerObj.getTransform().setLocalPosition(new vec3(local.x * k, local.y * k, -this.planeDistance));
+    pass.baseColor = this.isPinching ? new vec4(1, 1, 1, 1) : new vec4(1, 0.2, 0.8, 1);
+    this.markerObj.enabled = true;
   }
 
   private connect() {
@@ -176,6 +245,7 @@ export class WebcamHandBridge extends BaseScriptComponent {
   }
 
   private update() {
+    this.updateMarker();
     if (!this.connected && this.retryAt > 0 && getTime() > this.retryAt) {
       this.retryAt = 0;
       this.connect();
@@ -185,6 +255,10 @@ export class WebcamHandBridge extends BaseScriptComponent {
   private handle(msg: { hands: BridgeHand[] }) {
     const hands = msg.hands || [];
     this.hand = this.pickHand(hands);
+    if (this.hand && !this.loggedHand) {
+      this.loggedHand = true;
+      print("[GHOST bridge] first hand received from the tracker page.");
+    }
     if (!this.hand) {
       if (this.isPinching && this.smoothed) this.onPinchEnd.forEach(f => f(this.smoothed));
       this.isPinching = false;
@@ -194,7 +268,7 @@ export class WebcamHandBridge extends BaseScriptComponent {
       return;
     }
     const tip = this.hand.points[8];
-    const raw = this.toWorld(tip[0], tip[1]);
+    const raw = this.toWorld(this.reach(tip[0]), this.reach(tip[1]));
     this.smoothed = this.smoothed ? vec3.lerp(raw, this.smoothed, this.smoothing) : raw;
     this.fingertipWorld = this.smoothed;
 
@@ -237,6 +311,11 @@ export class WebcamHandBridge extends BaseScriptComponent {
    * so one pair of thresholds works near and far from the camera.
    */
   private decidePinch(h: BridgeHand): boolean {
+    // The tracker page now sends ONE hand ("Primary"), already picked, and its
+    // pinch flag is held steady for 4 frames. That is what the page shows as
+    // "pinch DOWN", so use it: deciding again here without that steadiness let
+    // a single noisy frame start a stroke the page never showed.
+    if (h.side === "Primary" && typeof h.pinch === "boolean") return h.pinch;
     if (!this.ownPinchDecision || typeof h.pinchDist !== "number") return !!h.pinch;
     const on = Math.min(this.pinchOnRatio, this.pinchOffRatio);
     const off = Math.max(this.pinchOnRatio, this.pinchOffRatio);

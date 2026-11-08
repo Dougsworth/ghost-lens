@@ -20,6 +20,8 @@ import { GhostShelfUI } from "./GhostShelfUI";
 import { GhostAskUI } from "./GhostAskUI";
 import { GhostTurnController, MissInfo } from "./GhostTurnController";
 import { GhostPinchInput } from "./GhostPinchInput";
+import { InkRibbon } from "./GhostInkRibbon";
+import { Pt } from "./GhostKanaPath";
 import { buildGlyphPath, GlyphPath, hasCharacter } from "./GhostKanaPath";
 import { findAskWord } from "./GhostAskWords";
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider";
@@ -36,10 +38,10 @@ import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
 import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
 import { GhostCoach } from "./GhostCoach";
 import { GhostSpeech } from "./GhostSpeech";
-import { GhostStudyTogether } from "./GhostStudyTogether";
+import { GhostStudyTogether, RoomPeer } from "./GhostStudyTogether";
 import { GhostARActivities } from "./GhostARActivities";
-import { InkRibbon } from "./GhostInkRibbon";
 import { Lesson } from "./GhostLessonSchema";
+import { BANK_KEYS } from "./GhostLessonBank";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import { Help, SkillTeacher } from "./GhostTeacher";
 import { validateLesson } from "./GhostLessonSchema";
@@ -147,7 +149,7 @@ export class GhostMain extends BaseScriptComponent {
 
   @input
   @allowUndefined
-  @hint("Optional local Study Together relay. Wire this component to enable multiplayer presence and lesson/step updates.")
+  @hint("Study Together: rooms, live peer ink, shared lesson, race and cheers, through the bridge (and Supabase across desktops). Optional; without it the solo lesson is unaffected.")
   studyTogether: GhostStudyTogether;
   @input
   @allowUndefined
@@ -245,6 +247,7 @@ export class GhostMain extends BaseScriptComponent {
   @hint("Seconds the finished sheet rests with its stamp before the page turns.")
   @widget(new SliderWidget(0.2, 3, 0.1))
   stampHoldSec: number = 1.1;
+
 
   @input
   @hint("Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart.")
@@ -409,12 +412,9 @@ export class GhostMain extends BaseScriptComponent {
           this.showPeerLive(event.from, data.strokeId, data.points);
         }
         if (data.type === "ink_end") this.endPeerLive(event.from);
-        // Room moments, on the sheet: a soft note when someone joins, and a
-        // cheer stamp when a peer finishes a character. Both are no-ops for
-        // the eye while the sheet is hidden (front door), by construction.
-        if (data.type === "join" && this.studyTogether) {
-          this.sheetUI.showNote(this.studyTogether.displayName(event.from) + " joined");
-        }
+        // A cheer stamp when a peer finishes a character (joins and leaves
+        // arrive as onPeerJoined/onPeerLeft). A no-op for the eye while the
+        // sheet is hidden (front door), by construction.
         if (data.type === "cheer" && this.studyTogether) {
           this.sheetUI.showCheer();
           this.sheetUI.showNote(this.studyTogether.displayName(event.from) + " finished!");
@@ -428,6 +428,14 @@ export class GhostMain extends BaseScriptComponent {
       });
     }
     this.speech.onGaveUp.add(() => this.onSpeechGaveUp());
+
+    this.frontUI.onStudyTogether.add(() => this.onStudyTogether());
+    if (this.studyTogether) {
+      this.studyTogether.onJoined.add((code: string) => this.onRoomJoined(code));
+      this.studyTogether.onPeerJoined.add((p: RoomPeer) => this.onPeerJoined(p));
+      this.studyTogether.onPeerLeft.add((p: RoomPeer) => this.onPeerLeft(p));
+      this.studyTogether.onError.add((why: string) => this.onRoomError(why));
+    }
 
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
     this.guitarUI.onNext.add(() => this.onGuitarNext());
@@ -756,6 +764,9 @@ export class GhostMain extends BaseScriptComponent {
 
     // A word, then the next instruction. Praise alone would leave the user
     // without a next step; the tip alone would feel like silence after effort.
+    // (Peers already have this stroke: GhostStudyTogether streamed it live
+    // while it was drawn and sent the final path on release.)
+
     const last = index >= this.glyph.strokeCount - 1;
     this.sheetUI.say(praiseFor(this.praiseCount), 0.9);
     if (this.playingPlanned && last) this.askCoach(index, "ok");
@@ -833,6 +844,7 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPageTurnComplete(): void {
     if (this.mode !== "finished") return;
+    this.clearPeerInk();
     if (this.playingPlanned) {
       this.beginPlannedStep(this.lessonPos + 1);
       return;
@@ -1155,6 +1167,8 @@ export class GhostMain extends BaseScriptComponent {
    * moving and never lies about how far along the work is.
    */
   private onSkillPicked(skill: string): void {
+    // On the Study Together screen the suggestion rows are rooms, not skills.
+    if (this.tryJoinFromRow(skill)) return;
     if (this.libraryOpen) {
       const found = this.libraryCourses.find((c) =>
         ((c.step > 0 ? "Continue  " : "Open  ") + c.skill) === skill);
@@ -1164,11 +1178,23 @@ export class GhostMain extends BaseScriptComponent {
     }
     this.audio.playTap();
     this.lessonSkill = skill;
+    this.frontUI.leaveRoomScreen();
     if (this.studyTogether) this.studyTogether.setSkill(skill);
     this.frontUI.beginOutline(skill);
     this.frontUI.setWaiting("");
     this.frontUI.beginStage("Planning your steps", 0, 0.55);
     this.audio.playUnroll();
+
+    // The built-in suggestions are hand-written lessons that already work.
+    // Asking the AI for them was slow and could come back as something this
+    // build cannot teach, which left the screen stuck on the outline. Only a
+    // skill the user asked for themselves goes to the AI.
+    if (BANK_KEYS.indexOf(skill.trim().toLowerCase()) >= 0) {
+      const own = this.lessonSource.bundledFor(skill);
+      this.lesson = own;
+      this.onLessonReady({ lesson: own, origin: "bank", note: "" });
+      return;
+    }
 
     // Two honest escalations, both measured from the pinch.
     const nudge = this.createEvent("DelayedCallbackEvent");
@@ -1271,6 +1297,27 @@ export class GhostMain extends BaseScriptComponent {
    */
   private startPlannedLesson(): void {
     if (!this.lesson) return;
+    if (this.lessonSteps.length === 0) {
+      // Nothing to trace. Send it to the pack that CAN teach it rather than
+      // leaving the outline on screen with nowhere to go.
+      const steps = (this.lesson && this.lesson.steps) || [];
+      for (let i = 0; i < steps.length; i++) {
+        const r: any = steps[i].render;
+        if (r && r.kind === "chord") {
+          const want = String(r.chord || "").toLowerCase();
+          let idx = 0;
+          for (let c = 0; c < GUITAR_CHORDS.length; c++) {
+            if (GUITAR_CHORDS[c].id.toLowerCase() === want) { idx = c; break; }
+          }
+          this.openGuitar(idx);
+          return;
+        }
+        if (r && r.kind === "hands") {
+          this.openAsl(0);
+          return;
+        }
+      }
+    }
     if (this.lessonSteps.length === 0 && this.arActivities) {
       const first = this.lesson.steps.find((step) => step.render.kind === "snap3d" || step.render.kind === "objects");
       if (first) {
@@ -1299,7 +1346,10 @@ export class GhostMain extends BaseScriptComponent {
       }
     }
     if (this.lessonSteps.length === 0) {
-      this.frontUI.setWaiting("No supported interactive activity in this lesson yet.");
+      this.frontUI.setWaiting("That one cannot be taught here yet. Pick another.");
+      const back = this.createEvent("DelayedCallbackEvent");
+      back.bind(() => { if (this.mode === "front") this.showFrontDoor(); });
+      back.reset(2.5);
       return;
     }
     this.frontRoot.enabled = false;
@@ -1377,6 +1427,122 @@ export class GhostMain extends BaseScriptComponent {
   private onCoachTip(tip: string): void {
     if (this.mode !== "turn") return;
     this.sheetUI.say(tip, 2.2);
+  }
+
+  // ── Study together ────────────────────────────────────────────────────────
+  //
+  // Additive throughout. Every handler below begins by checking it is actually
+  // in a room, so with no bridge — or a bridge that dies mid-lesson — none of
+  // this does anything and the solo lesson carries on untouched. That is the
+  // one rule of this feature.
+  //
+  // The screen is the front door's: pinch "Study together" and you are either
+  // in a room or looking at one you can join with a second pinch. Rooms,
+  // presence, live ink, the shared lesson, race points and cheers all go
+  // through GhostStudyTogether, which talks to the bridge over HTTP; with
+  // Supabase keys set on the bridge, the same room code reaches other desktops.
+
+  /**
+   * Study together. One pinch, and you are either in a room or looking at one
+   * you can join with a second pinch.
+   *
+   * The screen changes, your code is the title, and any room already open is
+   * listed, so joining never needs a code read out loud or typed.
+   */
+  private onStudyTogether(): void {
+    this.audio.playTap();
+    const st = this.studyTogether;
+    if (!st || !st.internetModule) {
+      this.frontUI.setWaiting("Study together needs the bridge running.");
+      return;
+    }
+    this.frontUI.setRoomScreen("", [], "Looking for rooms...");
+
+    st.listRooms((rooms) => {
+      if (this.mode !== "front") return;
+      const joinable: string[] = [];
+      for (let i = 0; i < rooms.length && joinable.length < 2; i++) {
+        const r = rooms[i];
+        if (!r || !r.room) continue;
+        // Do not offer the room we are already in.
+        if (st.isJoined && r.room === st.roomCode) continue;
+        const who = (r.members && r.members.length)
+          ? r.members.join(", ")
+          : "waiting";
+        joinable.push("Join " + r.room + "  (" + who + ")");
+      }
+      this.joinableRooms = joinable;
+
+      if (st.isJoined) {
+        this.frontUI.setRoomScreen(st.roomCode, joinable,
+          "Your room. Others can pinch it from their front door.");
+        return;
+      }
+      // Nothing open: make one, so the screen is never a dead end.
+      this.frontUI.setRoomScreen("", joinable,
+        joinable.length ? "Pinch a room to join, or wait for yours."
+                        : "Opening a room...");
+      st.create(rooms.map((r) => r.room));
+    });
+  }
+
+  /** Rooms currently offered on the Study Together screen, in row order. */
+  private joinableRooms: string[] = [];
+
+  /** A row was pinched on the Study Together screen: join that room. */
+  private tryJoinFromRow(label: string): boolean {
+    if (!this.frontUI.isRoomScreen || !this.studyTogether) return false;
+    // "Join TIGER  (Me)" -> TIGER
+    const parts = label.split(" ");
+    if (parts.length < 2 || parts[0] !== "Join") return false;
+    this.audio.playTap();
+    this.frontUI.setRoomScreen("", [], "Joining " + parts[1] + "...");
+    this.studyTogether.join(parts[1]);
+    return true;
+  }
+
+  private onRoomJoined(code: string): void {
+    if (this.mode !== "front") return;
+    this.audio.playUnroll();
+    this.frontUI.setRoomScreen(code, this.joinableRooms,
+      "In room " + code + ". Pick a skill and you both learn it.");
+  }
+
+  private onPeerJoined(p: RoomPeer): void {
+    this.audio.playGotIt();
+    if (this.mode === "front") {
+      if (this.frontUI.isRoomScreen && this.studyTogether) {
+        this.frontUI.setRoomScreen(this.studyTogether.roomCode, [],
+          p.name + " joined. Pick a skill and you both learn it.");
+      }
+    } else {
+      this.sheetUI.showNote(p.name + " joined");
+    }
+  }
+
+  private onPeerLeft(p: RoomPeer): void {
+    if (this.mode === "front") {
+      if (this.frontUI.isRoomScreen && this.studyTogether) {
+        this.frontUI.setRoomScreen(this.studyTogether.roomCode, [], p.name + " left.");
+      }
+    } else {
+      this.sheetUI.showNote(p.name + " left");
+    }
+    this.endPeerLive(p.id);
+  }
+
+  private onRoomError(why: string): void {
+    // Refused, not broken. Back to the front door with the reason.
+    if (this.mode !== "front") return;
+    this.frontUI.leaveRoomScreen();
+    this.frontUI.setWaiting(why);
+  }
+
+  /** Clear every peer's ink, finished and in progress, when the page turns. */
+  private clearPeerInk(): void {
+    for (const r of this.remoteInk) r.sceneObject.destroy();
+    this.remoteInk = [];
+    for (const id of Object.keys(this.peerLive)) this.endPeerLive(id);
   }
 
   // ── Guitar pack ───────────────────────────────────────────────────────────

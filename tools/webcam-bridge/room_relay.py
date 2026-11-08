@@ -27,7 +27,10 @@ class RoomRelay:
             self._clean(room)
             if person_id not in room["people"] and len(room["people"]) >= 4:
                 raise ValueError("room full (maximum 4)")
-            room["people"][person_id] = {"name":str(name)[:40], "lesson":str(lesson)[:120], "seen":time.time()}
+            # "remote": this person lives on another desktop (injected by
+            # cloud_rooms), so this bridge must not re-announce them.
+            room["people"][person_id] = {"name":str(name)[:40], "lesson":str(lesson)[:120],
+                                         "seen":time.time(), "remote":bool(_remote)}
             if event is not None:
                 if not isinstance(event, dict) or event.get("type") not in ("stroke", "stamp", "step", "cheer", "race", "join", "lesson", "path", "ink_live", "ink_end", "lesson_full"):
                     raise ValueError("invalid event")

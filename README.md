@@ -78,3 +78,26 @@ Bridge tests: `cd tools\webcam-bridge` then run each of `test_cloud_rooms.py`, `
 
 Hiragana and katakana stroke data derived from [KanjiVG](https://kanjivg.tagaini.net) by Ulrich Apel, licensed CC BY-SA 3.0.
 Hand tracking in the webcam bridge uses Google MediaPipe.
+
+## Study Together (multiplayer)
+
+The bridge doubles as a room relay. One learner creates a room and gets a short
+speakable code (TIGER, MANGO...); up to three others join with it. Members
+exchange small lesson events (strokes, stamps, cheers, race results) in real
+time; rooms are isolated from each other and survive a dropped connection for
+ten minutes. Relay tests: `python3 tools/webcam-bridge/test_rooms.py`.
+
+Second laptop on the same Wi-Fi: start the bridge with `GHOST_LAN=1` and point
+the other client at `ws://<your-ip>:8765`. Across the internet: `ngrok http 8765`
+and use the `wss://` URL. Only lesson events travel; never camera or hand frames.
+
+## Environment
+
+Copy `tools/webcam-bridge/credentials.env.example` to `credentials.env`
+(gitignored) and set one of GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
+for live lesson planning and coach tips. With no key, GHOST falls back to
+bundled lessons and fixed tips - everything still works.
+
+Launch: `set -a; source tools/webcam-bridge/credentials.env; set +a` then
+`bash tools/webcam-bridge/run_fast.sh`, open http://127.0.0.1:8766 in Chrome,
+allow the camera, and open GHOST.esproj in Lens Studio 5.24.1.

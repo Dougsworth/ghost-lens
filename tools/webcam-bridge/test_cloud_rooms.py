@@ -27,6 +27,12 @@ class FakeSupabase(object):
         # GET: parse the two query shapes cloud_rooms uses.
         import urllib.parse
         q = urllib.parse.parse_qs(path_and_query.split("?", 1)[1])
+        if "room" not in q:
+            # Discovery: recent presence/join rows from every room.
+            kinds = q["event->>type"][0][len("in.("):-1].split(",")
+            rows = [r for r in self.rows if r["event"].get("type") in kinds]
+            return 200, [{k: r[k] for k in ("room", "origin", "person", "name", "lesson")}
+                         for r in reversed(rows)]
         room = q["room"][0].split("eq.")[1]
         rows = [r for r in self.rows if r["room"] == room]
         if "id" in q and q["id"][0].startswith("gt."):
@@ -133,6 +139,25 @@ class CloudRoomTests(unittest.TestCase):
         finally:
             del os.environ["SUPABASE_URL"], os.environ["SUPABASE_ANON_KEY"]
 
+
+    def test_rooms_open_on_other_desktops_are_listed(self):
+        relay, cloud, sync = make()
+        cloud.insert("TIGER", "desk-b", "b", "Ben", "", {"type": "join"})
+        sync.pump_once()
+        rooms = relay.list_rooms("a")
+        self.assertEqual([r["room"] for r in rooms], ["TIGER"])
+        self.assertEqual(rooms[0]["people"], ["Ben"])
+
+    def test_remote_people_are_not_reannounced(self):
+        relay, cloud, sync = make()
+        cloud.insert("TIGER", "desk-b", "b", "Ben", "", {"type": "presence"})
+        sync.pump_once()
+        relay.update("TIGER", "a", "Ana", "")          # we join their room
+        sync.last_heartbeat = 0
+        before = len(cloud.rows)
+        sync.pump_once()
+        mine = [r["person"] for r in cloud.rows[before:] if r["event"]["type"] == "presence"]
+        self.assertEqual(mine, ["a"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,6 +21,9 @@ import lesson_llm
 import learning_engine
 import cloud_rooms
 from room_relay import RoomRelay
+# The websocket room protocol (role "room"): kept for its tests and any
+# client that speaks it. The Lens uses the HTTP /room relay above.
+import room_ws_relay
 from course_store import CourseStore
 
 # GHOST_BIND=0.0.0.0 exposes the bridge on the LAN (advanced; the relay has no
@@ -112,12 +115,18 @@ _rooms = RoomRelay()
 _courses = CourseStore()
 _cloud = cloud_rooms.start_if_configured(_rooms)
 
+_ws_rooms = room_ws_relay.Relay()
+
 async def handler(ws):
     role = "lens"
     try:
         first = await asyncio.wait_for(ws.recv(), timeout=1.0)
         if first == "source":
             role = "source"
+        elif first == "room":
+            # Study Together: hand the whole connection to the room relay.
+            await _ws_rooms.serve(ws)
+            return
     except asyncio.TimeoutError:
         pass
     except websockets.ConnectionClosed:
@@ -236,6 +245,9 @@ def serve_http():
                     return self._json(200 if lesson else 404, lesson or {"error": "not found"})
                 if parsed.path == "/progress":
                     return self._json(200, _courses.get_progress(q.get("learner", [""])[0], q.get("courseId", [""])[0]))
+            if self.path == "/ws-rooms":
+                return self._json(200, {"rooms": _ws_rooms.status()})
+
             if self.path == "/status":
                 # "llm" is the provider NAME only -- never the key, and never
                 # anything derived from it.
@@ -245,6 +257,10 @@ def serve_http():
                     "llm": name or "none",
                     "model": lesson_llm.model_name() if name else None,
                     "spend": _spend.as_dict(),
+                    # Open Study Together rooms (local and, with Supabase
+                    # keys, other desktops'), and whether cloud sync is on.
+                    "rooms": len(_rooms.list_rooms()),
+                    "cloud": bool(_cloud),
                 })
             return super().do_GET()
 

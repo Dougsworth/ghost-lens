@@ -28,6 +28,8 @@ TABLE = "ghost_room_events"
 UPLOAD_BATCH = 20
 POLL_LIMIT = 200
 HEARTBEAT_EVERY = 10.0   # seconds between presence uploads per local person
+DISCOVER_EVERY = 3.0     # seconds between "which rooms are open elsewhere?" looks
+DISCOVER_WINDOW = 35.0   # a room counts as open if someone was seen this recently
 INTERVAL = 0.5           # seconds between cloud polls (matches ~live ink feel)
 BACKOFF_MAX = 15.0
 
@@ -68,6 +70,7 @@ class CloudRoomSync(object):
         self.lock = threading.Lock()
         self.watermarks = {}          # room -> last cloud row id injected
         self.last_heartbeat = 0.0
+        self.last_discover = 0.0
         self.stats = {"sent": 0, "received": 0, "rejected": 0, "errors": 0}
         self.last_error = ""
         self.ok = True
@@ -106,8 +109,43 @@ class CloudRoomSync(object):
         for room in self.relay.active_rooms():
             snap = self.relay.poll(room, "", 10 ** 12)
             for pid, p in snap["people"].items():
+                if p.get("remote"):
+                    continue    # another desktop's learner: theirs to announce
                 self.queue_local(room, pid, p.get("name", ""),
                                  p.get("lesson", ""), {"type": "presence"})
+
+    def discover_once(self, now=None):
+        """List rooms opened on OTHER desktops, so the Study Together screen
+        can offer them. Recent presence/join rows from other bridges are
+        injected as presence; the room then becomes active locally and the
+        normal per-room poll takes over (starting at the newest row, so no
+        history is replayed)."""
+        now = time.time() if now is None else now
+        if now - self.last_discover < DISCOVER_EVERY:
+            return
+        self.last_discover = now
+        cutoff = time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                               time.gmtime(now - DISCOVER_WINDOW))
+        status, rows = self.transport(
+            "GET",
+            "%s?created_at=gt.%s&event->>type=in.(presence,join)"
+            "&order=id.desc&limit=%d&select=room,origin,person,name,lesson"
+            % (TABLE, cutoff, POLL_LIMIT))
+        local = set(self.relay.active_rooms())
+        seen = set()
+        for row in rows or []:
+            room, person = str(row.get("room", "")), str(row.get("person", ""))
+            if row.get("origin") == self.origin or room in local:
+                continue
+            if (room, person) in seen:
+                continue
+            seen.add((room, person))
+            try:
+                self.relay.inject_remote(room, person, str(row.get("name", "")),
+                                         str(row.get("lesson", "")),
+                                         {"type": "presence"})
+            except ValueError:
+                pass            # bad code or full room: just not offered
 
     # ---- cloud -> local ----------------------------------------------------
     def _watermark(self, room):
@@ -142,6 +180,7 @@ class CloudRoomSync(object):
         try:
             self.heartbeat_once()
             self._drain_uploads()
+            self.discover_once()
             for room in self.relay.active_rooms():
                 self._poll_room(room)
             self.ok, self.last_error = True, ""

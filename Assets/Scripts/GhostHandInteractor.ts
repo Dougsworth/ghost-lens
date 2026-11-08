@@ -41,6 +41,9 @@ import { InteractableHitInfo } from "SpectaclesInteractionKit.lspkg/Providers/Ta
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider";
 import { WebcamHandBridge } from "./WebcamHandBridge";
 
+/** Frames SIK needs to see trigger-end on a button before the target goes. */
+const RELEASE_HOLD_FRAMES = 2;
+
 const IDLE_STRENGTH = 0;
 const HOVER_STRENGTH = 0.2;
 const TRIGGER_STRENGTH = 0.8;
@@ -60,6 +63,15 @@ export class GhostHandInteractor extends BaseInteractor {
   @hint("How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.")
   @widget(new SliderWidget(50, 400, 10))
   reachCm: number = 200;
+
+  @input
+  @hint("Log what the hand is pointing at and every targeting/trigger change. Turn on if pinching selects nothing.")
+  debugHand: boolean = false;
+
+  @input
+  @hint("Ignore a new pinch within this many seconds of the last one ending. Hand tracking flickers at the threshold, and without this one physical pinch can fire a button twice.")
+  @widget(new SliderWidget(0, 0.6, 0.05))
+  debounceSec: number = 0.25;
   @ui.group_end
 
   private bridge: WebcamHandBridge | null = null;
@@ -91,6 +103,15 @@ export class GhostHandInteractor extends BaseInteractor {
   private lastHoveredAt = -100;
   @input @hint("A pinch that registers this many seconds after the hand left a button still presses it. Closing the fingers moves the hand slightly, and the pinch is only recognised partway through that motion.") pinchGraceSec: number = 0.35;
   private probe: any = null;
+  /** When the last press ended, so a flicker cannot re-fire immediately. */
+  private lastReleaseAt = -100;
+  /**
+   * Frames the pressed button is kept targeted, trigger already dropped, after
+   * the hand vanished mid-pinch. Dropping target and trigger on the same frame
+   * reads to SIK as "the thing being pressed disappeared" (a cancel, not a
+   * click); this way it sees a clean trigger-end on the button first.
+   */
+  private releaseHoldFrames = 0;
   /** Set true (e.g. from a LEAF test) to log every targeting/trigger change. */
   static debug = false;
   private lastDebug = "";
@@ -119,6 +140,7 @@ export class GhostHandInteractor extends BaseInteractor {
     this.probe.filter.includeStatic = true;
     this.probe.filter.includeDynamic = true;
 
+    if (this.debugHand) GhostHandInteractor.debug = true;
     this.createEvent("OnStartEvent").bind(() => this.hookBridge());
     this.createEvent("UpdateEvent").bind(() => this.onUpdate());
   }
@@ -180,6 +202,7 @@ export class GhostHandInteractor extends BaseInteractor {
       if (!this.pinching) {
         // Keep the release on the same button for this frame.
         this.lockedTarget = null;
+        this.lastReleaseAt = getTime();
       }
       this.previousPinch = this.pinching;
       this.debugState("locked");
@@ -210,7 +233,12 @@ export class GhostHandInteractor extends BaseInteractor {
         // few millimetres off one while the fingers closed. On the rising
         // pinch edge, take the hovered button, or the one hovered within the
         // grace window.
-        if (this.pinching && !this.previousPinch) {
+        const flicker = getTime() - this.lastReleaseAt < this.debounceSec;
+        if (this.pinching && !this.previousPinch && flicker) {
+          // The fingers re-closed right after a press ended: tracking noise
+          // at the threshold, not a second press. Show hover only.
+          this.nextTrigger = InteractorTriggerType.None;
+        } else if (this.pinching && !this.previousPinch) {
           const recent = this.lastHovered && getTime() - this.lastHoveredAt <= this.pinchGraceSec
             ? this.lastHovered : null;
           const target = this.nextInteractable || recent;
@@ -260,6 +288,20 @@ export class GhostHandInteractor extends BaseInteractor {
   }
 
   private resetInteraction(): void {
+    // Hand lost while pressing: drop the trigger now, the button a couple of
+    // frames later, so SIK completes the press instead of cancelling it.
+    if (this.lockedTarget && this.nextTrigger !== InteractorTriggerType.None) {
+      this.nextInteractable = this.lockedTarget;
+      this.nextTrigger = InteractorTriggerType.None;
+      this.lockedTarget = null;
+      this.lastReleaseAt = getTime();
+      this.releaseHoldFrames = RELEASE_HOLD_FRAMES;
+      return;
+    }
+    if (this.releaseHoldFrames > 0) {
+      this.releaseHoldFrames--;
+      return;
+    }
     this.raycastGeneration++;
     this.lastHovered = null;
     this.lockedTarget = null;

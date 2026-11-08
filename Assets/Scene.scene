@@ -940,6 +940,7 @@
     hintAfterSec: true
     hintGuideStrength: true
     stampHoldSec: true
+    peerInkColor: true
     debugColliders: true
   ScriptTypesDefault:
     {}
@@ -977,6 +978,7 @@
       hintAfterSec: 2.500000
       hintGuideStrength: 0.500000
       stampHoldSec: 1.100000
+      peerInkColor: !<Vec4> {x: 0.520000, y: 0.580000, z: 1.000000, w: 1.000000}
       debugColliders: false
   ScriptTypes:
     "":
@@ -996,6 +998,21 @@
     - !<own> 988c408a-99dc-47e6-b7c4-efbf4bf8dc3c
   Components:
     []
+- !<SceneObject/3ffb781b-41f9-45ae-82c1-69bdd6f5aa24>
+  PrefabRemaps:
+    []
+  Name: Room
+  Enabled: false
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 552310a5-2605-497f-97ad-d668bc8537ad
 - !<SceneObject/4051028a-c608-4a97-b3d5-1a3912a7c007>
   PrefabRemaps:
     []
@@ -1276,6 +1293,29 @@
     - !<own> 46b79537-a269-46f1-9483-500d7a4170d6
   Components:
     []
+- !<ScriptComponent/552310a5-2605-497f-97ad-d668bc8537ad>
+  PrefabRemaps:
+    []
+  Name: GhostRoom
+  Enabled: true
+  ScriptAsset: !<reference> f6d4a08e-85f5-4744-bb7b-b13c9ac31656
+  ScriptInputsDefault:
+    url: true
+    displayName: true
+    autoJoinCode: true
+    retrySec: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      internetModule: !<reference.InternetModule> 46241788-3794-4d79-b8b3-1684fe9f1e20
+      url: "ws://127.0.0.1:8765"
+      displayName: Me
+      autoJoinCode: ""
+      retrySec: 1.500000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/58ef319f-850e-40dd-8295-e6dc36ab4854>
   PrefabRemaps:
     []
@@ -1674,6 +1714,7 @@
     handDrivesUI: true
     reachCm: true
     hoverConfirmFrames: true
+    debounceSec: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1683,6 +1724,8 @@
       handDrivesUI: true
       reachCm: !<float> 200.000000
       hoverConfirmFrames: !<float> 2.000000
+      debugHand: false
+      debounceSec: 0.250000
   ScriptTypes:
     "":
       {}
@@ -3044,6 +3087,7 @@
     - !<own> 1bd491ae-d7db-4578-9e05-040ff9eaed36
     - !<own> a8347f5c-78cf-4c1c-b1c3-b0c5edc7510d
     - !<own> 7c73bd25-a157-4e0e-810f-74c5a0ca7456
+    - !<own> 3ffb781b-41f9-45ae-82c1-69bdd6f5aa24
   Components:
     - !<own> 3dd27e24-4b90-4977-9c02-d5621fc2dd8c
 - !<ScriptComponent/d3e2fbc5-8795-4913-9af6-c8626f8e6d9c>
@@ -3367,7 +3411,7 @@
       roomId: demo
       participantId: lens-a
       learnerName: Lens learner
-      enabledRoom: true
+      enabledRoom: false
       pollSeconds: 0.700000
       uniquePerPreview: true
   ScriptTypes:

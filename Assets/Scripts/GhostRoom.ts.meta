@@ -1,0 +1,67 @@
+- !<AssetImportMetadata/5bce260b-d64f-4d7d-be6a-b2f39abd95f1>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f6d4a08e-85f5-4744-bb7b-b13c9ac31656
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f6d4a08e-85f5-4744-bb7b-b13c9ac31656
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 00227a7d-ab28-4877-ad6f-1031770beb32
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/00227a7d-ab28-4877-ad6f-1031770beb32>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: abd549ea-2955-4953-ac6b-01998cf259b0
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    autoJoinCode: false
+    displayName: false
+    internetModule: false
+    retrySec: false
+    url: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - internetModule: !<reference.InternetModule> 00000000-0000-0000-0000-000000000000
+      url: "ws://127.0.0.1:8765"
+      displayName: Me
+      autoJoinCode: ""
+      retrySec: 1.500000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">GhostRoom &ndash; study together, through the relay</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">References</span>"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input Asset.InternetModule internetModule {"hint":"Internet Module. Without it Study Together is simply unavailable and the solo lesson is unaffected."}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input string url = "ws://127.0.0.1:8765" {"hint":"The relay. Same socket the hand bridge uses in the preview; point it at a LAN address or an ngrok tunnel to study with someone elsewhere."}'
+    - '// @input string displayName = "Me" {"hint":"The name peers see beside your ink."}'
+    - '// @input string autoJoinCode {"hint":"TESTING ONLY. Leave empty for normal use. A room code here is joined automatically at start, which is how two Preview panels can be put in the same room without a pinch in each. Not a shortcut in the product: the front door is still the way in."}'
+    - '// @input float retrySec = 1.5 {"hint":"Seconds before the first reconnect attempt. It backs off from here and never gives up, because a lost relay must not end the lesson.", "widget":"slider", "min":0.5, "max":10, "step":0.5}'
+    - '// @ui {"widget":"group_end"}'
