@@ -168,15 +168,7 @@ export class GhostHandInteractor extends BaseInteractor {
   private onUpdate(): void {
     if (!this.hooked) this.hookBridge();
 
-    // Apply the PREVIOUS frame's raycast first.
-    //
-    // Probe.rayCast is documented to call back "after simulation update, which
-    // occurs after script Update but prior to LateUpdate" - so a target set
-    // inside the callback lands after SIK has already rolled current into
-    // previous for this frame, and the hover/trigger transitions it computes
-    // are against stale state. Applying the result here, during Update,
-    // trades one frame of latency for transitions that are actually correct.
-    this.applyPending();
+    // NOTE: the target is NOT applied here. See updateState().
 
     // Aim with the hand EVERY frame, not only while pinching: you have to be
     // able to hover a control (and see it highlight) before you press it.
@@ -236,7 +228,7 @@ export class GhostHandInteractor extends BaseInteractor {
     });
   }
 
-  /** Put the last raycast result into SIK's hands, during Update. */
+  /** Stage the last raycast result. updateState() is what hands it to SIK. */
   private applyPending(): void {
     this.hitPoint = this.pendingHit;
     this.setTarget(this.pendingTarget);
@@ -268,8 +260,6 @@ export class GhostHandInteractor extends BaseInteractor {
    * control flicker as the hand crosses the room.
    */
   private setTarget(interactable: Interactable | null): void {
-    this.currentInteractable = interactable;
-
     // Debounce the RISING edge only.
     //
     // Hand tracking does not report a clean pinch: it flickers around the
@@ -294,10 +284,14 @@ export class GhostHandInteractor extends BaseInteractor {
     }
     this.triggerHeld = want;
 
-    this.currentTrigger = want ? InteractorTriggerType.Pinch : InteractorTriggerType.None;
-
-    this.appliedInteractable = this.currentInteractable;
-    this.appliedTrigger = this.currentTrigger;
+    // Staged ONLY. Writing current* here is what kept the press from ever
+    // firing: this runs from our UpdateEvent, which is BEFORE the manager
+    // calls updateState(), so super.updateState() would archive the value we
+    // had just written - previous and current came out identical and the
+    // None -> Pinch edge vanished. updateState() copies these across after
+    // the archive, which is the only moment that produces a real transition.
+    this.appliedInteractable = interactable;
+    this.appliedTrigger = want ? InteractorTriggerType.Pinch : InteractorTriggerType.None;
   }
 
   /**
@@ -324,7 +318,6 @@ export class GhostHandInteractor extends BaseInteractor {
       this.lastReleaseAt = getTime();
       // Keep currentInteractable. Drop only the trigger, so SIK sees the
       // press complete on the control rather than the control disappear.
-      this.currentTrigger = InteractorTriggerType.None;
       this.releaseHoldFrames = RELEASE_HOLD_FRAMES;
       this.appliedTrigger = InteractorTriggerType.None;
       return;
@@ -333,11 +326,6 @@ export class GhostHandInteractor extends BaseInteractor {
     if (this.releaseHoldFrames > 0) {
       this.releaseHoldFrames--;
       return;
-    }
-
-    if (this.currentInteractable !== null) this.currentInteractable = null;
-    if (this.currentTrigger !== InteractorTriggerType.None) {
-      this.currentTrigger = InteractorTriggerType.None;
     }
 
     this.appliedInteractable = null;
