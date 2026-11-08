@@ -231,7 +231,23 @@ through the bridge.
   `pinch on Item trigger=true` frames on "draw a star", the front door did not
   change and no lesson opened. Do not trust that commit's title.
 
-  Where to pick it up: SIK filters hover and trigger events through
+  A fourth fix (`6a0a88e`) found that `setTarget` was still writing `current*`
+  from the UpdateEvent, which runs before the manager archives current into
+  previous — so `previous === current` every frame and the `None -> Pinch`
+  edge SIK dispatches on never existed. That diagnosis is right and it
+  explains the 33 identical frames above. `current*` is now written only
+  inside `updateState()`, after the archive. **Still does not activate**:
+  retested on a settled scene, hover lands (`ray hit Collider -> Item`) and
+  the front door does not change.
+
+  Four fixes deep, all four sound, none of them the last one. Treat hand-press
+  as out of scope for the demo and use the mouse.
+
+  Where to pick it up: the one layer nobody has instrumented is the
+  Interactable's OWN `onTriggerStart`/`onTriggerEnd`. That separates "SIK
+  never dispatched" from "UIKit received it and did nothing" — every fix so
+  far has assumed the former without proving it. Prove that first. SIK also
+  filters hover and trigger events through
   `interactor.inputType & interactable.hoveringInteractor`, and
   `hoveringInteractor` is only set once a HoverStart has been dispatched. The
   next thing to check is whether HoverStart is firing at all — if it is not,
