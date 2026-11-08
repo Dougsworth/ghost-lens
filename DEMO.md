@@ -131,8 +131,10 @@ survives a restart."
 **Say:** "Two people, one lesson. Their ink arrives in indigo on your paper."
 
 > **Verify this yourself before recording.** The relay is tested (13 checks,
-> 0 failures) but the Lens half has never carried a real stroke between two
-> panels — see "Known limitations". If it does not work, cut this scene rather
+> 0 failures) and the Lens is confirmed to join it for real — run
+> `./.venv/bin/python -u tools/webcam-bridge/verify_lens_room.py` and follow
+> its instructions to see that again. What nobody has yet done is drag a real
+> stroke and watch it land on the other panel. If it does not work, cut this scene rather
 > than implying it does.
 
 **Honesty line if asked:** this runs on our own room relay, not Sync Kit. Sync
@@ -182,8 +184,11 @@ feedback, the guitar pack, the notebook persisting, browser speech end to end
 through the bridge.
 
 **Built but NOT verified end to end:**
-- Two preview panels exchanging strokes (scene 6). Relay tested; the Lens half
-  has not carried a real stroke between panels.
+- Two preview panels exchanging **strokes** (scene 6). The JOIN half is now
+  proven: `verify_lens_room.py` stood up a relay, and a real Lens joined it
+  (`PASS the Lens joined the room (id=2 name='Preview1')`). What is still
+  unproven is a drawn stroke actually crossing between two panels, because
+  that needs a pinch-drag nobody has done yet.
 - The webcam hand pressing UI controls. It registers with SIK and hooks the
   bridge, but has not been confirmed with a real hand on a real control.
 - Both LEAF scenarios after the front-door change. They compile; they have not

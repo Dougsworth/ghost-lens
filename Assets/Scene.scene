@@ -1292,6 +1292,7 @@
   ScriptInputsDefault:
     url: true
     displayName: true
+    autoJoinCode: true
     retrySec: true
   ScriptTypesDefault:
     {}
@@ -1300,6 +1301,7 @@
       internetModule: !<reference.InternetModule> 46241788-3794-4d79-b8b3-1684fe9f1e20
       url: "ws://127.0.0.1:8765"
       displayName: Me
+      autoJoinCode: ""
       retrySec: 1.500000
   ScriptTypes:
     "":
@@ -1717,6 +1719,7 @@
     _drawDebug: true
     handDrivesUI: true
     reachCm: true
+    debounceSec: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1725,6 +1728,7 @@
       _drawDebug: false
       handDrivesUI: true
       reachCm: !<float> 200.000000
+      debounceSec: 0.250000
   ScriptTypes:
     "":
       {}

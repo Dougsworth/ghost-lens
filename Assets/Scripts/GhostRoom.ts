@@ -60,6 +60,10 @@ export class GhostRoom extends BaseScriptComponent {
   displayName: string = "Me";
 
   @input
+  @hint("TESTING ONLY. Leave empty for normal use. A room code here is joined automatically at start, which is how two Preview panels can be put in the same room without a pinch in each. Not a shortcut in the product: the front door is still the way in.")
+  autoJoinCode: string = "";
+
+  @input
   @hint("Seconds before the first reconnect attempt. It backs off from here and never gives up, because a lost relay must not end the lesson.")
   @widget(new SliderWidget(0.5, 10, 0.5))
   retrySec: number = 1.5;
@@ -117,6 +121,14 @@ export class GhostRoom extends BaseScriptComponent {
 
   onAwake(): void {
     this.createEvent("UpdateEvent").bind(() => this.onUpdate());
+    // Bind late: the relay and the rest of the scene both need to be up, and
+    // a join that races OnStart gets refused for a room that does not exist yet.
+    this.createEvent("OnStartEvent").bind(() => {
+      const code = (this.autoJoinCode || "").trim();
+      if (!code) return;
+      print("[GhostRoom] auto-joining " + code.toUpperCase() + " (testing input is set)");
+      this.join(code);
+    });
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
