@@ -41,6 +41,9 @@ import { InteractableHitInfo } from "SpectaclesInteractionKit.lspkg/Providers/Ta
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider";
 import { WebcamHandBridge } from "./WebcamHandBridge";
 
+/** One frame is enough for SIK to see trigger-end before the target goes. */
+const RELEASE_HOLD_FRAMES = 2;
+
 const IDLE_STRENGTH = 0;
 const HOVER_STRENGTH = 0.2;
 const TRIGGER_STRENGTH = 0.8;
@@ -83,6 +86,8 @@ export class GhostHandInteractor extends BaseInteractor {
   private pendingTarget: Interactable | null = null;
   private pendingHit: vec3 | null = null;
   private lastDebug = "";
+  /** Frames the target is kept after the trigger drops. See clearTarget. */
+  private releaseHoldFrames = 0;
   private triggerHeld = false;
 
   /**
@@ -274,6 +279,8 @@ export class GhostHandInteractor extends BaseInteractor {
     // live it stays live until the hand genuinely opens — and the release is
     // never debounced, because a release that gets swallowed leaves a control
     // stuck down, which is far worse than a double press.
+    if (interactable) this.releaseHoldFrames = 0;
+
     const now = getTime();
     let want = !!interactable && this.pinching;
 
@@ -293,15 +300,41 @@ export class GhostHandInteractor extends BaseInteractor {
     this.appliedTrigger = this.currentTrigger;
   }
 
+  /**
+   * The hand is gone. Let go of the control — but not of the control itself,
+   * not in the same frame.
+   *
+   * This is what stopped a pinch ever selecting anything. Opening your hand
+   * ends the pinch AND loses the pose at the same moment, so the old code
+   * dropped currentInteractable and currentTrigger together on one frame. SIK
+   * reads that as "the thing I was pressing vanished" and fires a CANCEL, not
+   * a press: onTriggerUp never runs and the button never activates. The log
+   * showed the trigger going live (`pinch on Item trigger=true`) and nothing
+   * happening, which is exactly that shape.
+   *
+   * So the release is ordered. The trigger drops now, on the interactable
+   * that was being pressed, and the interactable is only let go one frame
+   * later — by which time SIK has seen a clean trigger-end on it.
+   */
   private clearTarget(): void {
     this.hitPoint = null;
-    // Tracking dropped or the hand left the frame. Release rather than leaving
-    // a control held down forever; the tracker's own 150 ms grace means this
-    // only fires when the hand is really gone.
+
     if (this.triggerHeld) {
       this.triggerHeld = false;
       this.lastReleaseAt = getTime();
+      // Keep currentInteractable. Drop only the trigger, so SIK sees the
+      // press complete on the control rather than the control disappear.
+      this.currentTrigger = InteractorTriggerType.None;
+      this.releaseHoldFrames = RELEASE_HOLD_FRAMES;
+      this.appliedTrigger = InteractorTriggerType.None;
+      return;
     }
+
+    if (this.releaseHoldFrames > 0) {
+      this.releaseHoldFrames--;
+      return;
+    }
+
     if (this.currentInteractable !== null) this.currentInteractable = null;
     if (this.currentTrigger !== InteractorTriggerType.None) {
       this.currentTrigger = InteractorTriggerType.None;
