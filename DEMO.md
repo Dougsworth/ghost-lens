@@ -165,8 +165,14 @@ the lesson is data, not code."
 | Bridge wedged | Ctrl-C and re-run `run_fast.sh` |
 | Check spend | `curl -s http://127.0.0.1:8766/status \| python3 -m json.tool` |
 
-A lesson costs about **$0.005** — plan plus review. Roughly 200 takes per
-dollar, so do not worry about re-recording.
+A lesson costs about **$0.0078** — plan plus review. Roughly **128 takes per
+dollar**, so do not worry about re-recording. (Reopening a saved lesson is
+free and instant, since the notebook persists them.)
+
+Earlier notes said $0.005 / 210 per dollar. That used Gemini Flash-**Lite**
+rates by mistake; the model in use is Flash, at $0.75 in / $3.75 out per
+million, read from the pricing page on 2026-11-07. Those rates double on
+2027-01-01, which would make a lesson $0.0156.
 
 ---
 
@@ -189,10 +195,20 @@ through the bridge.
   (`PASS the Lens joined the room (id=2 name='Preview1')`). What is still
   unproven is a drawn stroke actually crossing between two panels, because
   that needs a pinch-drag nobody has done yet.
-- The webcam hand pressing UI controls. It registers with SIK and hooks the
-  bridge, but has not been confirmed with a real hand on a real control.
-- Both LEAF scenarios after the front-door change. They compile; they have not
-  been re-run.
+- Both LEAF scenarios after the front-door change. `ghost-shelf-to-sheet`
+  PASSES. `ghost-demo-writes-a` could not be run to completion: the preview
+  resets itself mid-scenario, which orphans the run so it never reports. Try
+  it again after a fresh Lens Studio start.
+
+**TESTED AND NOT WORKING — do not plan a shot around it:**
+- The webcam hand **pressing** UI controls. A synthetic hand held a pinch for
+  four seconds directly on a front-door suggestion and nothing fired, though
+  the component is in the scene, `handDrivesUI` is true and it logs that it
+  hooked the bridge. The CURSOR half does work — the dot tracked onto the
+  front door correctly, a screen it was never wired for. So you can film the
+  cursor following your hand; use the mouse to actually press things.
+  Reproduce with `python3 fake_press.py 0.5 0.667` (scratchpad) while the
+  front door is showing.
 
 Anything in that last list: **try it before the take, and cut it if it does not
 work.** A demo that shows four solid things beats one that claims seven and
