@@ -223,6 +223,14 @@ through the bridge.
      HoverExit + TriggerCanceled each frame instead of TriggerStart/TriggerEnd.
      `updateState` now re-applies the computed target.
 
+  A third fix (`dfb91b2`) ordered the release so the trigger drops a couple of
+  frames before the target, on the theory that dropping both together reads to
+  SIK as "the thing I was pressing vanished" (a cancel, not a press). That
+  reasoning is sound and the change is worth keeping, but it was pushed
+  unverified and **it does not fix activation**: tested here with 33 clean
+  `pinch on Item trigger=true` frames on "draw a star", the front door did not
+  change and no lesson opened. Do not trust that commit's title.
+
   Where to pick it up: SIK filters hover and trigger events through
   `interactor.inputType & interactable.hoveringInteractor`, and
   `hoveringInteractor` is only set once a HoverStart has been dispatched. The
@@ -230,7 +238,10 @@ through the bridge.
   every later event is dropped by that mask regardless of the trigger.
 
   Repro: `python3 fake_press.py 0.5 0.667` (scratchpad) with the front door
-  showing. Two cautions learned the hard way: the preview self-resets, and a
+  showing. Note the synthetic hand reaches the Lens only intermittently — some
+  runs log nothing at all with the bridge connected and `lenses: 1` either way,
+  so a single silent run proves nothing; repeat it until you see `ray hit`.
+  Two further cautions learned the hard way: the preview self-resets, and a
   run that races a reset reconnects the bridge mid-test and reports a false
   negative — check the bridge connected BEFORE the hover started. And the log
   lags a second or two behind the run, so do not grep too early.
