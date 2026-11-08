@@ -31,6 +31,7 @@
     acceptWebcamBridge: false
     bridgeGain: false
     bridgeRelativeMode: false
+    brushFollowsHandDot: false
     reachCm: false
     surface: false
   ScriptTypesHidden:
@@ -46,6 +47,7 @@
       acceptWebcamBridge: true
       reachCm: !<float> 24.000000
       bridgeRelativeMode: true
+      brushFollowsHandDot: true
       bridgeGain: 1.300000
   ScriptTypes:
     -
@@ -63,5 +65,6 @@
     - '// @input bool acceptWebcamBridge = true {"hint":"Also accept pinches from the webcam bridge (tools/webcam-bridge) when it is connected. Preview only; harmless when the bridge is absent."}'
     - '// @input float reachCm = 24 {"hint":"Ignore points landing further than this from the surface centre, in cm. Stops a stray pinch across the room from painting.", "widget":"slider", "min":5, "max":60, "step":1}'
     - "// @input bool bridgeRelativeMode = true {\"hint\":\"Bridge only: start each stroke AT the stroke's start point and move the brush relative to your hand from there, instead of mapping your hand's absolute position onto the paper.\"}"
+    - "// @input bool brushFollowsHandDot = true {\"hint\":\"Bridge: paint exactly where the on-screen hand dot is. Overrides relative mode, which started every stroke at the stroke's start point so the brush never sat under your hand.\"}"
     - '// @input float bridgeGain = 1.3 {"hint":"Bridge relative mode: how far the brush travels per unit of hand movement. Above 1 means small hand moves cover the whole stroke.", "widget":"slider", "min":0.5, "max":3, "step":0.1}'
     - '// @ui {"widget":"group_end"}'

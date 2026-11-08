@@ -85,7 +85,7 @@ export class GhostHandInteractor extends BaseInteractor {
   private lockedTarget: Interactable | null = null;
   private previousPinch = false;
   private raycastGeneration = 0;
-  @input @hint("Consecutive frames on a button before hover is accepted. Reduces shaky targeting.") hoverConfirmFrames: number = 2;
+  @input @hint("Consecutive frames on a button before hover is accepted. Reduces shaky targeting.") hoverConfirmFrames: number = 1;
   /**
    * What the hand is targeting/triggering NOW, staged here and applied in
    * updateState(). SIK's InteractionManager calls updateState() each frame,
@@ -114,6 +114,14 @@ export class GhostHandInteractor extends BaseInteractor {
   private releaseHoldFrames = 0;
   /** Set true (e.g. from a LEAF test) to log every targeting/trigger change. */
   static debug = false;
+  /**
+   * When the hand last started a press ON a button, and when it last pinched
+   * with nothing under it. GhostBridgeCursor reads these to flash, so a pinch
+   * always gives feedback: a bright pop for "pressed", a small dip for "seen,
+   * but you are not on anything".
+   */
+  static lastPressAt = -100;
+  static lastMissAt = -100;
   private lastDebug = "";
   private debugState(where: string): void {
     if (!GhostHandInteractor.debug) return;
@@ -242,6 +250,8 @@ export class GhostHandInteractor extends BaseInteractor {
           const recent = this.lastHovered && getTime() - this.lastHoveredAt <= this.pinchGraceSec
             ? this.lastHovered : null;
           const target = this.nextInteractable || recent;
+          if (target) GhostHandInteractor.lastPressAt = getTime();
+          else GhostHandInteractor.lastMissAt = getTime();
           if (target) {
             // SIK starts a press on a None -> Pinch edge while targeting, so
             // the lock reports the trigger against this button from now on.

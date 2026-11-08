@@ -940,7 +940,6 @@
     hintAfterSec: true
     hintGuideStrength: true
     stampHoldSec: true
-    peerInkColor: true
     debugColliders: true
   ScriptTypesDefault:
     {}
@@ -978,7 +977,6 @@
       hintAfterSec: 2.500000
       hintGuideStrength: 0.500000
       stampHoldSec: 1.100000
-      peerInkColor: !<Vec4> {x: 0.520000, y: 0.580000, z: 1.000000, w: 1.000000}
       debugColliders: false
   ScriptTypes:
     "":
@@ -1083,6 +1081,7 @@
     radiusCm: true
     idleColor: true
     pinchColor: true
+    pressColor: true
     liftCm: true
   ScriptTypesDefault:
     {}
@@ -1093,6 +1092,7 @@
       radiusCm: 0.450000
       idleColor: !<Vec4> {x: 0.550000, y: 0.520000, z: 0.450000, w: 1.000000}
       pinchColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      pressColor: !<Vec4> {x: 0.550000, y: 0.950000, z: 1.000000, w: 1.000000}
       liftCm: 0.160000
   ScriptTypes:
     "":
@@ -1109,7 +1109,9 @@
     planeDistance: true
     planeWidth: true
     planeHeight: true
-    smoothing: true
+    uiSmoothing: true
+    reachGain: true
+    showMarker: true
     surfaceWidthCm: true
     surfaceHeightCm: true
     singleHandOnly: true
@@ -1127,7 +1129,10 @@
       planeDistance: !<float> 45.000000
       planeWidth: !<float> 30.000000
       planeHeight: !<float> 22.000000
-      smoothing: 0.500000
+      smoothing: 0.350000
+      uiSmoothing: 0.250000
+      reachGain: !<float> 2.000000
+      showMarker: true
       surface: !<reference.SceneObject> efa4b451-bc04-4023-97c8-aad948d25b12
       surfaceWidthCm: !<float> 15.000000
       surfaceHeightCm: !<float> 15.000000
@@ -1135,6 +1140,7 @@
       ownPinchDecision: true
       pinchOnRatio: 0.300000
       pinchOffRatio: 0.550000
+      uiReach: !<float> 2.000000
   ScriptTypes:
     "":
       {}
@@ -1713,8 +1719,9 @@
     _drawDebug: true
     handDrivesUI: true
     reachCm: true
-    hoverConfirmFrames: true
+    debugHand: true
     debounceSec: true
+    pinchGraceSec: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1723,9 +1730,10 @@
       _drawDebug: false
       handDrivesUI: true
       reachCm: !<float> 200.000000
-      hoverConfirmFrames: !<float> 2.000000
       debugHand: false
       debounceSec: 0.250000
+      hoverConfirmFrames: !<float> 1.000000
+      pinchGraceSec: 0.350000
   ScriptTypes:
     "":
       {}
@@ -2056,6 +2064,7 @@
     acceptWebcamBridge: true
     reachCm: true
     bridgeRelativeMode: true
+    brushFollowsHandDot: true
     bridgeGain: true
   ScriptTypesDefault:
     {}
@@ -2065,6 +2074,7 @@
       acceptWebcamBridge: true
       reachCm: !<float> 24.000000
       bridgeRelativeMode: true
+      brushFollowsHandDot: true
       bridgeGain: 1.300000
   ScriptTypes:
     "":
@@ -3400,6 +3410,7 @@
     roomId: true
     participantId: true
     learnerName: true
+    enabledRoom: true
     pollSeconds: true
     uniquePerPreview: true
   ScriptTypesDefault:

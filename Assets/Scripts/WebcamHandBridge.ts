@@ -26,7 +26,11 @@ export class WebcamHandBridge extends BaseScriptComponent {
   @input planeDistance: number = 45; // cm in front of the camera (fallback only)
   @input planeWidth: number = 30;    // cm covered by the webcam width (fallback only)
   @input planeHeight: number = 22;   // cm covered by the webcam height (fallback only)
-  @input smoothing: number = 0.5;    // 0 = raw, closer to 1 = smoother
+  @input smoothing: number = 0.35;   // painting: 0 = raw, closer to 1 = smoother (and laggier)
+  @input
+  @hint("Smoothing for AIMING at buttons only. Lower = the cursor sticks to your hand; higher = steadier but trails behind. Buttons are big, so this can be lower than the painting smoothing.")
+  @widget(new SliderWidget(0, 0.9, 0.05))
+  uiSmoothing: number = 0.25;
 
   @input
   @hint("How much of the webcam frame your hand needs to cover. 1 = the whole frame. 2 = only the middle half of the frame, so small moves reach every edge of the view and your hand never has to leave the camera.")
@@ -95,9 +99,9 @@ export class WebcamHandBridge extends BaseScriptComponent {
   pinchOffRatio: number = 0.55;
 
   @input
-  @hint("UI aiming only: how far the hand reaches across buttons, as a multiple of the painting area. 1 = the 15 cm sheet; 1.6 reaches the front door's notebook row and the bookmark tabs. Painting is not affected.")
+  @hint("UI aiming only: how far the hand reaches across buttons, as a multiple of the painting area. 1 = the 15 cm sheet; 2 reaches the front door's notebook row and the bookmark tabs from the middle of the webcam frame, without reaching low. Painting is not affected.")
   @widget(new SliderWidget(1, 3, 0.1))
-  uiReach: number = 1.6;
+  uiReach: number = 2.0;
 
   static instance: WebcamHandBridge;
 
@@ -278,7 +282,7 @@ export class WebcamHandBridge extends BaseScriptComponent {
     const my = thumb ? (thumb[1] + tip[1]) * 0.5 : tip[1];
     const k = Math.max(1, this.uiReach);
     const uiRaw = this.toWorld(0.5 + (mx - 0.5) * k, 0.5 + (my - 0.5) * k);
-    this.uiSmoothed = this.uiSmoothed ? vec3.lerp(uiRaw, this.uiSmoothed, this.smoothing) : uiRaw;
+    this.uiSmoothed = this.uiSmoothed ? vec3.lerp(uiRaw, this.uiSmoothed, this.uiSmoothing) : uiRaw;
     this.uiPointWorld = this.uiSmoothed;
 
     const p = this.smoothed;

@@ -19,6 +19,12 @@
 import { createDot } from "./GhostInkRibbon";
 import { GhostPinchInput } from "./GhostPinchInput";
 import { WebcamHandBridge } from "./WebcamHandBridge";
+import { GhostHandInteractor } from "./GhostHandInteractor";
+
+/** Press feedback: how long the pop / dip lasts, and how big the pop gets. */
+const PRESS_FLASH_SEC = 0.32;
+const PRESS_POP = 1.9;
+const MISS_FLASH_SEC = 0.22;
 
 @component
 export class GhostBridgeCursor extends BaseScriptComponent {
@@ -53,6 +59,11 @@ export class GhostBridgeCursor extends BaseScriptComponent {
   @hint("Colour while pinching. Brighter than the resting colour, so 'painting' is obvious.")
   @widget(new ColorWidget())
   pinchColor: vec4 = new vec4(1.0, 0.95, 0.86, 1);
+
+  @input
+  @hint("Flash colour when a pinch presses a button. Distinct from the pinch colour so 'pressed' cannot be mistaken for 'pinching'.")
+  @widget(new ColorWidget())
+  pressColor: vec4 = new vec4(0.55, 0.95, 1.0, 1);
 
   @input
   @hint("How far in front of the sheet the dot floats, in cm. Keeps it above the paper, grid and ink.")
@@ -132,7 +143,23 @@ export class GhostBridgeCursor extends BaseScriptComponent {
     this.dotObj.getTransform().setLocalPosition(new vec3(lx, ly, this.liftCm));
     if (!this.dotObj.enabled) this.dotObj.enabled = true;
 
+    // Press feedback. A pinch that lands on a button pops the dot (bigger,
+    // cyan) for a third of a second; a pinch on nothing dips it smaller, so
+    // "I pinched and nothing happened" is visibly different from "my pinch
+    // was not seen at all".
+    const now = getTime();
+    const sincePress = now - GhostHandInteractor.lastPressAt;
+    const sinceMiss = now - GhostHandInteractor.lastMissAt;
+    let scale = 1;
+    let color = bridge.isPinching ? this.pinchColor : this.idleColor;
+    if (sincePress >= 0 && sincePress < PRESS_FLASH_SEC) {
+      scale = 1 + (PRESS_POP - 1) * Math.sin(Math.PI * sincePress / PRESS_FLASH_SEC);
+      color = this.pressColor;
+    } else if (sinceMiss >= 0 && sinceMiss < MISS_FLASH_SEC) {
+      scale = 1 - 0.4 * Math.sin(Math.PI * sinceMiss / MISS_FLASH_SEC);
+    }
+    this.dotObj.getTransform().setLocalScale(new vec3(scale, scale, scale));
     const pass = this.dot.mainMaterial.mainPass;
-    pass.baseColor = bridge.isPinching ? this.pinchColor : this.idleColor;
+    pass.baseColor = color;
   }
 }

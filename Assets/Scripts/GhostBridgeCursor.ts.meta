@@ -32,6 +32,7 @@
     liftCm: false
     pinchColor: false
     pinchInput: false
+    pressColor: false
     radiusCm: false
     surface: false
   ScriptTypesHidden:
@@ -48,6 +49,7 @@
       radiusCm: 0.450000
       idleColor: !<Vec4> {x: 0.550000, y: 0.520000, z: 0.450000, w: 1.000000}
       pinchColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      pressColor: !<Vec4> {x: 0.550000, y: 0.950000, z: 1.000000, w: 1.000000}
       liftCm: 0.160000
   ScriptTypes:
     -
@@ -66,5 +68,6 @@
     - '// @input float radiusCm = 0.45 {"hint":"Dot radius in cm. Big enough to find, small enough not to hide the stroke you are tracing.", "widget":"slider", "min":0.1, "max":1.5, "step":0.05}'
     - '// @input vec4 idleColor = {0.55,0.52,0.45,1} {"hint":"Resting colour while the fingertip is tracked but not pinching. Additive: this is emitted light.", "widget":"color"}'
     - "// @input vec4 pinchColor = {1,0.95,0.86,1} {\"hint\":\"Colour while pinching. Brighter than the resting colour, so 'painting' is obvious.\", \"widget\":\"color\"}"
+    - "// @input vec4 pressColor = {0.55,0.95,1,1} {\"hint\":\"Flash colour when a pinch presses a button. Distinct from the pinch colour so 'pressed' cannot be mistaken for 'pinching'.\", \"widget\":\"color\"}"
     - '// @input float liftCm = 0.16 {"hint":"How far in front of the sheet the dot floats, in cm. Keeps it above the paper, grid and ink."}'
     - '// @ui {"widget":"group_end"}'

@@ -44,6 +44,8 @@
     surface: false
     surfaceHeightCm: false
     surfaceWidthCm: false
+    uiReach: false
+    uiSmoothing: false
     url: false
   ScriptTypesHidden:
     {}
@@ -62,6 +64,7 @@
       planeWidth: !<float> 30.000000
       planeHeight: !<float> 22.000000
       smoothing: 0.500000
+      uiSmoothing: 0.250000
       reachGain: !<float> 2.000000
       showMarker: true
       surface: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
@@ -71,6 +74,7 @@
       ownPinchDecision: true
       pinchOnRatio: 0.300000
       pinchOffRatio: 0.550000
+      uiReach: 1.600000
   ScriptTypes:
     -
       {}
@@ -82,7 +86,8 @@
     - // @input float planeDistance = 45
     - // @input float planeWidth = 30
     - // @input float planeHeight = 22
-    - // @input float smoothing = 0.5
+    - // @input float smoothing = 0.35
+    - '// @input float uiSmoothing = 0.25 {"hint":"Smoothing for AIMING at buttons only. Lower = the cursor sticks to your hand; higher = steadier but trails behind. Buttons are big, so this can be lower than the painting smoothing.", "widget":"slider", "min":0, "max":0.9, "step":0.05}'
     - '// @input float reachGain = 2 {"hint":"How much of the webcam frame your hand needs to cover. 1 = the whole frame. 2 = only the middle half of the frame, so small moves reach every edge of the view and your hand never has to leave the camera.", "widget":"slider", "min":1, "max":3, "step":0.1}'
     - '// @input bool showMarker = true {"hint":"Draw a debug dot on screen where the bridge thinks your index fingertip is. A cyan dot sits in the middle for the first 4 seconds (proves drawing works), then a magenta dot follows your finger and turns white while pinching. It is attached to the camera, so it shows on every screen, not just the practice sheet."}'
     - '// @input SceneObject surface {"hint":"The practice sheet. The webcam frame is mapped onto THIS surface, so the middle of the camera view is the middle of the sheet and a hand sweep crosses the paper. Leave empty to fall back to a plane in front of the camera."}'
@@ -92,3 +97,4 @@
     - "// @input bool ownPinchDecision = true {\"hint\":\"Decide the pinch HERE from pinchDist, instead of trusting the tracker page's own pinch flag. The page latches that flag per hand side, and MediaPipe's handedness label is unreliable on a mirrored image, so with two hands in frame the flag can belong to the other hand.\"}"
     - '// @input float pinchOnRatio = 0.3 {"hint":"Pinch STARTS below this thumb-to-index distance (as a fraction of hand size, so it is the same near or far).", "widget":"slider", "min":0.1, "max":0.9, "step":0.01}'
     - '// @input float pinchOffRatio = 0.55 {"hint":"Pinch ENDS above this. The gap between the two stops the pinch flickering on a borderline hold.", "widget":"slider", "min":0.1, "max":1.2, "step":0.01}'
+    - "// @input float uiReach = 2 {\"hint\":\"UI aiming only: how far the hand reaches across buttons, as a multiple of the painting area. 1 = the 15 cm sheet; 2 reaches the front door's notebook row and the bookmark tabs from the middle of the webcam frame, without reaching low. Painting is not affected.\", \"widget\":\"slider\", \"min\":1, \"max\":3, \"step\":0.1}"
