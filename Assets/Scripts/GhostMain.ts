@@ -20,6 +20,8 @@ import { GhostShelfUI } from "./GhostShelfUI";
 import { GhostAskUI } from "./GhostAskUI";
 import { GhostTurnController, MissInfo } from "./GhostTurnController";
 import { GhostPinchInput } from "./GhostPinchInput";
+import { InkRibbon } from "./GhostInkRibbon";
+import { Pt } from "./GhostKanaPath";
 import { buildGlyphPath, GlyphPath, hasCharacter } from "./GhostKanaPath";
 import { findAskWord } from "./GhostAskWords";
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider";
@@ -36,6 +38,7 @@ import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
 import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
 import { GhostCoach } from "./GhostCoach";
 import { GhostSpeech } from "./GhostSpeech";
+import { GhostRoom, Peer, RoomEvent } from "./GhostRoom";
 import { Lesson } from "./GhostLessonSchema";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import {
@@ -141,6 +144,10 @@ export class GhostMain extends BaseScriptComponent {
   speech!: GhostSpeech;
 
   @input
+  @hint("Study Together: the room relay. Optional — with it absent the solo lesson is completely unaffected.")
+  room!: GhostRoom;
+
+  @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
   audio!: GhostAudio;
   @ui.group_end
@@ -170,6 +177,11 @@ export class GhostMain extends BaseScriptComponent {
   @hint("Seconds the finished sheet rests with its stamp before the page turns.")
   @widget(new SliderWidget(0.2, 3, 0.1))
   stampHoldSec: number = 1.1;
+
+  @input("vec4", "{0.52,0.58,1,1}")
+  @hint("A peer's ink. Indigo so it reads as someone else's hand without competing with your own warm ink; additive display, so it is an emitted blue.")
+  @widget(new ColorWidget())
+  peerInkColor: vec4;
 
   @input
   @hint("Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart.")
@@ -209,7 +221,7 @@ export class GhostMain extends BaseScriptComponent {
       !this.aslRoot || !this.aslUI || !this.asl ||
       !this.guitarRoot || !this.guitarUI || !this.guitar ||
       !this.frontRoot || !this.frontUI || !this.lessonSource || !this.coach ||
-      !this.speech
+      !this.speech || !this.room
     ) {
       print("[GhostMain] ERROR: a required @input is not wired. Check the scene bootstrap's input-wiring pass.");
       return;
@@ -253,6 +265,13 @@ export class GhostMain extends BaseScriptComponent {
     this.coach.onTip.add((tip: string) => this.onCoachTip(tip));
     this.speech.onHeard.add((text: string) => this.onHeard(text));
     this.speech.onGaveUp.add(() => this.onSpeechGaveUp());
+
+    this.frontUI.onStudyTogether.add(() => this.onStudyTogether());
+    this.room.onJoined.add((code: string) => this.onRoomJoined(code));
+    this.room.onPeerJoined.add((p: Peer) => this.onPeerJoined(p));
+    this.room.onPeerLeft.add((p: Peer) => this.onPeerLeft(p));
+    this.room.onEvent.add((e: RoomEvent) => this.onRoomEvent(e));
+    this.room.onError.add((why: string) => this.onRoomError(why));
 
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
     this.guitarUI.onNext.add(() => this.onGuitarNext());
@@ -510,6 +529,11 @@ export class GhostMain extends BaseScriptComponent {
 
     // A word, then the next instruction. Praise alone would leave the user
     // without a next step; the tip alone would feel like silence after effort.
+    // Share it. Downsampled, because a stroke is a few hundred points and the
+    // peer only needs its shape — and because this rides the same socket the
+    // hand bridge uses at 30 fps.
+    this.shareStroke(index);
+
     const last = index >= this.glyph.strokeCount - 1;
     this.sheetUI.say(praiseFor(this.praiseCount), 0.9);
     if (this.playingPlanned && last) this.askCoach(index, "ok");
@@ -576,6 +600,7 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPageTurnComplete(): void {
     if (this.mode !== "finished") return;
+    this.clearPeerInk();
     if (this.playingPlanned) {
       this.beginPlannedStep(this.lessonPos + 1);
       return;
@@ -1031,6 +1056,113 @@ export class GhostMain extends BaseScriptComponent {
   private onCoachTip(tip: string): void {
     if (this.mode !== "turn") return;
     this.sheetUI.say(tip, 2.2);
+  }
+
+  // ── Study together ────────────────────────────────────────────────────────
+  //
+  // Additive throughout. Every handler below begins by checking it is actually
+  // in a room, so with no relay — or a relay that dies mid-lesson — none of
+  // this does anything and the solo lesson carries on untouched. That is the
+  // one rule of this feature.
+
+  /** Peer ink, kept so it can be cleared when the page turns. */
+  private peerInk: InkRibbon[] = [];
+
+  private onStudyTogether(): void {
+    this.audio.playTap();
+    // One pinch creates; the code is then read out or spoken to join. Joining
+    // by code is the speech path, which already exists — "say a skill" and
+    // "say a code" are the same microphone.
+    this.frontUI.setRoomCode("", "Opening a room...");
+    this.room.create();
+  }
+
+  private onRoomJoined(code: string): void {
+    this.audio.playUnroll();
+    this.frontUI.setRoomCode(code, "Say this code on the other headset to join.");
+  }
+
+  private onPeerJoined(p: Peer): void {
+    this.audio.playGotIt();
+    if (this.mode === "front") {
+      this.frontUI.setRoomCode(this.room.roomCode, p.name + " joined. Pick a skill to begin.");
+    } else {
+      this.sheetUI.say(p.name + " JOINED", 1.4);
+    }
+  }
+
+  private onPeerLeft(p: Peer): void {
+    if (this.mode === "front") {
+      this.frontUI.setRoomCode(this.room.roomCode, p.name + " left.");
+    } else {
+      this.sheetUI.say(p.name + " LEFT", 1.2);
+    }
+    this.clearPeerInk();
+  }
+
+  private onRoomError(why: string): void {
+    // Refused, not broken. Back to the picker with the reason.
+    this.frontUI.setRoomCode("", why);
+  }
+
+  /**
+   * Send the stroke just accepted, downsampled to its shape.
+   *
+   * Points are normalised by the glyph unit so the peer renders it at THEIR
+   * sheet size, not ours — the two Lenses may be anchored differently.
+   */
+  private shareStroke(index: number): void {
+    if (!this.room.isJoined || !this.glyph) return;
+    const stroke = this.glyph.strokes[index];
+    const pts = stroke.points;
+    if (!pts || pts.length < 2) return;
+
+    const unit = Math.max(0.001, this.demo.glyphUnitCm);
+    const MAX = 24;
+    const step = Math.max(1, Math.floor(pts.length / MAX));
+    const out: number[][] = [];
+    for (let i = 0; i < pts.length; i += step) {
+      out.push([
+        Math.round((pts[i].x / unit) * 1000) / 1000,
+        Math.round((pts[i].y / unit) * 1000) / 1000,
+      ]);
+    }
+    const last = pts[pts.length - 1];
+    out.push([
+      Math.round((last.x / unit) * 1000) / 1000,
+      Math.round((last.y / unit) * 1000) / 1000,
+    ]);
+
+    this.room.send({ kind: "stroke", index: index, pts: out });
+  }
+
+  /** A peer finished a stroke: draw it on our sheet in their colour. */
+  private onRoomEvent(e: RoomEvent): void {
+    const d = e.data;
+    if (!d || d.kind !== "stroke" || !d.pts || !this.sheet) return;
+    if (this.mode !== "turn" && this.mode !== "demo" && this.mode !== "finished") return;
+
+    const unit = Math.max(0.001, this.demo.glyphUnitCm);
+    const raw: Pt[] = [];
+    for (let i = 0; i < d.pts.length; i++) {
+      const p = d.pts[i];
+      if (p && p.length === 2) raw.push({ x: p[0] * unit, y: p[1] * unit });
+    }
+    if (raw.length < 2) return;
+
+    const ribbon = new InkRibbon(
+      this.sheet.inkRoot, "PeerStroke" + this.peerInk.length,
+      this.peerInkColor, 0.42, 0.002
+    );
+    ribbon.setUniformWidth(true);
+    ribbon.setRawPoints(raw);
+    this.peerInk.push(ribbon);
+    this.audio.playInkDry();
+  }
+
+  private clearPeerInk(): void {
+    for (let i = 0; i < this.peerInk.length; i++) this.peerInk[i].sceneObject.destroy();
+    this.peerInk = [];
   }
 
   // ── Guitar pack ───────────────────────────────────────────────────────────

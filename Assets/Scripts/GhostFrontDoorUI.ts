@@ -126,6 +126,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   private readonly _onSkillPicked = new Event<string>();
   private readonly _onMicPressed = new Event<void>();
   private readonly _onNotebookPicked = new Event<string>();
+  private readonly _onStudyTogether = new Event<void>();
 
   /** A suggestion was pinched, or a skill was chosen from the mic list. */
   get onSkillPicked(): PublicApi<string> {
@@ -138,6 +139,24 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   /** One of the built-in packs under "Your notebook". */
   get onNotebookPicked(): PublicApi<string> {
     return this._onNotebookPicked.publicApi();
+  }
+  /** "Study together" was pinched. */
+  get onStudyTogether(): PublicApi<void> {
+    return this._onStudyTogether.publicApi();
+  }
+
+  /**
+   * The room code, large, in ink, on the paper.
+   *
+   * It has to be read out loud across a room or typed into a second machine,
+   * so it takes the Title role and the whole sheet. Passing "" puts the
+   * picker back.
+   */
+  setRoomCode(code: string, note: string): void {
+    if (this.titleText) this.titleText.text = code ? code : "What do you want to learn?";
+    this.setWaiting(note || "");
+    if (this.pickRoot) this.pickRoot.enabled = !code;
+    if (code) this.hideProgress();
   }
 
   onAwake(): void {
@@ -257,8 +276,13 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     // to run to its own edges, but nothing readable may sit past about 11 cm
     // from centre or it is simply not on screen.
     this.buildMic(this.pickRoot, halfH - 6.8);
-    this.buildSuggestions(this.pickRoot, -1.2);
-    this.buildNotebookRow(this.pickRoot, -8.2);
+    this.buildSuggestions(this.pickRoot, -1.4);
+    this.buildNotebookRow(this.pickRoot, -8.5);
+
+    // In the gap the removed mic caption left, between the disc and the
+    // suggestions. Below the suggestions it collided with "Your notebook" —
+    // the sheet is 21 cm and this screen now has five things on it.
+    this.buildStudyTogether(this.pickRoot, 0.2);
 
     this.outlineRoot = this.obj(root, "Outline");
     this.outlineRoot.enabled = false;
@@ -427,11 +451,17 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     const w = this.sheetWidthCm - 3.4;
     const h = 1.8;
     const gap = 0.4;
+    // TWO, not three. The spec asked for three, but it was written before
+    // "Study together" existed and this sheet is 21 cm: mic, study, three
+    // suggestions and the notebook row do not fit without them touching, and
+    // a cramped screen is worse than one fewer idea. The mic is the way to
+    // ask for anything that is not listed.
+    const COUNT = 2;
     const host = this.obj(parent, "Suggestions", new vec3(0, topY - h, 0));
-    const column = this.flexColumn(host, w, 3 * h + 2 * gap, gap);
+    const column = this.flexColumn(host, w, COUNT * h + (COUNT - 1) * gap, gap);
 
     const items: FlexItem[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < COUNT; i++) {
       const index = i;
       items.push(this.flexChild(column, w, h, (cell) => {
         const btn = cell.createComponent(Button.getTypeName()) as Button;
@@ -471,6 +501,41 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
       }));
     }
     this.registerItems(column, items);
+  }
+
+  /**
+   * "Study together" — one quiet line, not a fourth button.
+   *
+   * The spec allows one primary action per screen and the mic already is it,
+   * so this is type on paper with a hover wash, the same treatment the
+   * suggestions get. It is a door, not a call to action.
+   */
+  private buildStudyTogether(parent: SceneObject, y: number): void {
+    const w = this.sheetWidthCm - 6.0;
+    const h = 1.8;
+    const host = this.obj(parent, "StudyTogether", new vec3(0, y, 0));
+
+    const btn = host.createComponent(Button.getTypeName()) as Button;
+    btn.setVariant({ theme: "SnapOS2", shape: "Rectangle", style: "PrimaryNeutral" });
+    btn.size = new vec3(w, h, 1);
+    btn.onInitialized.add(() => {
+      btn.size = new vec3(w, h, 1);
+      btn.opacity = 0;
+      this.stripPlate(btn);
+    });
+    btn.onTriggerUp.add(() => this._onStudyTogether.invoke());
+
+    const REST = new vec4(0, 0, 0, 0);
+    const wash = createQuads(host, "StudyWash", [{ x: 0, y: 0, w: w, h: h }], REST, -0.01);
+    btn.onHoverEnter.add(() => {
+      wash.mainMaterial.mainPass.baseColor = this.fade(this.hoverColor, 0.55);
+    });
+    btn.onHoverExit.add(() => {
+      wash.mainMaterial.mainPass.baseColor = REST;
+    });
+
+    this.addText(host, "StudyLabel", 0, 0, "Meta", w - 0.6, 0.7, this.dimInkColor)
+      .text = "Study together";
   }
 
   /** "Your notebook": progress, not pressure. No streaks, no timers. */

@@ -4828,6 +4828,33 @@
               "type": "AssignableType_1",
               "uiInfo": "{\"hint\":\"The notebook shelf UI module.\"}"
             },
+            "shelfRoot": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "9640457f-2916-4175-9241-1c5d42c1f173",
+                "name": "Shelf"
+              },
+              "type": "SceneObject",
+              "uiInfo": "{\"hint\":\"Group root holding the notebook shelf.\"}"
+            },
+            "sheetUI": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "4b233945-1ddc-42df-bb31-cc5e8496b59f",
+                "name": "GhostSheetUI"
+              },
+              "type": "AssignableType_2",
+              "uiInfo": "{\"hint\":\"The sheet's stroke counter, caption and bookmark tabs.\"}"
+            },
+            "sheet": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "bf292640-859c-4fa9-8461-9bd5428e042a",
+                "name": "GhostSheet"
+              },
+              "type": "AssignableType_4",
+              "uiInfo": "{\"hint\":\"The washi practice sheet.\"}"
+            },
             "pinchInput": {
               "isScriptInput": true,
               "value": {
@@ -4836,6 +4863,22 @@
               },
               "type": "AssignableType_7",
               "uiInfo": "{\"hint\":\"Pinch source shared by the turn controller.\"}"
+            },
+            "frontUI": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "d1b6791f-b464-43b1-8a42-c0269bddd019",
+                "name": "GhostFrontDoorUI"
+              },
+              "type": "AssignableType_12",
+              "uiInfo": "{\"hint\":\"The front door: what do you want to learn?\"}"
+            },
+            "peerInkColor": {
+              "isScriptInput": true,
+              "value": "{x: 0.52, y: 0.58, z: 1, w: 1}",
+              "type": "vec4",
+              "uiInfo": "{\"hint\":\"A peer's ink. Indigo so it reads as someone else's hand without competing with your own warm ink; additive display, so it is an emitted blue.\", \"widget\":\"color\"}",
+              "defaultValue": "{0.52,0.58,1,1}"
             },
             "stampHoldSec": {
               "isScriptInput": true,
@@ -4901,15 +4944,6 @@
               "uiInfo": "{\"hint\":\"Drop the shelf and the sheet in front of wherever the user is standing when they open, instead of at a fixed spot in the room. Turn off to pin GHOST to the world origin.\"}",
               "defaultValue": "true"
             },
-            "frontUI": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "d1b6791f-b464-43b1-8a42-c0269bddd019",
-                "name": "GhostFrontDoorUI"
-              },
-              "type": "AssignableType_12",
-              "uiInfo": "{\"hint\":\"The front door: what do you want to learn?\"}"
-            },
             "frontRoot": {
               "isScriptInput": true,
               "value": {
@@ -4918,24 +4952,6 @@
               },
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the front door sheet.\"}"
-            },
-            "shelfRoot": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "9640457f-2916-4175-9241-1c5d42c1f173",
-                "name": "Shelf"
-              },
-              "type": "SceneObject",
-              "uiInfo": "{\"hint\":\"Group root holding the notebook shelf.\"}"
-            },
-            "sheetUI": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "4b233945-1ddc-42df-bb31-cc5e8496b59f",
-                "name": "GhostSheetUI"
-              },
-              "type": "AssignableType_2",
-              "uiInfo": "{\"hint\":\"The sheet's stroke counter, caption and bookmark tabs.\"}"
             },
             "debugColliders": {
               "isScriptInput": true,
@@ -4992,7 +5008,7 @@
                 "UUID": "31344314-8576-480c-a972-fbd63c3ecbe6",
                 "name": "GhostAudio"
               },
-              "type": "AssignableType_16",
+              "type": "AssignableType_17",
               "uiInfo": "{\"hint\":\"Brush, paper, stamp and spoken-character sounds.\"}"
             },
             "demo": {
@@ -5003,15 +5019,6 @@
               },
               "type": "AssignableType_5",
               "uiInfo": "{\"hint\":\"The ghost brush that demonstrates a character.\"}"
-            },
-            "sheet": {
-              "isScriptInput": true,
-              "value": {
-                "UUID": "bf292640-859c-4fa9-8461-9bd5428e042a",
-                "name": "GhostSheet"
-              },
-              "type": "AssignableType_4",
-              "uiInfo": "{\"hint\":\"The washi practice sheet.\"}"
             },
             "askUI": {
               "isScriptInput": true,
@@ -5039,6 +5046,15 @@
               },
               "type": "SceneObject",
               "uiInfo": "{\"hint\":\"Group root holding the Ask GHOST word picker.\"}"
+            },
+            "room": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "552310a5-2605-497f-97ad-d668bc8537ad",
+                "name": "GhostRoom"
+              },
+              "type": "AssignableType_16",
+              "uiInfo": "{\"hint\":\"Study Together: the room relay. Optional — with it absent the solo lesson is completely unaffected.\"}"
             },
             "guitarUI": {
               "isScriptInput": true,
@@ -5069,15 +5085,17 @@
             "inputNames.16": "lessonRoot",
             "inputNames.17": "lessonSequence",
             "inputNames.18": "lessonSource",
-            "inputNames.19": "pinchInput",
-            "inputNames.20": "reanchorOnOpen",
-            "inputNames.21": "sheet",
-            "inputNames.22": "sheetUI",
-            "inputNames.23": "shelfRoot",
-            "inputNames.24": "shelfUI",
-            "inputNames.25": "speech",
-            "inputNames.26": "stampHoldSec",
-            "inputNames.27": "turn",
+            "inputNames.19": "peerInkColor",
+            "inputNames.20": "pinchInput",
+            "inputNames.21": "reanchorOnOpen",
+            "inputNames.22": "room",
+            "inputNames.23": "sheet",
+            "inputNames.24": "sheetUI",
+            "inputNames.25": "shelfRoot",
+            "inputNames.26": "shelfUI",
+            "inputNames.27": "speech",
+            "inputNames.28": "stampHoldSec",
+            "inputNames.29": "turn",
             "name": "GhostMain",
             "enabled": true,
             "sceneObject": "@sceneObject:GHOST",
@@ -7175,6 +7193,81 @@
             "isPrefabInstanceRoot": false,
             "hasPrefabChanges": false,
             "id": "6a408698-1da5-4539-b6b9-def19bcf1d9c",
+            "type": "ScriptComponent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "3ffb781b-41f9-45ae-82c1-69bdd6f5aa24",
+      "name": "Room",
+      "enabled": true,
+      "parentId": "d343f1c3-771e-4811-935b-0c37960832c5",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "layers": 1,
+      "components": [
+        {
+          "id": "552310a5-2605-497f-97ad-d668bc8537ad",
+          "type": "ScriptComponent",
+          "name": "GhostRoom",
+          "enabled": true,
+          "properties": {
+            "url": {
+              "isScriptInput": true,
+              "value": "ws://127.0.0.1:8765",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"The relay. Same socket the hand bridge uses in the preview; point it at a LAN address or an ngrok tunnel to study with someone elsewhere.\"}",
+              "defaultValue": "ws://127.0.0.1:8765"
+            },
+            "retrySec": {
+              "isScriptInput": true,
+              "value": 1.5,
+              "type": "float",
+              "uiInfo": "{\"hint\":\"Seconds before the first reconnect attempt. It backs off from here and never gives up, because a lost relay must not end the lesson.\", \"widget\":\"slider\", \"min\":0.5, \"max\":10, \"step\":0.5}",
+              "defaultValue": "1.5"
+            },
+            "internetModule": {
+              "isScriptInput": true,
+              "value": {
+                "UUID": "46241788-3794-4d79-b8b3-1684fe9f1e20"
+              },
+              "type": "Asset.InternetModule",
+              "uiInfo": "{\"hint\":\"Internet Module. Without it Study Together is simply unavailable and the solo lesson is unaffected.\"}"
+            },
+            "displayName": {
+              "isScriptInput": true,
+              "value": "Me",
+              "type": "string",
+              "uiInfo": "{\"hint\":\"The name peers see beside your ink.\"}",
+              "defaultValue": "Me"
+            },
+            "scriptAsset": "@asset:Scripts/GhostRoom.ts",
+            "inputNames.0": "displayName",
+            "inputNames.1": "internetModule",
+            "inputNames.2": "retrySec",
+            "inputNames.3": "url",
+            "name": "GhostRoom",
+            "enabled": true,
+            "sceneObject": "@sceneObject:Room",
+            "isPrefabInstanceRoot": false,
+            "hasPrefabChanges": false,
+            "id": "552310a5-2605-497f-97ad-d668bc8537ad",
             "type": "ScriptComponent"
           }
         }

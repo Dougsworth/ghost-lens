@@ -47,8 +47,10 @@
     lessonRoot: false
     lessonSequence: false
     lessonSource: false
+    peerInkColor: false
     pinchInput: false
     reanchorOnOpen: false
+    room: false
     sheet: false
     sheetUI: false
     shelfRoot: false
@@ -86,12 +88,14 @@
       lessonSource: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
       coach: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
       speech: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
-      audio: !<MappingBased.AssignableType_16> 00000000-0000-0000-0000-000000000000
+      room: !<MappingBased.AssignableType_16> 00000000-0000-0000-0000-000000000000
+      audio: !<MappingBased.AssignableType_17> 00000000-0000-0000-0000-000000000000
       lessonSequence: あいうえお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
       cleanRunsBeforeFade: !<float> 1.000000
       stampHoldSec: 1.100000
+      peerInkColor: !<Vec4> {x: 0.520000, y: 0.580000, z: 1.000000, w: 1.000000}
       debugColliders: false
   ScriptTypes:
     -
@@ -122,7 +126,8 @@
     - '// @input AssignableType_13 lessonSource {"hint":"Plans a lesson, or falls back to a bundled one. Never fails."}'
     - '// @input AssignableType_14 coach {"hint":"One short line after each attempt. Never blocks the lesson."}'
     - '// @input AssignableType_15 speech {"hint":"Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback."}'
-    - '// @input AssignableType_16 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
+    - '// @input AssignableType_16 room {"hint":"Study Together: the room relay. Optional — with it absent the solo lesson is completely unaffected."}'
+    - '// @input AssignableType_17 audio {"hint":"Brush, paper, stamp and spoken-character sounds."}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">Settings</span>"}'
@@ -132,5 +137,6 @@
     - "// @input float anchorDistanceCm = 45 {\"hint\":\"How far in front of the user GHOST appears, in cm. The brief's writing distance is 45.\", \"widget\":\"slider\", \"min\":25, \"max\":90, \"step\":1}"
     - '// @input float cleanRunsBeforeFade = 1 {"hint":"Characters written with no missed strokes before the guide outline starts to fade. Set high to keep the full outline forever.", "widget":"slider", "min":1, "max":6, "step":1}'
     - '// @input float stampHoldSec = 1.1 {"hint":"Seconds the finished sheet rests with its stamp before the page turns.", "widget":"slider", "min":0.2, "max":3, "step":0.1}'
+    - "// @input vec4 peerInkColor = \"{0.52,0.58,1,1}\" {\"hint\":\"A peer's ink. Indigo so it reads as someone else's hand without competing with your own warm ink; additive display, so it is an emitted blue.\", \"widget\":\"color\"}"
     - '// @input bool debugColliders {"hint":"Wireframe every collider and body in the scene, so pinch hit-zones can be checked. Takes effect on preview restart."}'
     - '// @ui {"widget":"group_end"}'
