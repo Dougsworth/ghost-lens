@@ -7,6 +7,7 @@ import {scenariosIndex} from "Leaf.lspkg/Scenarios/decorator/ScenarioIndexDecora
 import {ScenarioMetadata} from "Leaf.lspkg/Scenarios/scenario/ScenarioMetadata"
 import {GhostDemoScenario} from "./GhostDemoScenario"
 import {GhostShelfToSheetScenario} from "./GhostShelfToSheetScenario"
+import {GhostHandPinchScenario} from "./GhostHandPinchScenario"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -19,6 +20,10 @@ export class LeafIndex extends BaseScriptComponent {
     {
       id: "ghost-demo-writes-a",
       typename: GhostDemoScenario.getTypeName(),
+    },
+    {
+      id: "ghost-hand-pinch-selects",
+      typename: GhostHandPinchScenario.getTypeName(),
     },
   ]
 }

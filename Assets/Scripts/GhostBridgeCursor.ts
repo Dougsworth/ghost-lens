@@ -120,8 +120,12 @@ export class GhostBridgeCursor extends BaseScriptComponent {
       lx = emitted.x;
       ly = emitted.y;
     } else {
+      // Hovering: show where the hand is AIMING (the bridge's UI point, the
+      // same one GhostHandInteractor targets with), so the dot sits on the
+      // button that a pinch will press, tabs included.
+      const aim = bridge.uiPointWorld || tip;
       const st = this.surface.getTransform();
-      const local = st.getInvertedWorldTransform().multiplyPoint(tip);
+      const local = st.getInvertedWorldTransform().multiplyPoint(aim);
       lx = local.x;
       ly = local.y;
     }

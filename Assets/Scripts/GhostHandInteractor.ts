@@ -74,7 +74,33 @@ export class GhostHandInteractor extends BaseInteractor {
   private previousPinch = false;
   private raycastGeneration = 0;
   @input @hint("Consecutive frames on a button before hover is accepted. Reduces shaky targeting.") hoverConfirmFrames: number = 2;
+  /**
+   * What the hand is targeting/triggering NOW, staged here and applied in
+   * updateState(). SIK's InteractionManager calls updateState() each frame,
+   * which first copies current -> previous and then expects the interactor to
+   * compute the new current; it fires TriggerStart/TriggerEnd by comparing
+   * the two. Writing currentTrigger from our own UpdateEvent meant SIK's copy
+   * always saw the new value already, previous === current every frame, and
+   * no button ever received a press or a click.
+   */
+  private nextInteractable: Interactable | null = null;
+  private nextTrigger: InteractorTriggerType = InteractorTriggerType.None;
+
+  /** The last button that passed hover confirmation, and when. */
+  private lastHovered: Interactable | null = null;
+  private lastHoveredAt = -100;
+  @input @hint("A pinch that registers this many seconds after the hand left a button still presses it. Closing the fingers moves the hand slightly, and the pinch is only recognised partway through that motion.") pinchGraceSec: number = 0.35;
   private probe: any = null;
+  /** Set true (e.g. from a LEAF test) to log every targeting/trigger change. */
+  static debug = false;
+  private lastDebug = "";
+  private debugState(where: string): void {
+    if (!GhostHandInteractor.debug) return;
+    const n = (i: Interactable | null) => (i ? i.getSceneObject().name + "/" + (i.getSceneObject().getParent() ? i.getSceneObject().getParent().name : "") : "-");
+    const line = `${where} hit=${n(this.candidate)}x${this.candidateFrames} cur=${n(this.nextInteractable)} ` +
+      `pinch=${this.pinching} prev=${this.previousPinch} lock=${n(this.lockedTarget)} trig=${this.nextTrigger}`;
+    if (line !== this.lastDebug) { this.lastDebug = line; print("[hand-dbg] " + line); }
+  }
   private hitPoint: vec3 | null = null;
 
   constructor() {
@@ -125,7 +151,9 @@ export class GhostHandInteractor extends BaseInteractor {
     // Read its live fingertip EVERY frame so hovering works before a pinch.
     const live = this.bridge;
     this.handVisible = !!(live && live.hand && live.fingertipWorld);
-    this.handPoint = this.handVisible ? live!.fingertipWorld : null;
+    // Aim with the stable pinch point (thumb/index midpoint, wider reach);
+    // fall back to the fingertip on bridges that do not provide it.
+    this.handPoint = this.handVisible ? (live!.uiPointWorld || live!.fingertipWorld) : null;
     this.pinching = this.handVisible && !!live!.isPinching;
 
     if (!this.handDrivesUI || !this.handPoint) {
@@ -154,6 +182,7 @@ export class GhostHandInteractor extends BaseInteractor {
         this.lockedTarget = null;
       }
       this.previousPinch = this.pinching;
+      this.debugState("locked");
       return;
     }
     if (this.raycastBusy) return;
@@ -171,14 +200,29 @@ export class GhostHandInteractor extends BaseInteractor {
         if (this.candidateFrames >= Math.max(1, this.hoverConfirmFrames)) {
           this.hitPoint = hit && hit.position ? hit.position : null;
           this.setTarget(found);
+          if (found) {
+            this.lastHovered = found;
+            this.lastHoveredAt = getTime();
+          }
         }
-        // Never initiate a press when the pinch started in empty space.
-        // Require a stable hovered target on the rising pinch edge.
-        if (this.pinching && !this.previousPinch && this.currentInteractable) {
-          this.lockedTarget = this.currentInteractable;
-          this.setTarget(this.lockedTarget);
+        // Never initiate a press when the pinch started in empty space -- but
+        // "empty space" means nowhere near a button, not a hand that drifted a
+        // few millimetres off one while the fingers closed. On the rising
+        // pinch edge, take the hovered button, or the one hovered within the
+        // grace window.
+        if (this.pinching && !this.previousPinch) {
+          const recent = this.lastHovered && getTime() - this.lastHoveredAt <= this.pinchGraceSec
+            ? this.lastHovered : null;
+          const target = this.nextInteractable || recent;
+          if (target) {
+            // SIK starts a press on a None -> Pinch edge while targeting, so
+            // the lock reports the trigger against this button from now on.
+            this.lockedTarget = target;
+            this.setTarget(target);
+          }
         }
         this.previousPinch = this.pinching;
+        this.debugState("ray");
       });
     } catch (e) {
       this.raycastBusy = false;
@@ -208,8 +252,8 @@ export class GhostHandInteractor extends BaseInteractor {
    * control flicker as the hand crosses the room.
    */
   private setTarget(interactable: Interactable | null): void {
-    this.currentInteractable = interactable;
-    this.currentTrigger = (interactable && this.pinching &&
+    this.nextInteractable = interactable;
+    this.nextTrigger = (interactable && this.pinching &&
       (this.lockedTarget === interactable || !this.previousPinch))
       ? InteractorTriggerType.Pinch
       : InteractorTriggerType.None;
@@ -217,6 +261,7 @@ export class GhostHandInteractor extends BaseInteractor {
 
   private resetInteraction(): void {
     this.raycastGeneration++;
+    this.lastHovered = null;
     this.lockedTarget = null;
     this.candidate = null;
     this.candidateFrames = 0;
@@ -226,10 +271,21 @@ export class GhostHandInteractor extends BaseInteractor {
 
   private clearTarget(): void {
     this.hitPoint = null;
-    if (this.currentInteractable !== null) this.currentInteractable = null;
-    if (this.currentTrigger !== InteractorTriggerType.None) {
-      this.currentTrigger = InteractorTriggerType.None;
+    this.nextInteractable = null;
+    if (this.nextTrigger !== InteractorTriggerType.None) {
+      this.nextTrigger = InteractorTriggerType.None;
     }
+  }
+
+  /**
+   * SIK's per-frame hook: let the base class copy current -> previous, THEN
+   * publish the staged state, so a pinch shows up as None -> Pinch (press) and
+   * a release as Pinch -> None (click), exactly once each.
+   */
+  override updateState(): void {
+    super.updateState();
+    this.currentInteractable = this.nextInteractable;
+    this.currentTrigger = this.nextTrigger;
   }
 
   // ── BaseInteractor contract ───────────────────────────────────────────────

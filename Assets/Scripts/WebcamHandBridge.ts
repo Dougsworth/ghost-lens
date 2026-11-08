@@ -64,6 +64,8 @@ export class WebcamHandBridge extends BaseScriptComponent {
     // new one towards wherever the last surface was.
     this.smoothed = null;
     this.fingertipWorld = null;
+    this.uiSmoothed = null;
+    this.uiPointWorld = null;
   }
 
   @input
@@ -80,11 +82,25 @@ export class WebcamHandBridge extends BaseScriptComponent {
   @widget(new SliderWidget(0.1, 1.2, 0.01))
   pinchOffRatio: number = 0.55;
 
+  @input
+  @hint("UI aiming only: how far the hand reaches across buttons, as a multiple of the painting area. 1 = the 15 cm sheet; 1.6 reaches the front door's notebook row and the bookmark tabs. Painting is not affected.")
+  @widget(new SliderWidget(1, 3, 0.1))
+  uiReach: number = 1.6;
+
   static instance: WebcamHandBridge;
 
   connected = false;
   hand: BridgeHand | null = null;
   fingertipWorld: vec3 | null = null;
+  /**
+   * Where the hand is AIMING at UI: the midpoint of thumb tip and index tip,
+   * spread by uiReach around the surface centre. The index tip alone travels
+   * toward the thumb as the fingers close, which slid the cursor off a button
+   * at the very moment of the pinch; the midpoint barely moves (the same
+   * "pinch point" SIK and Quest aim with). Null when no hand is tracked.
+   */
+  uiPointWorld: vec3 | null = null;
+  private uiSmoothed: vec3 | null = null;
   isPinching = false;
 
   onPinchStart: Array<(pos: vec3) => void> = [];
@@ -173,12 +189,23 @@ export class WebcamHandBridge extends BaseScriptComponent {
       if (this.isPinching && this.smoothed) this.onPinchEnd.forEach(f => f(this.smoothed));
       this.isPinching = false;
       this.fingertipWorld = null;
+      this.uiPointWorld = null;
+      this.uiSmoothed = null;
       return;
     }
     const tip = this.hand.points[8];
     const raw = this.toWorld(tip[0], tip[1]);
     this.smoothed = this.smoothed ? vec3.lerp(raw, this.smoothed, this.smoothing) : raw;
     this.fingertipWorld = this.smoothed;
+
+    // UI aim: thumb/index midpoint in webcam space, spread around the centre.
+    const thumb = this.hand.points[4];
+    const mx = thumb ? (thumb[0] + tip[0]) * 0.5 : tip[0];
+    const my = thumb ? (thumb[1] + tip[1]) * 0.5 : tip[1];
+    const k = Math.max(1, this.uiReach);
+    const uiRaw = this.toWorld(0.5 + (mx - 0.5) * k, 0.5 + (my - 0.5) * k);
+    this.uiSmoothed = this.uiSmoothed ? vec3.lerp(uiRaw, this.uiSmoothed, this.smoothing) : uiRaw;
+    this.uiPointWorld = this.uiSmoothed;
 
     const p = this.smoothed;
     const pinching = this.decidePinch(this.hand);
