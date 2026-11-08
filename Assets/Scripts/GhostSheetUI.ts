@@ -664,7 +664,10 @@ export class GhostSheetUI extends BaseScriptComponent {
    */
   showNote(text: string): void {
     if (!this.noteText) {
-      this.noteText = this.buildText("RoomNote", 2.5, "Body", 2.6, 1.2);
+      this.noteText = this.buildText("RoomNote", 2.5, "Body", 2.6, 1.6);
+      // Wrap inside the 5.2 cm column: "Desktop B finished!" on one line ran
+      // off the left edge of the frame in preview.
+      this.noteText.horizontalOverflow = HorizontalOverflow.Wrap;
       this.noteText.getSceneObject().getTransform().setLocalPosition(new vec3(-10.3, 2.5, 0.03));
     }
     this.noteText.text = text;

@@ -176,13 +176,32 @@ class CloudRoomSync(object):
                 **self.stats}
 
 
+def _is_admin_key(key):
+    """True for keys that bypass row-level security and must never leave the
+    dashboard. Supabase keys are encoded, so a plain substring test never
+    matches a real one: new-style secret keys start with sb_secret_, and
+    legacy JWT keys carry their role base64-encoded in the payload."""
+    if "service_role" in key or key.startswith("sb_secret_"):
+        return True
+    parts = key.split(".")
+    if len(parts) == 3 and parts[0].startswith("eyJ"):
+        import base64
+        payload = parts[1] + "=" * (-len(parts[1]) % 4)
+        try:
+            role = json.loads(base64.urlsafe_b64decode(payload)).get("role", "")
+        except Exception:
+            return False
+        return role == "service_role"
+    return False
+
+
 def start_if_configured(relay):
     """Called by bridge_web at startup. Returns a running sync or None."""
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_ANON_KEY", "").strip()
     if not url or not key:
         return None
-    if "service_role" in key:
+    if _is_admin_key(key):
         print("[GHOST cloud] REFUSING to start: that looks like a service-role "
               "key. Use the anon public key only.")
         return None
