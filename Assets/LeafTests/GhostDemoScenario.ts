@@ -20,7 +20,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
-import {BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, FRONT_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
+import {passGlovePicker, BRUSH, GUIDE_INK, GhostLeafInteractor, LESSON_ROOT, FRONT_ROOT, STROKE_COUNTER, VOICE_SOURCE, requireDescendant, requireObject, textOfDescendant} from "./GhostLeafInteractor"
 import {GhostDemoPlayer} from "../Scripts/GhostDemoPlayer"
 import {GhostSheetUI} from "../Scripts/GhostSheetUI"
 import {buildGlyphPath} from "../Scripts/GhostKanaPath"
@@ -43,6 +43,7 @@ export class GhostDemoScenario extends Scenario {
   async run(): Promise<void> {
     const interactor = new GhostLeafInteractor()
     await sleep(1500)
+    await passGlovePicker()
 
     const front = requireObject(FRONT_ROOT)
     const lesson = requireObject(LESSON_ROOT)

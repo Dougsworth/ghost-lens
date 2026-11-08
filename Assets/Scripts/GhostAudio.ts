@@ -77,11 +77,22 @@ export class GhostAudio extends BaseScriptComponent {
   private stamp!: AudioComponent;
   private page!: AudioComponent;
   private gotIt!: AudioComponent;
-  private gameTick!: AudioComponent;
-  private gameCombo!: AudioComponent;
-  private gameLevel!: AudioComponent;
-  private gameBadge!: AudioComponent;
-  private gameWin!: AudioComponent;
+  /**
+   * Game sounds are made the first time each one plays, not in onAwake:
+   * five more sources at start pushed GhostAudio's onAwake past Lens Studio's
+   * script time limit with two previews loading at once ("Javascript
+   * execution has timed out"), which can stop later components starting.
+   */
+  private game: { [k: string]: AudioComponent } = {};
+
+  private playGame(key: string, clip: AudioTrackAsset, volume: number): void {
+    let a = this.game[key];
+    if (!a) {
+      a = this.makeSource("SfxGame_" + key, clip, this.sfxVolume * volume, true);
+      this.game[key] = a;
+    }
+    a.play(1);
+  }
   /** One reusable source whose track is swapped per character. */
   private voice!: AudioComponent;
   /** One reusable source whose track is swapped per chord. */
@@ -99,11 +110,6 @@ export class GhostAudio extends BaseScriptComponent {
     this.stamp = this.makeSource("SfxStamp", CLIP_STAMP, this.sfxVolume, true);
     this.page = this.makeSource("SfxPageTurn", CLIP_PAGE, this.sfxVolume, true);
     this.gotIt = this.makeSource("SfxGotIt", CLIP_GOT_IT, this.sfxVolume, true);
-    this.gameTick = this.makeSource("SfxGameTick", CLIP_GAME_TICK, this.sfxVolume * 0.5, true);
-    this.gameCombo = this.makeSource("SfxGameCombo", CLIP_GAME_COMBO, this.sfxVolume * 0.7, true);
-    this.gameLevel = this.makeSource("SfxGameLevel", CLIP_GAME_LEVEL, this.sfxVolume * 0.8, true);
-    this.gameBadge = this.makeSource("SfxGameBadge", CLIP_GAME_BADGE, this.sfxVolume * 0.7, true);
-    this.gameWin = this.makeSource("SfxGameWin", CLIP_GAME_WIN, this.sfxVolume * 0.85, true);
     this.voice = this.makeSource("SfxVoice", null, this.voiceVolume, false);
     // A chord answers the user's own strum, so it takes the low-latency path:
     // a strum you hear late does not feel like the strum you just made.
@@ -152,19 +158,19 @@ export class GhostAudio extends BaseScriptComponent {
     if (this.gotIt) this.gotIt.play(1);
   }
   playGameTick(): void {
-    if (this.gameTick) this.gameTick.play(1);
+    this.playGame("tick", CLIP_GAME_TICK, 0.5);
   }
   playGameCombo(): void {
-    if (this.gameCombo) this.gameCombo.play(1);
+    this.playGame("combo", CLIP_GAME_COMBO, 0.7);
   }
   playGameLevelUp(): void {
-    if (this.gameLevel) this.gameLevel.play(1);
+    this.playGame("level", CLIP_GAME_LEVEL, 0.8);
   }
   playGameBadge(): void {
-    if (this.gameBadge) this.gameBadge.play(1);
+    this.playGame("badge", CLIP_GAME_BADGE, 0.7);
   }
   playGameWin(): void {
-    if (this.gameWin) this.gameWin.play(1);
+    this.playGame("win", CLIP_GAME_WIN, 0.85);
   }
 
   /**

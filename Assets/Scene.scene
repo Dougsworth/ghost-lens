@@ -1182,9 +1182,6 @@
   ScriptAsset: !<reference> f7e255b9-1cc8-4ec7-8e84-d1bfd5e8047d
   ScriptInputsDefault:
     markerColor: true
-    progressDoneColor: true
-    progressCurrentColor: true
-    progressDimColor: true
     progressDotRadiusCm: true
     tabHeightCm: true
     tabGapCm: true
@@ -1194,12 +1191,12 @@
   ScriptInputs:
     "":
       markerColor: !<Vec4> {x: 1.000000, y: 0.860000, z: 0.550000, w: 1.000000}
-      tabPaperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      tabPaperColor: !<Vec4> {x: 0.110000, y: 0.115000, z: 0.160000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
-      typeColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}
-      progressDoneColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
-      progressCurrentColor: !<Vec4> {x: 0.720000, y: 0.680000, z: 0.600000, w: 1.000000}
-      progressDimColor: !<Vec4> {x: 0.300000, y: 0.280000, z: 0.240000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.950000, y: 0.960000, z: 1.000000, w: 1.000000}
+      progressDoneColor: !<Vec4> {x: 0.930000, y: 0.950000, z: 1.000000, w: 1.000000}
+      progressCurrentColor: !<Vec4> {x: 0.680000, y: 0.720000, z: 0.860000, w: 1.000000}
+      progressDimColor: !<Vec4> {x: 0.220000, y: 0.230000, z: 0.310000, w: 1.000000}
       progressDotRadiusCm: 0.200000
       tabWidthCm: 3.200000
       tabHeightCm: 3.200000
@@ -1563,18 +1560,16 @@
   Enabled: true
   ScriptAsset: !<reference> 136f48a4-f100-491a-9069-736ffa7e829f
   ScriptInputsDefault:
-    tabPaperColor: true
     tabHighlightColor: true
-    typeColor: true
     tabOffsetXCm: true
     labelHeightCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      tabPaperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      tabPaperColor: !<Vec4> {x: 0.110000, y: 0.115000, z: 0.160000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
-      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.780000, y: 0.800000, z: 0.900000, w: 1.000000}
       tabOffsetXCm: 8.400000
       labelHeightCm: !<float> 8.000000
   ScriptTypes:
@@ -1690,6 +1685,8 @@
     strumSec: true
     strumStringsNeeded: true
     fingertipReachCm: true
+    fingerDwellSec: true
+    showChordBox: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1705,6 +1702,8 @@
       chordBoxAtCm: !<Vec3> {x: 7.300000, y: 0.000000, z: 0.000000}
       chordBoxSizeCm: !<Vec3> {x: 3.400000, y: 5.000000, z: 0.000000}
       fingertipReachCm: 2.600000
+      fingerDwellSec: 0.250000
+      showChordBox: false
   ScriptTypes:
     "":
       {}
@@ -1776,7 +1775,6 @@
   ScriptInputsDefault:
     tileColor: true
     tileHighlightColor: true
-    typeColor: true
     panelWidthCm: true
     tileHeightCm: true
   ScriptTypesDefault:
@@ -1785,7 +1783,7 @@
     "":
       tileColor: !<Vec4> {x: 0.220000, y: 0.200000, z: 0.150000, w: 1.000000}
       tileHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
-      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.780000, y: 0.800000, z: 0.900000, w: 1.000000}
       panelWidthCm: !<float> 17.000000
       tileHeightCm: 2.100000
   ScriptTypes:
@@ -2308,8 +2306,6 @@
   Enabled: true
   ScriptAsset: !<reference> 4301fbb6-72ef-48ad-a4b0-bab03175cdc7
   ScriptInputsDefault:
-    inkColor: true
-    paperColor: true
     fretLengthCm: true
     stringGapCm: true
     stampColor: true
@@ -2317,8 +2313,8 @@
     {}
   ScriptInputs:
     "":
-      inkColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
-      paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
+      inkColor: !<Vec4> {x: 0.950000, y: 0.960000, z: 1.000000, w: 1.000000}
+      paperColor: !<Vec4> {x: 0.110000, y: 0.115000, z: 0.160000, w: 1.000000}
       guideColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
       fretLengthCm: 7.800000
       stringGapCm: 1.450000
@@ -2808,8 +2804,6 @@
   ScriptAsset: !<reference> 8a278688-0b77-41a7-a970-e12d6c60027a
   ScriptInputsDefault:
     sheetSizeCm: true
-    paperColor: true
-    gridColor: true
     edgeJitterCm: true
     unrollSeconds: true
     stampColor: true
@@ -2818,8 +2812,8 @@
   ScriptInputs:
     "":
       sheetSizeCm: !<float> 15.000000
-      paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
-      gridColor: !<Vec4> {x: 0.400000, y: 0.370000, z: 0.300000, w: 1.000000}
+      paperColor: !<Vec4> {x: 0.110000, y: 0.115000, z: 0.160000, w: 1.000000}
+      gridColor: !<Vec4> {x: 0.250000, y: 0.270000, z: 0.370000, w: 1.000000}
       edgeJitterCm: 0.120000
       unrollSeconds: 0.650000
       stampColor: !<Vec4> {x: 1.000000, y: 0.270000, z: 0.140000, w: 1.000000}
@@ -2893,7 +2887,6 @@
   ScriptInputsDefault:
     coverColor: true
     coverHighlightColor: true
-    typeColor: true
     lockedFade: true
     coverHeightCm: true
   ScriptTypesDefault:
@@ -2902,7 +2895,7 @@
     "":
       coverColor: !<Vec4> {x: 0.240000, y: 0.210000, z: 0.160000, w: 1.000000}
       coverHighlightColor: !<Vec4> {x: 0.540000, y: 0.490000, z: 0.380000, w: 1.000000}
-      typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.780000, y: 0.800000, z: 0.900000, w: 1.000000}
       lockedFade: 0.450000
       coverWidthCm: 3.200000
       coverHeightCm: !<float> 6.000000
@@ -3053,18 +3046,15 @@
   Enabled: true
   ScriptAsset: !<reference> 2c5bbe10-7b6d-4451-b9ad-fb3044f8d016
   ScriptInputsDefault:
-    paperColor: true
-    inkColor: true
-    dimInkColor: true
     hoverColor: true
     sheetWidthCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      paperColor: !<Vec4> {x: 0.260000, y: 0.230000, z: 0.170000, w: 1.000000}
-      inkColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}
-      dimInkColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
+      paperColor: !<Vec4> {x: 0.110000, y: 0.115000, z: 0.160000, w: 1.000000}
+      inkColor: !<Vec4> {x: 0.950000, y: 0.960000, z: 1.000000, w: 1.000000}
+      dimInkColor: !<Vec4> {x: 0.520000, y: 0.540000, z: 0.660000, w: 1.000000}
       hoverColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
       sheetWidthCm: !<float> 19.000000
       sheetHeightCm: !<float> 21.000000
@@ -3473,9 +3463,9 @@
     {}
   ScriptInputs:
     "":
-      tabPaperColor: !<Vec4> {x: 0.300000, y: 0.270000, z: 0.200000, w: 1.000000}
+      tabPaperColor: !<Vec4> {x: 0.110000, y: 0.115000, z: 0.160000, w: 1.000000}
       tabHighlightColor: !<Vec4> {x: 0.520000, y: 0.470000, z: 0.360000, w: 1.000000}
-      typeColor: !<Vec4> {x: 0.960000, y: 0.930000, z: 0.860000, w: 1.000000}
+      typeColor: !<Vec4> {x: 0.950000, y: 0.960000, z: 1.000000, w: 1.000000}
       dimTypeColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
       stepHeightCm: 9.300000
       nameHeightCm: 6.200000
@@ -3813,7 +3803,6 @@
     strokeDurationSec: true
     interStrokePauseSec: true
     slowerSpeedMultiplier: true
-    inkColor: true
     guideColor: true
     inkWidthCm: true
     fadeSeconds: true
@@ -3826,7 +3815,7 @@
       strokeDurationSec: !<float> 1.000000
       interStrokePauseSec: 0.300000
       slowerSpeedMultiplier: 0.500000
-      inkColor: !<Vec4> {x: 1.000000, y: 0.950000, z: 0.860000, w: 1.000000}
+      inkColor: !<Vec4> {x: 0.950000, y: 0.960000, z: 1.000000, w: 1.000000}
       guideColor: !<Vec4> {x: 0.420000, y: 0.390000, z: 0.330000, w: 1.000000}
       inkWidthCm: 0.550000
       fadeSeconds: 0.500000

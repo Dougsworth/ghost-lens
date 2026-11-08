@@ -14,7 +14,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {nextFrame, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
-import {FRONT_ROOT, GhostLeafInteractor, requireObject} from "./GhostLeafInteractor"
+import {passGlovePicker, FRONT_ROOT, GhostLeafInteractor, requireObject} from "./GhostLeafInteractor"
 import {WebcamHandBridge} from "../Scripts/WebcamHandBridge"
 import {GhostGuitarController} from "../Scripts/GhostGuitarController"
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
@@ -26,6 +26,7 @@ export class GhostGuitarFingersScenario extends Scenario {
   async run(): Promise<void> {
     const interactor = new GhostLeafInteractor()
     await sleep(1500)
+    await passGlovePicker()
     const bridge = WebcamHandBridge.instance
     if (!bridge) throw new Error("WebcamHandBridge.instance missing")
     const guitar = findComponent(GhostGuitarController.getTypeName()) as GhostGuitarController

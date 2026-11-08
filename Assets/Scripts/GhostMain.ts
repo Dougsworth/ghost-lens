@@ -174,6 +174,7 @@ export class GhostMain extends BaseScriptComponent {
   glove: GhostGlove | null = null;
   /** The front door is showing the glove picker. */
   private choosingGlove = false;
+  private gloveAskedThisSession = false;
   private hudShown = true;
   /** The race in this room has been decided; one winner per room. */
   private raceDecided = false;
@@ -367,10 +368,7 @@ export class GhostMain extends BaseScriptComponent {
     }
     this.game = new GhostGame(this.sceneObject, this.audio);
     this.glove = new GhostGlove();
-    if (this.glove.chosen) {
-      this.game.setAccent(this.glove.color);
-      this.game.setGlove(this.glove.name);
-    }
+    if (this.glove.chosen) this.wearGlove();
     this.characters = this.parseLesson(this.lessonSequence);
     if (this.characters.length === 0) {
       print("[GhostMain] ERROR: no usable characters in lessonSequence.");
@@ -1135,10 +1133,17 @@ export class GhostMain extends BaseScriptComponent {
     this.libraryOpen = false;
     this.frontUI.setSuggestions(this.pickSuggestions());
     this.frontUI.showPicker();
-    // First launch: pick a glove before anything else. After that, a welcome
-    // that knows who you are.
-    if (this.glove && !this.glove.chosen) this.openGlovePicker();
-    else this.greet();
+    // Every entry starts by putting your glove on: the try-on opens on the
+    // glove you wore last time, so "Keep this glove" is one pinch. Coming
+    // back to the front door from a lesson does not ask again.
+    // The front door is drawn more than once while the Lens starts up, so a
+    // try-on still in progress is reopened rather than drawn over.
+    if (this.glove && (!this.gloveAskedThisSession || this.choosingGlove)) {
+      this.gloveAskedThisSession = true;
+      this.openGlovePicker();
+    } else {
+      this.greet();
+    }
   }
 
   // ── Your glove ────────────────────────────────────────────────────────────
@@ -1156,8 +1161,43 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private showTryOn(name: string): void {
+    const g = this.glove ? this.glove.trying : null;
     this.frontUI.setRoomScreen(name, ["Keep this glove", "Try another glove"],
-      "Choose your glove. It becomes your hand in GHOST.");
+      g ? g.power : "Choose your glove. It becomes your hand in GHOST.");
+    // The picker itself wears the glove being tried: hovers glow its colour.
+    if (g) this.tintUI(g.color);
+  }
+
+  /** Put the chosen glove on: colours, power, profile line. */
+  private wearGlove(): void {
+    if (!this.glove || !this.glove.chosen) return;
+    this.tintUI(this.glove.color);
+    if (this.game) {
+      this.game.setAccent(this.glove.color);
+      this.game.setPerk(this.glove.perk || "");
+      this.game.setGlove(this.glove.name);
+    }
+  }
+
+  /**
+   * The interface takes the glove's colour: hover washes and tab highlights
+   * glow in it, dimmed, because on an additive display a full-strength wash
+   * would read as a solid block instead of tinted glass.
+   */
+  private tintUI(c: vec4): void {
+    const glow = new vec4(c.x * 0.42, c.y * 0.42, c.z * 0.42, 1);
+    this.frontUI.hoverColor = glow;
+    if (this.sheetUI) this.sheetUI.tabHighlightColor = glow;
+  }
+
+  /** True while the entry try-on is up. */
+  get isChoosingGlove(): boolean {
+    return this.choosingGlove;
+  }
+
+  /** Keep the glove being tried on, as "Keep this glove" does. For tests. */
+  keepCurrentGlove(): void {
+    if (this.choosingGlove) this.onGloveRow("Keep this glove");
   }
 
   private onGloveRow(label: string): void {
@@ -1179,11 +1219,8 @@ export class GhostMain extends BaseScriptComponent {
     if (!this.glove.chooseByName(label)) return;
     this.choosingGlove = false;
     this.audio.playGameBadge();
-    if (this.game) {
-      this.game.setAccent(this.glove.color);
-      this.game.setGlove(this.glove.name);
-      this.game.burst(new vec3(0, 2, 2), 30, 1.2);
-    }
+    this.wearGlove();
+    if (this.game) this.game.burst(new vec3(0, 2, 2), 30, 1.2);
     this.frontUI.leaveRoomScreen();
     this.frontUI.setSuggestions(this.pickSuggestions());
     this.frontUI.setWaiting("");

@@ -74,7 +74,13 @@ setInterval(async()=>{try{
 // already requires for the GPU hand tracking.
 const micBtn=document.getElementById('mic'), speechEl=document.getElementById('speech');
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null, listening=false;
+let rec=null, listening=false, gotText=false;
+// Tell the Lens to stop waiting. Every way a listen can end without words
+// must call this, or the Lens sits on "Listening..." until its timeout.
+function heardNothing(){
+  fetch('/heard',{method:'POST',headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({text:''})}).catch(()=>{});
+}
 
 function speechSay(t,colour){speechEl.textContent=t; speechEl.style.color=colour||'#444';}
 
@@ -85,7 +91,7 @@ if(!SR){
   rec=new SR();
   rec.lang='en-US'; rec.interimResults=true; rec.maxAlternatives=1; rec.continuous=false;
 
-  rec.onstart=()=>{listening=true; micBtn.textContent='Listening...'; speechSay('Say a skill, e.g. "draw a star"');};
+  rec.onstart=()=>{listening=true; gotText=false; micBtn.textContent='Listening...'; speechSay('Say a skill, e.g. "draw a star"');};
   rec.onerror=(e)=>{
     listening=false; micBtn.textContent='Hold a skill - tap to speak';
     // no-speech just means silence; it is not worth shouting about.
@@ -95,7 +101,11 @@ if(!SR){
     fetch('/heard',{method:'POST',headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({text:''})}).catch(()=>{});
   };
-  rec.onend=()=>{listening=false; micBtn.textContent='Hold a skill - tap to speak';};
+  rec.onend=()=>{
+    listening=false; micBtn.textContent='Hold a skill - tap to speak';
+    // Ended on silence with no error and no words: Chrome does this a lot.
+    if(!gotText){ speechSay('Heard nothing - try again'); heardNothing(); }
+  };
   rec.onresult=(ev)=>{
     let finalText='', interim='';
     for(let i=ev.resultIndex;i<ev.results.length;i++){
@@ -104,6 +114,7 @@ if(!SR){
     }
     if(interim) speechSay('... '+interim.trim());
     if(finalText){
+      gotText=true;
       const text=finalText.trim();
       speechSay('Heard: "'+text+'"','#1b7f3b');
       fetch('/heard',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -113,7 +124,11 @@ if(!SR){
 
   function startListening(){
     if(listening) return;
-    try{ rec.start(); }catch(e){ /* already starting; harmless */ }
+    try{ rec.start(); }
+    catch(e){
+      // "already started" is harmless; anything else means no microphone.
+      if(!String(e).includes('already')){ speechSay('Mic could not start: '+e,'#b3261e'); heardNothing(); }
+    }
   }
   micBtn.onclick=startListening;
 
@@ -121,6 +136,10 @@ if(!SR){
   // turns that into a real microphone start, which must happen in the page.
   setInterval(async()=>{
     try{
+      // Only the tab you can see may take the request: a hidden tab cannot
+      // open the microphone, and with two tracker tabs open the hidden one
+      // was grabbing it, so the Lens listened to nothing.
+      if(document.hidden) return;
       const r=await (await fetch('/listen')).json();
       if(r.listen) startListening();
     }catch(e){}

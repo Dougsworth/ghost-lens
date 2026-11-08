@@ -36,8 +36,9 @@ const PTS_FINGER = 5;
 const PTS_CHORD = 30;
 const PTS_SIGN = 30;
 
-function multiplierFor(combo: number): number {
-  return Math.min(3, 1 + 0.5 * Math.floor(combo / 3));
+/** The multiplier steps up every few clean strokes (3, or 2 with Bloom). */
+function multiplierFor(combo: number, step: number = 3): number {
+  return Math.min(3, 1 + 0.5 * Math.floor(combo / step));
 }
 
 /** Points needed to go from level n to n+1. */
@@ -108,6 +109,10 @@ export class GhostGame {
   private s: Saved;
   /** The player's glove colour: leads the sparks and the level line. */
   private accent: vec4 = GOLD;
+  /** The glove's power: midas (+25% points), shield (one free miss per
+   *  character), bloom (multiplier every 2 strokes). */
+  private perk = "";
+  private shieldUsed = false;
   private combo = 0;
   private cleanRunChars = 0;
   /** Points the HUD counter shows; it counts up toward the real total. */
@@ -194,9 +199,10 @@ export class GhostGame {
   /** A stroke was accepted. `at` is where to float the points (GHOST-local cm). */
   strokeClean(at: vec3): void {
     this.combo++;
-    const mult = multiplierFor(this.combo);
-    const before = multiplierFor(this.combo - 1);
-    const pts = Math.round(PTS_STROKE * mult);
+    const step = this.perk === "bloom" ? 2 : 3;
+    const mult = multiplierFor(this.combo, step);
+    const before = multiplierFor(this.combo - 1, step);
+    const pts = this.boost(Math.round(PTS_STROKE * mult));
     this.float("+" + pts + (mult > 1 ? "  x" + mult : ""), at, mult > 1 ? AMBER : GOLD);
     if (mult > before) {
       this.audio.playGameCombo();
@@ -214,6 +220,13 @@ export class GhostGame {
 
   /** A stroke was missed: the combo breaks, nothing is taken away. */
   strokeMissed(): void {
+    // Neon Glove: the first miss of a character is absorbed.
+    if (this.perk === "shield" && !this.shieldUsed && this.combo > 0) {
+      this.shieldUsed = true;
+      this.float("SHIELD", new vec3(HUD_X, -5.2, 0.3), this.accent);
+      this.audio.playGameCombo();
+      return;
+    }
     if (this.combo >= 3) this.float("combo lost", new vec3(HUD_X, -5.2, 0.3), DIM);
     this.combo = 0;
     this.cleanRunChars = 0;
@@ -223,6 +236,7 @@ export class GhostGame {
   /** A character is finished. `at` is the stamp's spot, for the burst. */
   characterDone(clean: boolean, at: vec3): void {
     this.s.characters++;
+    this.shieldUsed = false;
     let pts = PTS_CHARACTER;
     if (clean) {
       pts += PTS_CLEAN_BONUS;
@@ -230,6 +244,7 @@ export class GhostGame {
     } else {
       this.cleanRunChars = 0;
     }
+    pts = this.boost(pts);
     this.burst(at, clean ? 28 : 16, clean ? 1.2 : 0.8);
     this.float((clean ? "PERFECT  +" : "+") + pts, new vec3(at.x, at.y + 2.4, at.z + 0.5), clean ? GOLD : TEXT);
     this.award(pts);
@@ -241,15 +256,17 @@ export class GhostGame {
 
   fingerPlaced(at: vec3): void {
     this.audio.playGameTick();
-    this.float("+" + PTS_FINGER, at, GOLD);
-    this.award(PTS_FINGER);
+    const pts = this.boost(PTS_FINGER);
+    this.float("+" + pts, at, GOLD);
+    this.award(pts);
   }
 
   chordPlayed(id: string, at: vec3): void {
     if (this.s.chords.indexOf(id) < 0) this.s.chords.push(id);
     this.burst(at, 24, 1.0);
-    this.float("+" + PTS_CHORD, new vec3(at.x, at.y + 2, at.z + 0.5), GOLD);
-    this.award(PTS_CHORD);
+    const pts = this.boost(PTS_CHORD);
+    this.float("+" + pts, new vec3(at.x, at.y + 2, at.z + 0.5), GOLD);
+    this.award(pts);
     this.unlock("first_chord");
     if (this.s.chords.length >= 5) this.unlock("chords5");
   }
@@ -257,8 +274,9 @@ export class GhostGame {
   signDone(at: vec3): void {
     this.s.signs++;
     this.burst(at, 20, 1.0);
-    this.float("+" + PTS_SIGN, at, GOLD);
-    this.award(PTS_SIGN);
+    const pts = this.boost(PTS_SIGN);
+    this.float("+" + pts, at, GOLD);
+    this.award(pts);
     this.unlock("first_sign");
   }
 
@@ -290,6 +308,17 @@ export class GhostGame {
     this.accent = c;
     this.levelText.textFill.color = c;
     this.profileText.textFill.color = c;
+  }
+
+  /** The glove's power. */
+  setPerk(perk: string): void {
+    this.perk = perk || "";
+    this.shieldUsed = false;
+  }
+
+  /** Golden Glove: +25% on every award. */
+  private boost(pts: number): number {
+    return this.perk === "midas" ? Math.round(pts * 1.25) : pts;
   }
 
   /** Name the player's glove for the front-door profile line. */
@@ -375,7 +404,7 @@ export class GhostGame {
     const f = Math.max(0, Math.min(1, (this.s.xp - from) / Math.max(1, to - from)));
     const lit = Math.floor(f * PIPS + 1e-6);
     for (let i = 0; i < PIPS; i++) this.pips[i].pass.baseColor = i < lit ? GOLD : DIM;
-    const mult = multiplierFor(this.combo);
+    const mult = multiplierFor(this.combo, this.perk === "bloom" ? 2 : 3);
     this.comboText.text = this.combo >= 2 ? "COMBO " + this.combo + (mult > 1 ? "  x" + mult : "") : "";
     this.comboText.getSceneObject().enabled = this.combo >= 2;
     const heat = Math.min(1, this.combo / 12);

@@ -40,7 +40,7 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
 import {getInteractables} from "Leaf.lspkg/Interactors/InteractableUtils"
-import {
+import {passGlovePicker, 
   GhostLeafInteractor,
   LESSON_ROOT,
   FRONT_ROOT,
@@ -73,6 +73,7 @@ export class GhostShelfToSheetScenario extends Scenario {
     // after OnStart, and every UIKit Button builds its Interactable on its own
     // OnStart, so nothing below exists at frame 0.
     await sleep(1500)
+    await passGlovePicker()
 
     const front = requireObject(FRONT_ROOT)
     const lesson = requireObject(LESSON_ROOT)

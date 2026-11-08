@@ -12,6 +12,8 @@
  * Nothing in this file touches the Lens's own scripts; it only reads the scene.
  */
 
+import {GhostMain} from "../Scripts/GhostMain"
+import {nextFrame as nextFrameForGlove} from "Leaf.lspkg/Utils/common/Utils"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {getInteractables} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
@@ -213,4 +215,29 @@ export class GhostLeafInteractor extends DefaultLeafInteractor {
     await this.trigger(this.requireTabByLabel(label))
     await sleep(200)
   }
+}
+
+
+/**
+ * Every entry now opens the glove try-on before the front door. Scenarios
+ * written against the front door call this first: it waits briefly for the
+ * try-on and keeps the current glove, exactly as pinching "Keep this glove".
+ */
+export async function passGlovePicker(): Promise<void> {
+  let main: any = null
+  const visit = (o: SceneObject): any => {
+    const c = o.getComponent(GhostMain.getTypeName())
+    if (c) return c
+    for (let i = 0; i < o.getChildrenCount(); i++) {
+      const hit = visit(o.getChild(i))
+      if (hit) return hit
+    }
+    return null
+  }
+  for (let i = 0; i < global.scene.getRootObjectsCount() && !main; i++) main = visit(global.scene.getRootObject(i))
+  if (!main) return
+  const until = getTime() + 4
+  while (getTime() < until && !main.isChoosingGlove) await nextFrameForGlove()
+  if (main.isChoosingGlove) main.keepCurrentGlove()
+  for (let i = 0; i < 10; i++) await nextFrameForGlove()
 }

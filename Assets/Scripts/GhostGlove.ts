@@ -18,13 +18,19 @@ import { HandPose } from "./GhostAslPack";
 import { WebcamHandBridge } from "./WebcamHandBridge";
 import { GhostHandInteractor } from "./GhostHandInteractor";
 
-export type GloveStyle = { id: string; name: string; color: vec4 };
+/** What each glove does in the game. GhostGame reads the id. */
+export type GlovePerk = "midas" | "shield" | "bloom";
+
+export type GloveStyle = { id: string; name: string; color: vec4; perk: GlovePerk; power: string };
 
 /** The gloves on offer. Their names are the front-door rows, word for word. */
 export const GLOVES: GloveStyle[] = [
-  { id: "gold", name: "Golden Glove", color: new vec4(1.0, 0.62, 0.1, 1) },
-  { id: "neon", name: "Neon Glove", color: new vec4(0.1, 0.8, 1.0, 1) },
-  { id: "sakura", name: "Sakura Glove", color: new vec4(1.0, 0.3, 0.62, 1) },
+  { id: "gold", name: "Golden Glove", color: new vec4(1.0, 0.62, 0.1, 1),
+    perk: "midas", power: "Midas Touch: +25% points on everything" },
+  { id: "neon", name: "Neon Glove", color: new vec4(0.1, 0.8, 1.0, 1),
+    perk: "shield", power: "Shield: one free miss per character keeps your combo" },
+  { id: "sakura", name: "Sakura Glove", color: new vec4(1.0, 0.3, 0.62, 1),
+    perk: "bloom", power: "Bloom: your combo multiplier grows twice as fast" },
 ];
 
 const STORE_KEY = "ghost.glove.v1";
@@ -67,6 +73,10 @@ export class GhostGlove {
 
   get color(): vec4 {
     return this.style ? this.style.color : GLOVES[0].color;
+  }
+
+  get perk(): GlovePerk | null {
+    return this.style ? this.style.perk : null;
   }
 
   /** Pick by row label ("Neon Glove"). Returns false for anything else. */

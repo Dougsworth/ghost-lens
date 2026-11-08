@@ -9,7 +9,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
-import {FRONT_ROOT, LESSON_ROOT, GhostLeafInteractor, requireObject} from "./GhostLeafInteractor"
+import {passGlovePicker, FRONT_ROOT, LESSON_ROOT, GhostLeafInteractor, requireObject} from "./GhostLeafInteractor"
 import {GhostMain} from "../Scripts/GhostMain"
 
 @component
@@ -17,6 +17,7 @@ export class GhostGameScenario extends Scenario {
   async run(): Promise<void> {
     const interactor = new GhostLeafInteractor()
     await sleep(1500)
+    await passGlovePicker()
     const main = findComponent(GhostMain.getTypeName()) as GhostMain
     if (!main || !main.game) throw new Error("GhostMain.game missing")
     const game = main.game

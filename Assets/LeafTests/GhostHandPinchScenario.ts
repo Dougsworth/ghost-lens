@@ -24,7 +24,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, nextFrame, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {waitUntil} from "./LeafWait"
-import {
+import {passGlovePicker, 
   FRONT_ROOT,
   GhostLeafInteractor,
   LESSON_ROOT,
@@ -48,6 +48,7 @@ export class GhostHandPinchScenario extends Scenario {
   async run(): Promise<void> {
     const interactor = new GhostLeafInteractor()
     await sleep(1500)
+    await passGlovePicker()
 
     const bridge = WebcamHandBridge.instance
     if (!bridge) throw new Error("WebcamHandBridge.instance missing")
