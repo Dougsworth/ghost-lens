@@ -145,6 +145,52 @@ export class GhostRoom extends BaseScriptComponent {
     this.sendOp({ op: "join", room: c, name: this.displayName });
   }
 
+  /**
+   * Which rooms are open right now, so joining can be a pinch instead of a
+   * code read out loud.
+   *
+   * Over HTTP rather than the relay socket: the relay protocol has no "list"
+   * op by design (a room client is IN one room), and the bridge already
+   * publishes GET /rooms. Fails silently to an empty list — not being able to
+   * see other rooms is a smaller problem than an error on the front door.
+   */
+  listRooms(onDone: (rooms: { room: string; members: string[] }[]) => void): void {
+    if (!this.internetModule) {
+      onDone([]);
+      return;
+    }
+    const http = this.url
+      .replace("ws://", "http://")
+      .replace("wss://", "https://")
+      .replace(/:\d+$/, ":8766") + "/rooms";
+    let req: Request;
+    try {
+      req = new Request(http, { method: "GET" });
+    } catch (e) {
+      onDone([]);
+      return;
+    }
+    this.internetModule
+      .fetch(req)
+      .then((r: Response) => {
+        if (r.status !== 200) {
+          onDone([]);
+          return;
+        }
+        r.text()
+          .then((t: string) => {
+            try {
+              const body = JSON.parse(t);
+              onDone(body.rooms || []);
+            } catch (e) {
+              onDone([]);
+            }
+          })
+          .catch(() => onDone([]));
+      })
+      .catch(() => onDone([]));
+  }
+
   /** Broadcast to everyone else in the room. Silently ignored when solo. */
   send(data: any): void {
     if (!this.joined || !this.open || !this.ws) return;

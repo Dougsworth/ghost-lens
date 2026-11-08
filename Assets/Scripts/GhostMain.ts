@@ -889,8 +889,11 @@ export class GhostMain extends BaseScriptComponent {
    * moving and never lies about how far along the work is.
    */
   private onSkillPicked(skill: string): void {
+    // On the Study Together screen the suggestion rows are rooms, not skills.
+    if (this.tryJoinFromRow(skill)) return;
     this.audio.playTap();
     this.lessonSkill = skill;
+    this.frontUI.leaveRoomScreen();
     this.frontUI.beginOutline(skill);
     this.frontUI.setWaiting("");
     this.frontUI.beginStage("Planning your steps", 0, 0.55);
@@ -1068,24 +1071,74 @@ export class GhostMain extends BaseScriptComponent {
   /** Peer ink, kept so it can be cleared when the page turns. */
   private peerInk: InkRibbon[] = [];
 
+  /**
+   * Study together. One pinch, and you are either in a room or looking at one
+   * you can join with a second pinch.
+   *
+   * The old version created a room and left the front door looking identical
+   * apart from one small grey line, which reads as nothing having happened -
+   * the room WAS created and the relay had it, but there was no way to tell.
+   * Now the screen changes, your code is the title, and any room already open
+   * is listed so joining never needs a code read out loud or typed.
+   */
   private onStudyTogether(): void {
     this.audio.playTap();
-    // One pinch creates; the code is then read out or spoken to join. Joining
-    // by code is the speech path, which already exists — "say a skill" and
-    // "say a code" are the same microphone.
-    this.frontUI.setRoomCode("", "Opening a room...");
-    this.room.create();
+    this.frontUI.setRoomScreen("", [], "Looking for rooms...");
+
+    this.room.listRooms((rooms) => {
+      if (this.mode !== "front") return;
+      const joinable: string[] = [];
+      for (let i = 0; i < rooms.length && joinable.length < 2; i++) {
+        const r = rooms[i];
+        if (!r || !r.room) continue;
+        // Do not offer the room we are already in.
+        if (this.room.isJoined && r.room === this.room.roomCode) continue;
+        const who = (r.members && r.members.length)
+          ? r.members.join(", ")
+          : "waiting";
+        joinable.push("Join " + r.room + "  (" + who + ")");
+      }
+      this.joinableRooms = joinable;
+
+      if (this.room.isJoined) {
+        this.frontUI.setRoomScreen(this.room.roomCode, joinable,
+          "Your room. Others can pinch it from their front door.");
+        return;
+      }
+      // Nothing open: make one, so the screen is never a dead end.
+      this.frontUI.setRoomScreen("", joinable,
+        joinable.length ? "Pinch a room to join, or wait for yours."
+                        : "Opening a room...");
+      this.room.create();
+    });
+  }
+
+  /** Rooms currently offered on the Study Together screen, in row order. */
+  private joinableRooms: string[] = [];
+
+  /** A row was pinched on the Study Together screen: join that room. */
+  private tryJoinFromRow(label: string): boolean {
+    if (!this.frontUI.isRoomScreen) return false;
+    // "Join TIGER  (Me)" -> TIGER
+    const parts = label.split(" ");
+    if (parts.length < 2 || parts[0] !== "Join") return false;
+    this.audio.playTap();
+    this.frontUI.setRoomScreen("", [], "Joining " + parts[1] + "...");
+    this.room.join(parts[1]);
+    return true;
   }
 
   private onRoomJoined(code: string): void {
     this.audio.playUnroll();
-    this.frontUI.setRoomCode(code, "Say this code on the other headset to join.");
+    this.frontUI.setRoomScreen(code, this.joinableRooms,
+      "In room " + code + ". Pick a skill and you both learn it.");
   }
 
   private onPeerJoined(p: Peer): void {
     this.audio.playGotIt();
     if (this.mode === "front") {
-      this.frontUI.setRoomCode(this.room.roomCode, p.name + " joined. Pick a skill to begin.");
+      this.frontUI.setRoomScreen(this.room.roomCode, [],
+        p.name + " joined. Pick a skill and you both learn it.");
     } else {
       this.sheetUI.say(p.name + " JOINED", 1.4);
     }
@@ -1093,7 +1146,7 @@ export class GhostMain extends BaseScriptComponent {
 
   private onPeerLeft(p: Peer): void {
     if (this.mode === "front") {
-      this.frontUI.setRoomCode(this.room.roomCode, p.name + " left.");
+      this.frontUI.setRoomScreen(this.room.roomCode, [], p.name + " left.");
     } else {
       this.sheetUI.say(p.name + " LEFT", 1.2);
     }
@@ -1101,8 +1154,9 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private onRoomError(why: string): void {
-    // Refused, not broken. Back to the picker with the reason.
-    this.frontUI.setRoomCode("", why);
+    // Refused, not broken. Back to the front door with the reason.
+    this.frontUI.leaveRoomScreen();
+    this.frontUI.setWaiting(why);
   }
 
   /**

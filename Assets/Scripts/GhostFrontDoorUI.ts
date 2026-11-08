@@ -111,6 +111,11 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   private outlineTexts: Text[] = [];
   private outlineRoot: SceneObject | null = null;
   private pickRoot: SceneObject | null = null;
+  private micHost: SceneObject | null = null;
+  private notebookHost: SceneObject | null = null;
+  private notebookLabel: SceneObject | null = null;
+  private studyHost: SceneObject | null = null;
+  private inRoomScreen = false;
 
   // ── The brush progress line ───────────────────────────────────────────────
   private progressRoot: SceneObject | null = null;
@@ -146,17 +151,49 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   }
 
   /**
-   * The room code, large, in ink, on the paper.
+   * The Study Together screen.
    *
-   * It has to be read out loud across a room or typed into a second machine,
-   * so it takes the Title role and the whole sheet. Passing "" puts the
-   * picker back.
+   * Replaces the whole picker rather than tucking a note under it. Pressing
+   * "Study together" used to leave the front door looking identical except for
+   * one small grey line, which reads as nothing having happened at all - the
+   * room WAS being created and the relay had it, but you could not tell.
+   *
+   * Your code becomes the title, in the same large ink a skill name gets,
+   * because it is the thing someone across the room has to read. Rooms you can
+   * join take over the suggestion rows, so joining is a pinch and never a code
+   * typed or spoken.
    */
-  setRoomCode(code: string, note: string): void {
-    if (this.titleText) this.titleText.text = code ? code : "What do you want to learn?";
+  setRoomScreen(myCode: string, joinable: string[], note: string): void {
+    this.inRoomScreen = true;
+    if (this.outlineRoot) this.outlineRoot.enabled = false;
+    if (this.pickRoot) this.pickRoot.enabled = true;
+    this.hideProgress();
+
+    if (this.titleText) this.titleText.text = myCode ? myCode : "Study together";
+
+    // The mic and the notebook are not what this screen is for.
+    if (this.micHost) this.micHost.enabled = false;
+    if (this.notebookHost) this.notebookHost.enabled = false;
+    if (this.notebookLabel) this.notebookLabel.enabled = false;
+    if (this.studyHost) this.studyHost.enabled = false;
+
+    this.setSuggestions(joinable);
     this.setWaiting(note || "");
-    if (this.pickRoot) this.pickRoot.enabled = !code;
-    if (code) this.hideProgress();
+  }
+
+  /** Back to the normal front door. */
+  leaveRoomScreen(): void {
+    if (!this.inRoomScreen) return;
+    this.inRoomScreen = false;
+    if (this.micHost) this.micHost.enabled = true;
+    if (this.notebookHost) this.notebookHost.enabled = true;
+    if (this.notebookLabel) this.notebookLabel.enabled = true;
+    if (this.studyHost) this.studyHost.enabled = true;
+    this.showPicker();
+  }
+
+  get isRoomScreen(): boolean {
+    return this.inRoomScreen;
   }
 
   onAwake(): void {
@@ -401,6 +438,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
   private buildMic(parent: SceneObject, y: number): void {
     const r = 2.5;
     const host = this.obj(parent, "MicCircle", new vec3(0, y, 0.02));
+    this.micHost = host;
 
     const btn = host.createComponent(Button.getTypeName()) as Button;
     btn.setVariant({ theme: "SnapOS2", shape: "Rectangle", style: "PrimaryNeutral" });
@@ -514,6 +552,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     const w = this.sheetWidthCm - 6.0;
     const h = 1.8;
     const host = this.obj(parent, "StudyTogether", new vec3(0, y, 0));
+    this.studyHost = host;
 
     const btn = host.createComponent(Button.getTypeName()) as Button;
     btn.setVariant({ theme: "SnapOS2", shape: "Rectangle", style: "PrimaryNeutral" });
@@ -540,14 +579,17 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
 
   /** "Your notebook": progress, not pressure. No streaks, no timers. */
   private buildNotebookRow(parent: SceneObject, y: number): void {
-    this.addText(parent, "NotebookLabel", 0, y + 1.9, "Meta",
-      this.sheetWidthCm - 4, 0.7, this.dimInkColor).text = "Your notebook";
+    const nbLabel = this.addText(parent, "NotebookLabel", 0, y + 1.9, "Meta",
+      this.sheetWidthCm - 4, 0.7, this.dimInkColor);
+    nbLabel.text = "Your notebook";
+    this.notebookLabel = nbLabel.getSceneObject();
 
     const w = 4.6;
     const h = 2.2;
     const gap = 0.6;
     const rowW = NOTEBOOKS.length * w + (NOTEBOOKS.length - 1) * gap;
     const host = this.obj(parent, "Notebooks", new vec3(0, y, 0));
+    this.notebookHost = host;
     const row = this.flexRow(host, rowW, h, gap);
 
     const items: FlexItem[] = [];
