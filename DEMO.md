@@ -132,7 +132,7 @@ survives a restart."
 
 > **Verify this yourself before recording.** The relay is tested (13 checks,
 > 0 failures) and the Lens is confirmed to join it for real — run
-> `./.venv/bin/python -u tools/webcam-bridge/verify_lens_room.py` and follow
+> `python3 -u tools/webcam-bridge/verify_lens_room.py` and follow
 > its instructions to see that again. What nobody has yet done is drag a real
 > stroke and watch it land on the other panel. If it does not work, cut this scene rather
 > than implying it does.
@@ -201,14 +201,41 @@ through the bridge.
   it again after a fresh Lens Studio start.
 
 **TESTED AND NOT WORKING — do not plan a shot around it:**
-- The webcam hand **pressing** UI controls. A synthetic hand held a pinch for
-  four seconds directly on a front-door suggestion and nothing fired, though
-  the component is in the scene, `handDrivesUI` is true and it logs that it
-  hooked the bridge. The CURSOR half does work — the dot tracked onto the
-  front door correctly, a screen it was never wired for. So you can film the
-  cursor following your hand; use the mouse to actually press things.
-  Reproduce with `python3 fake_press.py 0.5 0.667` (scratchpad) while the
-  front door is showing.
+- The webcam hand **pressing** UI controls. Still broken, but now understood
+  much better, and two real bugs have been fixed along the way.
+
+  What now provably works: the hand reaches the Lens, the ray hits the right
+  control, and the trigger fires on it. With `debugHand` on, a synthetic pinch
+  on "draw a star" logs `ray hit Collider -> Item` then `pinch on Item
+  trigger=true` for every frame of the hold. The cursor also tracks correctly.
+
+  What still does not work: the button never activates. The lesson does not
+  open. So the press reaches SIK and SIK does not turn it into a press.
+
+  Fixed on the way (keep these, they were genuine):
+  1. `Probe.rayCast` calls back after the simulation update, so the target was
+     landing a frame late, after SIK had rolled `current` into `previous`.
+  2. `BaseInteractor.updateState()` rolls current into previous and then sets
+     `currentInteractable` back to null, expecting the interactor to re-target
+     inside that same call — which is why every built-in interactor overrides
+     it. Ours targeted from an `UpdateEvent` instead, so its target was wiped
+     every frame before SIK looked at it, and the manager dispatched
+     HoverExit + TriggerCanceled each frame instead of TriggerStart/TriggerEnd.
+     `updateState` now re-applies the computed target.
+
+  Where to pick it up: SIK filters hover and trigger events through
+  `interactor.inputType & interactable.hoveringInteractor`, and
+  `hoveringInteractor` is only set once a HoverStart has been dispatched. The
+  next thing to check is whether HoverStart is firing at all — if it is not,
+  every later event is dropped by that mask regardless of the trigger.
+
+  Repro: `python3 fake_press.py 0.5 0.667` (scratchpad) with the front door
+  showing. Two cautions learned the hard way: the preview self-resets, and a
+  run that races a reset reconnects the bridge mid-test and reports a false
+  negative — check the bridge connected BEFORE the hover started. And the log
+  lags a second or two behind the run, so do not grep too early.
+
+  For the demo: film the cursor following your hand; use the mouse to press.
 
 Anything in that last list: **try it before the take, and cut it if it does not
 work.** A demo that shows four solid things beats one that claims seven and

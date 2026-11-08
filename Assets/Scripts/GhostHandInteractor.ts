@@ -85,6 +85,15 @@ export class GhostHandInteractor extends BaseInteractor {
   private lastDebug = "";
   private triggerHeld = false;
 
+  /**
+   * What the UpdateEvent decided this frame, kept so updateState can put it
+   * back after SIK nulls currentInteractable. These are the authoritative
+   * values; currentInteractable/currentTrigger are merely where SIK reads
+   * them from, and it clears that spot once a frame.
+   */
+  private appliedInteractable: Interactable | null = null;
+  private appliedTrigger: InteractorTriggerType = InteractorTriggerType.None;
+
   constructor() {
     super();
     // CustomController is what SIK calls an interactor that is neither one of
@@ -103,6 +112,31 @@ export class GhostHandInteractor extends BaseInteractor {
 
     this.createEvent("OnStartEvent").bind(() => this.hookBridge());
     this.createEvent("UpdateEvent").bind(() => this.onUpdate());
+  }
+
+  /**
+   * Re-apply our target AFTER SIK has wiped it.
+   *
+   * BaseInteractor.updateState() rolls current into previous and then sets
+   * currentInteractable back to null, expecting the interactor to re-target
+   * before the InteractionManager processes events later in the same call.
+   * The built-in interactors (Mouse, Hand, Mobile) do their targeting inside
+   * their own updateState override for exactly that reason.
+   *
+   * We target from an UpdateEvent instead, because the aim depends on a
+   * raycast whose callback lands outside this call. So the target computed
+   * there was being wiped every frame before SIK ever looked at it: the
+   * manager saw a null current alongside a live previous, and dispatched
+   * HoverExit + TriggerCanceled each frame, never TriggerStart/TriggerEnd.
+   * The hand hovered and "pressed" in our own state while no button fired.
+   *
+   * Re-applying here puts the value back in the window SIK actually reads,
+   * while keeping the raycast deferral that Probe.rayCast's timing forces.
+   */
+  override updateState(): void {
+    super.updateState();
+    this.currentInteractable = this.appliedInteractable;
+    this.currentTrigger = this.appliedTrigger;
   }
 
   /** The bridge appears when the tracker page connects, which may be late. */
@@ -254,6 +288,9 @@ export class GhostHandInteractor extends BaseInteractor {
     this.triggerHeld = want;
 
     this.currentTrigger = want ? InteractorTriggerType.Pinch : InteractorTriggerType.None;
+
+    this.appliedInteractable = this.currentInteractable;
+    this.appliedTrigger = this.currentTrigger;
   }
 
   private clearTarget(): void {
@@ -269,6 +306,9 @@ export class GhostHandInteractor extends BaseInteractor {
     if (this.currentTrigger !== InteractorTriggerType.None) {
       this.currentTrigger = InteractorTriggerType.None;
     }
+
+    this.appliedInteractable = null;
+    this.appliedTrigger = InteractorTriggerType.None;
   }
 
   // ── BaseInteractor contract ───────────────────────────────────────────────
