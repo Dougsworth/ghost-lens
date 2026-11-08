@@ -40,6 +40,7 @@ import { GhostCoach } from "./GhostCoach";
 import { GhostSpeech } from "./GhostSpeech";
 import { GhostRoom, Peer, RoomEvent } from "./GhostRoom";
 import { Lesson } from "./GhostLessonSchema";
+import { BANK_KEYS } from "./GhostLessonBank";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import {
   GUITAR_LEGEND,
@@ -899,6 +900,17 @@ export class GhostMain extends BaseScriptComponent {
     this.frontUI.beginStage("Planning your steps", 0, 0.55);
     this.audio.playUnroll();
 
+    // The built-in suggestions are hand-written lessons that already work.
+    // Asking the AI for them was slow and could come back as something this
+    // build cannot teach, which left the screen stuck on the outline. Only a
+    // skill the user asked for themselves goes to the AI.
+    if (BANK_KEYS.indexOf(skill.trim().toLowerCase()) >= 0) {
+      const own = this.lessonSource.bundledFor(skill);
+      this.lesson = own;
+      this.onLessonReady({ lesson: own, origin: "bank", note: "" });
+      return;
+    }
+
     // Two honest escalations, both measured from the pinch.
     const nudge = this.createEvent("DelayedCallbackEvent");
     nudge.bind(() => {
@@ -998,7 +1010,29 @@ export class GhostMain extends BaseScriptComponent {
    */
   private startPlannedLesson(): void {
     if (!this.lesson || this.lessonSteps.length === 0) {
-      this.frontUI.setWaiting("That one needs hands, which this build cannot check yet.");
+      // Nothing to trace. Send it to the pack that CAN teach it rather than
+      // leaving the outline on screen with nowhere to go.
+      const steps = (this.lesson && this.lesson.steps) || [];
+      for (let i = 0; i < steps.length; i++) {
+        const r: any = steps[i].render;
+        if (r && r.kind === "chord") {
+          const want = String(r.chord || "").toLowerCase();
+          let idx = 0;
+          for (let c = 0; c < GUITAR_CHORDS.length; c++) {
+            if (GUITAR_CHORDS[c].id.toLowerCase() === want) { idx = c; break; }
+          }
+          this.openGuitar(idx);
+          return;
+        }
+        if (r && r.kind === "hands") {
+          this.openAsl(0);
+          return;
+        }
+      }
+      this.frontUI.setWaiting("That one cannot be taught here yet. Pick another.");
+      const back = this.createEvent("DelayedCallbackEvent");
+      back.bind(() => { if (this.mode === "front") this.showFrontDoor(); });
+      back.reset(2.5);
       return;
     }
     this.frontRoot.enabled = false;

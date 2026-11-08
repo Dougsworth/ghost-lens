@@ -58,6 +58,10 @@ export class GhostPinchInput extends BaseScriptComponent {
   bridgeRelativeMode: boolean = true;
 
   @input
+  @hint("Bridge: paint exactly where the on-screen hand dot is. Overrides relative mode, which started every stroke at the stroke's start point so the brush never sat under your hand.")
+  brushFollowsHandDot: boolean = true;
+
+  @input
   @hint("Bridge relative mode: how far the brush travels per unit of hand movement. Above 1 means small hand moves cover the whole stroke.")
   @widget(new SliderWidget(0.5, 3, 0.1))
   bridgeGain: number = 1.3;
@@ -135,6 +139,10 @@ export class GhostPinchInput extends BaseScriptComponent {
     this.interactors = found;
     for (let i = 0; i < found.length; i++) {
       const it = found[i];
+      // GhostHandInteractor is a CustomController driven by the webcam bridge.
+      // The bridge already paints through hookBridge(); listening to its SIK
+      // trigger as well made one pinch feed the brush twice.
+      if (it.inputType === InteractorInputType.CustomController) continue;
       it.onTriggerStart.add(() => this.handleTriggerStart(it));
       it.onTriggerEnd.add(() => this.handleTriggerEnd(it));
     }
@@ -217,7 +225,7 @@ export class GhostPinchInput extends BaseScriptComponent {
       // on a 2 mm start point is a test of the tracker, not of their writing.
       // The offset between hand and target is remembered, and from here the
       // hand drives the brush as a delta.
-      if (this.bridgeRelativeMode && this.strokeStart) {
+      if (this.bridgeRelativeMode && !this.brushFollowsHandDot && this.strokeStart) {
         this.anchorHand = { x: hand.x, y: hand.y };
         this.anchorTarget = { x: this.strokeStart.x, y: this.strokeStart.y };
       } else {
@@ -231,6 +239,12 @@ export class GhostPinchInput extends BaseScriptComponent {
       this._onPinchStart.invoke(p);
       return;
     }
+
+    // Only a stroke that STARTED with a pinch can move or end. A pinch held
+    // over from pressing a button (or from before this screen accepted input)
+    // used to paint straight away on the first "move"; now it does nothing
+    // until the hand opens and pinches again.
+    if (!this.bridgePinching) return;
 
     if (phase === "move") {
       const p = this.applyAnchor(hand);

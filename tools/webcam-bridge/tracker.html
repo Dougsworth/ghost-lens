@@ -3,7 +3,7 @@
 <style>
 :root{--bg:#f4f1ea;--ink:#1c1b19;--muted:#8a857b;--rule:#d8d2c6;--accent:#b3261e}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,sans-serif}
-main{max-width:720px;margin:24px auto;padding:0 16px}
+main{max-width:1600px;margin:16px auto;padding:0 16px}
 h1{font-weight:500;font-size:18px;margin:0 0 4px}
 p{margin:0;color:var(--muted)}
 .wrap{position:relative;margin-top:16px;border-top:1px solid var(--rule);padding-top:16px}
@@ -32,7 +32,9 @@ const coachEl=document.getElementById('coach'); const v=document.getElementById(
 // 0.10-0.14, so start below 0.30 and release above 0.55. The wide gap is
 // deliberate stability, and the frame debounce below is what adds strictness
 // -- narrowing these instead would make a steady pinch drop out mid-stroke.
-const PINCH_ON=0.30, PINCH_OFF=0.55;
+// Tightened: 0.30 fired on a relaxed pointing hand (0.18-0.27 seen while
+// pointing), so a pinch now needs thumb and index actually touching.
+const PINCH_ON=0.15, PINCH_OFF=0.35;
 // One Euro filter: smooth when the hand is slow, responsive when it moves fast.
 class OneEuro{constructor(minCut=0.5,beta=0.004,dCut=1.0){this.minCut=minCut;this.beta=beta;this.dCut=dCut;this.x=null;this.dx=0;this.t=null}
  a(c,dt){const r=2*Math.PI*c*dt;return r/(r+1)}
@@ -126,7 +128,7 @@ if(!SR){
 
 const fileset=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
 const lm=await HandLandmarker.createFromOptions(fileset,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2,minHandDetectionConfidence:0.6,minHandPresenceConfidence:0.6,minTrackingConfidence:0.5});
-v.srcObject=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:960},height:{ideal:540},frameRate:{ideal:60,min:24}}});
+v.srcObject=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:60,min:24}}});
 await v.play(); c.width=v.videoWidth; c.height=v.videoHeight;
 let last=performance.now(), fps=0, lastT=-1;
 function loop(){

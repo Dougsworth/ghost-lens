@@ -140,6 +140,13 @@ export class GhostHandInteractor extends BaseInteractor {
    */
   override updateState(): void {
     super.updateState();
+    // Stage the latest raycast HERE. Commit 6a0a88e removed the only call to
+    // applyPending() (it used to run in onUpdate) and never added it back, so
+    // setTarget() never ran, appliedInteractable stayed null forever, and SIK
+    // saw no target: no hover, no trigger, nothing pressed. With no hand,
+    // onUpdate's clearTarget() owns the applied values (it orders the release),
+    // so only stage while a hand is actually aiming.
+    if (this.handDrivesUI && this.handPoint) this.applyPending();
     this.currentInteractable = this.appliedInteractable;
     this.currentTrigger = this.appliedTrigger;
   }
