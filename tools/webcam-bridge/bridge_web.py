@@ -14,12 +14,19 @@ The LLM provider is chosen by lesson_llm from the environment: GEMINI_API_KEY,
 then ANTHROPIC_API_KEY, then OPENAI_API_KEY, then GHOST's bundled lessons.
 Copy credentials.env.example to credentials.env (gitignored) and source it.
 """
-import asyncio, http.server, json, os, threading, time, webbrowser
+import asyncio, http.server, json, os, sys, threading, time, webbrowser
 import websockets
 
 import lesson_llm
+import learning_engine
+import cloud_rooms
+from room_relay import RoomRelay
+from course_store import CourseStore
 
-HOST, WS_PORT, HTTP_PORT = "127.0.0.1", 8765, 8766
+# GHOST_BIND=0.0.0.0 exposes the bridge on the LAN (advanced; the relay has no
+# auth, so prefer the Supabase cloud sync for multi-desktop rooms instead).
+HOST = os.environ.get("GHOST_BIND", "127.0.0.1")
+WS_PORT, HTTP_PORT = 8765, 8766
 HERE = os.path.dirname(os.path.abspath(__file__))
 lenses, sources = set(), set()
 
@@ -101,6 +108,9 @@ class Speech(object):
 
 
 _speech = Speech()
+_rooms = RoomRelay()
+_courses = CourseStore()
+_cloud = cloud_rooms.start_if_configured(_rooms)
 
 async def handler(ws):
     role = "lens"
@@ -151,6 +161,81 @@ def serve_http():
                 return self._json(200, {"text": _speech.take_heard(),
                                         "listening": _speech.listening})
 
+            if self.path.startswith("/invite-qr?"):
+                from urllib.parse import urlsplit, parse_qs
+                import io
+                q = parse_qs(urlsplit(self.path).query)
+                url = q.get("url", [""])[0]
+                # Never turn this endpoint into a general QR generator for arbitrary URLs.
+                parsed = urlsplit(url)
+                if (parsed.scheme not in ("http", "https") or
+                    parsed.path != "/room.html" or
+                    not parse_qs(parsed.query).get("room", [""])[0].isalnum() or
+                    len(url) > 400):
+                    return self._json(400, {"error": "invalid invite URL"})
+                try:
+                    import qrcode
+                    image = qrcode.make(url)
+                    out = io.BytesIO()
+                    image.save(out, format="PNG")
+                    data = out.getvalue()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/png")
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.end_headers()
+                    return self.wfile.write(data)
+                except ImportError:
+                    return self._json(503, {"error": "Install qrcode[pil] for invite QR images"})
+
+            if self.path.startswith("/cloud"):
+                return self._json(200, _cloud.status() if _cloud else
+                                  {"enabled": False, "hint": "set SUPABASE_URL and "
+                                   "SUPABASE_ANON_KEY to share rooms across desktops"})
+
+            if self.path.startswith("/rooms"):
+                from urllib.parse import urlsplit, parse_qs
+                q = parse_qs(urlsplit(self.path).query)
+                return self._json(200, {"rooms": _rooms.list_rooms(q.get("person", [""])[0])})
+
+            if self.path.startswith("/room?"):
+                from urllib.parse import urlsplit, parse_qs
+                q = parse_qs(urlsplit(self.path).query)
+                return self._json(200, _rooms.poll(q.get("room", ["demo"])[0], q.get("person", [""])[0], q.get("since", ["0"])[0]))
+
+            if self.path.startswith("/learning/activity?"):
+                from urllib.parse import urlsplit, parse_qs
+                q = parse_qs(urlsplit(self.path).query)
+                course_id = q.get("courseId", [""])[0]
+                skill = q.get("skill", [""])[0]
+                lesson = _courses.by_id(course_id) if course_id else _courses.get(skill)
+                if not lesson:
+                    return self._json(404, {"error": "course not found"})
+                try:
+                    compiled = learning_engine.compile_lesson(lesson)
+                    learner = q.get("learner", [""])[0]
+                    progress = _courses.get_progress(learner, compiled["courseId"]) if learner else None
+                    return self._json(200, {"lesson": compiled, "progress": progress,
+                                            "next": learning_engine.next_activity(compiled, progress)})
+                except ValueError as exc:
+                    return self._json(422, {"error": str(exc)})
+
+            if self.path.startswith("/courses") or self.path.startswith("/progress"):
+                from urllib.parse import urlsplit, parse_qs
+                parsed = urlsplit(self.path)
+                q = parse_qs(parsed.query)
+                if parsed.path == "/courses/export":
+                    return self._json(200, _courses.export_library(q.get("learner", [""])[0]))
+                if parsed.path == "/courses":
+                    return self._json(200, {"courses": _courses.list_courses(q.get("learner", [""])[0])})
+                if parsed.path == "/courses/find":
+                    lesson = _courses.get(q.get("skill", [""])[0])
+                    return self._json(200 if lesson else 404, lesson or {"error": "not found"})
+                if parsed.path == "/courses/get":
+                    lesson = _courses.by_id(q.get("id", [""])[0])
+                    return self._json(200 if lesson else 404, lesson or {"error": "not found"})
+                if parsed.path == "/progress":
+                    return self._json(200, _courses.get_progress(q.get("learner", [""])[0], q.get("courseId", [""])[0]))
             if self.path == "/status":
                 # "llm" is the provider NAME only -- never the key, and never
                 # anything derived from it.
@@ -196,6 +281,45 @@ def serve_http():
                 print("heard: %r" % text)
                 return self._json(200, {"ok": True, "text": text})
 
+            if route == "/room/leave":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    if n > 2000: return self._json(413, {"error": "payload too large"})
+                    body = json.loads(self.rfile.read(n) or b"{}")
+                    return self._json(200, _rooms.leave(str(body.get("room", "")), str(body.get("person", ""))))
+                except (ValueError, TypeError) as e:
+                    return self._json(400, {"error": str(e)})
+
+            if route == "/room":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    if n > 6000: return self._json(413, {"error":"payload too large"})
+                    body = json.loads(self.rfile.read(n) or b"{}")
+                    result = _rooms.update(str(body.get("room", "demo")), str(body.get("person", "")),
+                                           body.get("name", "Learner"), body.get("lesson", ""), body.get("event"))
+                    return self._json(200, result)
+                except (ValueError, TypeError) as e:
+                    return self._json(400, {"error": str(e)})
+
+            if route == "/courses/import":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    if n > 1024 * 1024: return self._json(413, {"error": "snapshot too large"})
+                    req = json.loads(self.rfile.read(n) or b"{}")
+                    return self._json(200, _courses.import_library(req.get("learner"), req.get("snapshot")))
+                except (ValueError, TypeError, KeyError) as e:
+                    return self._json(400, {"error": str(e)})
+
+            if route == "/progress":
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                    if n > 4096: return self._json(413, {"error": "payload too large"})
+                    req = json.loads(self.rfile.read(n) or b"{}")
+                    result = _courses.save_progress(req.get("learner"), req.get("courseId"), req.get("step"), req.get("completed"), req.get("score"))
+                    return self._json(200, result)
+                except (ValueError, TypeError, KeyError) as e:
+                    return self._json(400, {"error": str(e)})
+
             # POST /coach  {"skill","step","reason","detail"}  ->  {"tip": "..."}
             # One short line after an attempt, from the same provider the
             # planner uses. coach_tip never raises: with no key, or a dead one,
@@ -234,6 +358,11 @@ def serve_http():
                 if len(skill) > 200:
                     return self._json(400, {"error": "'skill' too long"})
 
+                if route == "/lesson/plan" and not req.get("regenerate"):
+                    cached = _courses.get(skill)
+                    if cached:
+                        cached["cacheHit"] = True
+                        return self._json(200, cached)
                 usage = lesson_llm.Usage()
                 t0 = time.time()
                 try:
@@ -247,7 +376,12 @@ def serve_http():
                         print("review requested: %r" % skill)
                         # review_lesson never raises; a failed review returns
                         # the planned lesson with reviewed=false.
-                        lesson = lesson_llm.review_lesson(skill, planned, usage=usage)
+                        if planned.get("courseId") and planned.get("reviewed") is True:
+                            lesson = planned
+                        else:
+                            lesson = lesson_llm.review_lesson(skill, planned, usage=usage)
+                            if lesson.get("reviewed") is True:
+                                lesson = _courses.save(skill, lesson, replace=bool(req.get("regenerate")))
                 except lesson_llm.LessonInvalid as e:
                     print("  rejected after retry: %s" % (e.args[0],))
                     return self._json(422, {"error": "lesson failed validation",
@@ -276,11 +410,17 @@ def serve_http():
             if len(skill) > 200:
                 return self._json(400, {"error": "'skill' too long"})
 
+            cached = _courses.get(skill)
+            if cached:
+                cached["cacheHit"] = True
+                return self._json(200, cached)
             print("lesson requested: %r" % skill)
             usage = lesson_llm.Usage()
             t0 = time.time()
             try:
                 lesson = lesson_llm.build_lesson(skill, usage=usage)
+                if lesson.get("reviewed") is True:
+                    lesson = _courses.save(skill, lesson)
             except lesson_llm.LessonInvalid as e:
                 print("  rejected after retry: %s" % (e.args[0],))
                 return self._json(422, {"error": "lesson failed validation",
@@ -301,11 +441,19 @@ def serve_http():
 async def main():
     threading.Thread(target=serve_http, daemon=True).start()
     async with websockets.serve(handler, HOST, WS_PORT):
-        url = f"http://{HOST}:{HTTP_PORT}"
+        shown = "127.0.0.1" if HOST in ("0.0.0.0", "::") else HOST
+        url = f"http://{shown}:{HTTP_PORT}"
         print(f"Relay on ws://{HOST}:{WS_PORT}. Open {url} in Chrome and allow the camera.")
+        # Prefer Chrome (the tracker needs its GPU path); `open -a` exists only
+        # on macOS, so elsewhere fall back to the default browser instead of
+        # printing "'open' is not recognized" on Windows.
         try: webbrowser.get("chrome").open(url)
         except Exception:
-            try: os.system(f'open -a "Google Chrome" {url}')
+            try:
+                if sys.platform == "darwin":
+                    os.system(f'open -a "Google Chrome" {url}')
+                else:
+                    webbrowser.open(url)
             except Exception: pass
         await asyncio.Future()
 

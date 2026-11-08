@@ -65,8 +65,8 @@
       surfaceHeightCm: !<float> 15.000000
       singleHandOnly: true
       ownPinchDecision: true
-      pinchOnRatio: 0.340000
-      pinchOffRatio: 0.500000
+      pinchOnRatio: 0.300000
+      pinchOffRatio: 0.550000
   ScriptTypes:
     -
       {}

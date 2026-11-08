@@ -1,0 +1,52 @@
+- !<AssetImportMetadata/2f93687e-dedd-4a80-b1d1-fc8242c1f2fc>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 0c170fc3-043e-43b3-bbea-5b165702efd8
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 0c170fc3-043e-43b3-bbea-5b165702efd8
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 6225145d-df78-4d1a-b59a-b1f156218580
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/6225145d-df78-4d1a-b59a-b1f156218580>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 4d745671-3f0f-4b48-901b-1071e506adab
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    pinchDistanceCm: false
+    preferRight: false
+    releaseDistanceCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - preferRight: true
+      pinchDistanceCm: 2.700000
+      releaseDistanceCm: 3.800000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @input bool preferRight = true {"hint":"Prefer the right hand when both are tracked."}'
+    - '// @input float pinchDistanceCm = 2.7 {"hint":"Pinch distance in centimeters when the SIK pinch state is unavailable."}'
+    - '// @input float releaseDistanceCm = 3.8 {"hint":"Release distance in centimeters (hysteresis)."}'

@@ -1,0 +1,67 @@
+- !<AssetImportMetadata/a2e71069-5b2e-4733-afe5-e3bda8b11a8f>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 66451cc0-b256-40eb-9ca0-8e2d2106abc3
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 66451cc0-b256-40eb-9ca0-8e2d2106abc3
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 3a99dfaa-c70b-4180-baf1-eef8bd1bb03d
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/3a99dfaa-c70b-4180-baf1-eef8bd1bb03d>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 36e2a3ba-e385-4941-a7b6-d5a0b861dc28
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    bridgeUrl: false
+    enabledRoom: false
+    internetModule: false
+    learnerName: false
+    participantId: false
+    pollSeconds: false
+    roomId: false
+    uniquePerPreview: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - internetModule: !<reference.InternetModule> 00000000-0000-0000-0000-000000000000
+      bridgeUrl: "http://127.0.0.1:8766"
+      roomId: demo
+      participantId: lens-a
+      learnerName: Lens learner
+      enabledRoom: false
+      pollSeconds: 0.700000
+      uniquePerPreview: true
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input Asset.InternetModule internetModule
+    - '// @input string bridgeUrl = "http://127.0.0.1:8766"'
+    - '// @input string roomId = "demo"'
+    - '// @input string participantId = "lens-a"'
+    - '// @input string learnerName = "Lens learner"'
+    - // @input bool enabledRoom
+    - // @input float pollSeconds = 0.7
+    - // @input bool uniquePerPreview = true

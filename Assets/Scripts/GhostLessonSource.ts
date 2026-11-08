@@ -189,6 +189,11 @@ export class GhostLessonSource extends BaseScriptComponent {
       (planned) => {
         if (cancelled) return;
         onPlanned(planned);
+        // A reviewed cached course is already canonical: do not pay for review again.
+        if ((planned as any).courseId && (planned as any).reviewed === true) {
+          finish({ lesson: planned, origin: "bridge", note: "loaded from saved courses" });
+          return;
+        }
         // Stage 2. A failure here is not fatal: the planned lesson already
         // validated, so it is shipped as-is with reviewed left false.
         this.askStage(

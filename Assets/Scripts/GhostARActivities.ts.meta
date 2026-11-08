@@ -1,0 +1,61 @@
+- !<AssetImportMetadata/a1486514-2f54-44de-ad01-dd4c77f334f6>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> ee9ee3f2-2b8a-4ca1-ba1a-d44039374b63
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> ee9ee3f2-2b8a-4ca1-ba1a-d44039374b63
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 30e907a1-0f16-44f2-ab80-0db544996d7b
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/30e907a1-0f16-44f2-ab80-0db544996d7b>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: e5787adb-a847-4fbe-bd3c-b6451f305806
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    boxModel: false
+    cylinderModel: false
+    freehandGrab: false
+    grabRadiusCm: false
+    preferNativeHand: false
+    sphereModel: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - boxModel: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      sphereModel: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      cylinderModel: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      freehandGrab: true
+      preferNativeHand: true
+      grabRadiusCm: !<float> 12.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @input SceneObject boxModel {"hint":"Optional box RenderMeshVisual (mesh/material configured in scene)."}'
+    - '// @input SceneObject sphereModel {"hint":"Optional sphere model."}'
+    - '// @input SceneObject cylinderModel {"hint":"Optional cylinder model."}'
+    - '// @input bool freehandGrab = true {"hint":"Enable freehand 3D grabbing with native Spectacles tracking, or webcam in Preview."}'
+    - '// @input bool preferNativeHand = true {"hint":"Prefer native Spectacles hand tracking when available."}'
+    - '// @input float grabRadiusCm = 12 {"hint":"Maximum distance in cm from the model to begin grabbing."}'

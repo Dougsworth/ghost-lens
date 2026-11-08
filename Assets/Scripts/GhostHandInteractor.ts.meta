@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     _drawDebug: false
     handDrivesUI: false
+    hoverConfirmFrames: false
     indirectDragThreshold: false
     reachCm: false
   ScriptTypesHidden:
@@ -45,6 +46,7 @@
       _drawDebug: false
       handDrivesUI: true
       reachCm: !<float> 200.000000
+      hoverConfirmFrames: !<float> 2.000000
   ScriptTypes:
     -
       {}
@@ -64,3 +66,4 @@
     - "// @input bool handDrivesUI = true {\"hint\":\"Let the webcam bridge's hand drive the UI. Off leaves the mouse and real SIK hands completely untouched — this component then reports nothing at all.\"}"
     - '// @input float reachCm = 200 {"hint":"How far the probe reaches from the camera, in cm. Everything GHOST shows sits within about a metre.", "widget":"slider", "min":50, "max":400, "step":10}'
     - '// @ui {"widget":"group_end"}'
+    - '// @input float hoverConfirmFrames = 2 {"hint":"Consecutive frames on a button before hover is accepted. Reduces shaky targeting."}'

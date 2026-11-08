@@ -60,6 +60,8 @@ import {GhostSheet} from "../Scripts/GhostSheet"
 // and Knots are still covers only.
 /** The front door's row uses short names: "Guitar", not "Guitar Chords". */
 const OPEN_PACKS = ["Japanese", "ASL", "Guitar"]
+/** Not a pack: the saved-course library (V3+), which shares the notebook row. */
+const LIBRARY_TILES = ["My Learning"]
 const TAB_LABELS = ["Replay", "Slower", "Next", "Packs"]
 
 @component
@@ -85,9 +87,9 @@ export class GhostShelfToSheetScenario extends Scenario {
     expect(
       cards.length,
       `pack covers under ${NOTEBOOK_ROW}; names found: [${titles.join(", ")}]`,
-    ).toBe(OPEN_PACKS.length)
+    ).toBe(OPEN_PACKS.length + LIBRARY_TILES.length)
 
-    for (const pack of OPEN_PACKS) {
+    for (const pack of OPEN_PACKS.concat(LIBRARY_TILES)) {
       expect(
         titles.indexOf(pack) >= 0,
         `front door offers "${pack}"; names found: [${titles.join(", ")}]`,

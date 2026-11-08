@@ -6,8 +6,8 @@
     - !<own> f5d74682-203a-4970-81ea-9fa7b88c96bb
     - !<own> d343f1c3-771e-4811-935b-0c37960832c5
     - !<own> 4dd99e78-bbd2-4226-99a1-bbf943bebefd
-    - !<own> 059ab02a-8b80-4ad5-8f88-9e8a842a624f
     - !<own> a9f30383-0f52-4103-bbaa-e5ef082e6fd3
+    - !<own> f0446799-3cb6-4692-a92e-04ad0bf0fe50
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -240,21 +240,6 @@
     []
   Components:
     []
-- !<SceneObject/059ab02a-8b80-4ad5-8f88-9e8a842a624f>
-  PrefabRemaps:
-    []
-  Name: LEAF Plugin Bridge
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 628ee75e-6673-46a9-bee0-883918bafdc1
 - !<ScriptComponent/0847d2bb-a13f-4c4a-a404-169f67308f6f>
   PrefabRemaps:
     []
@@ -337,6 +322,22 @@
       handOccluderMaterial: !<reference.Material> bb8479b9-021e-4c42-809a-60edf99cbeac
       overrides:
         []
+  ScriptTypes:
+    "":
+      {}
+- !<ScriptComponent/0858eeaf-a267-424e-8e7a-38dd6abcbff1>
+  PrefabRemaps:
+    []
+  Name: MessagingBridge
+  Enabled: true
+  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
   ScriptTypes:
     "":
       {}
@@ -932,9 +933,12 @@
   Enabled: true
   ScriptAsset: !<reference> 1cfe76b1-423e-487b-a75e-a28dde59e473
   ScriptInputsDefault:
+    learnerId: true
     reanchorOnOpen: true
     anchorDistanceCm: true
     cleanRunsBeforeFade: true
+    hintAfterSec: true
+    hintGuideStrength: true
     stampHoldSec: true
     debugColliders: true
   ScriptTypesDefault:
@@ -962,11 +966,16 @@
       lessonSource: !<MappingBased.AssignableType_13> ccecc6dd-db91-4517-9eea-04a0b2398090
       coach: !<MappingBased.AssignableType_14> 59563978-083f-486c-891e-d1f483058974
       speech: !<MappingBased.AssignableType_15> 6a408698-1da5-4539-b6b9-def19bcf1d9c
-      audio: !<MappingBased.AssignableType_16> 31344314-8576-480c-a972-fbd63c3ecbe6
+      studyTogether: !<MappingBased.AssignableType_16> e986e5ec-b62c-458d-8fc3-53bca75c227d
+      arActivities: !<MappingBased.AssignableType_17> 8d00b108-82bd-46c5-86ad-d696e8b832d6
+      learnerId: learner-a
+      audio: !<MappingBased.AssignableType_18> 31344314-8576-480c-a972-fbd63c3ecbe6
       lessonSequence: いうえあお
       reanchorOnOpen: true
       anchorDistanceCm: !<float> 45.000000
       cleanRunsBeforeFade: !<float> 1.000000
+      hintAfterSec: 2.500000
+      hintGuideStrength: 0.500000
       stampHoldSec: 1.100000
       debugColliders: false
   ScriptTypes:
@@ -1088,6 +1097,8 @@
     surfaceHeightCm: true
     singleHandOnly: true
     ownPinchDecision: true
+    pinchOnRatio: true
+    pinchOffRatio: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1358,22 +1369,6 @@
     - !<own> cc8b3ee0-e217-46f9-896e-79a2b4108f80
   Components:
     []
-- !<ScriptComponent/628ee75e-6673-46a9-bee0-883918bafdc1>
-  PrefabRemaps:
-    []
-  Name: MessagingBridge
-  Enabled: true
-  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<ScriptComponent/62967490-d66e-4479-8829-e5c9da5b5b57>
   PrefabRemaps:
     []
@@ -1678,6 +1673,7 @@
     _drawDebug: true
     handDrivesUI: true
     reachCm: true
+    hoverConfirmFrames: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1686,6 +1682,7 @@
       _drawDebug: false
       handDrivesUI: true
       reachCm: !<float> 200.000000
+      hoverConfirmFrames: !<float> 2.000000
   ScriptTypes:
     "":
       {}
@@ -1931,6 +1928,21 @@
     - !<own> 3b4f5057-b516-4d3b-9c8d-14c81af2f505
   Components:
     []
+- !<SceneObject/7c73bd25-a157-4e0e-810f-74c5a0ca7456>
+  PrefabRemaps:
+    []
+  Name: ARActivities
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 8d00b108-82bd-46c5-86ad-d696e8b832d6
 - !<SceneObject/7e2075c6-0882-4275-8365-16a03da73298>
   PrefabRemaps:
     []
@@ -2161,6 +2173,32 @@
     - !<own> b859e31c-4c76-46bd-bd6a-042228e52728
   Components:
     []
+- !<ScriptComponent/8d00b108-82bd-46c5-86ad-d696e8b832d6>
+  PrefabRemaps:
+    []
+  Name: GhostARActivities
+  Enabled: true
+  ScriptAsset: !<reference> ee9ee3f2-2b8a-4ca1-ba1a-d44039374b63
+  ScriptInputsDefault:
+    boxModel: true
+    sphereModel: true
+    cylinderModel: true
+    freehandGrab: true
+    preferNativeHand: true
+    grabRadiusCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      boxModel: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      sphereModel: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      cylinderModel: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      freehandGrab: true
+      preferNativeHand: true
+      grabRadiusCm: !<float> 12.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/8fe2a532-9bf3-4cde-b598-04ce5470718d>
   PrefabRemaps:
     []
@@ -2454,6 +2492,21 @@
     - !<own> 0c355300-e635-47c1-a8c3-5ddef30b8824
   Components:
     []
+- !<SceneObject/a8347f5c-78cf-4c1c-b1c3-b0c5edc7510d>
+  PrefabRemaps:
+    []
+  Name: StudyTogether
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> e986e5ec-b62c-458d-8fc3-53bca75c227d
 - !<SceneObject/a98a7d22-28b9-4357-97cd-1486e721ac5d>
   PrefabRemaps:
     []
@@ -2989,6 +3042,8 @@
     - !<own> 22bdd82e-fff2-4ec3-b00c-f378117a8264
     - !<own> 76d3821b-2bfc-438c-b42e-7219fbb5ff81
     - !<own> 1bd491ae-d7db-4578-9e05-040ff9eaed36
+    - !<own> a8347f5c-78cf-4c1c-b1c3-b0c5edc7510d
+    - !<own> 7c73bd25-a157-4e0e-810f-74c5a0ca7456
   Components:
     - !<own> 3dd27e24-4b90-4977-9c02-d5621fc2dd8c
 - !<ScriptComponent/d3e2fbc5-8795-4913-9af6-c8626f8e6d9c>
@@ -3290,6 +3345,34 @@
     Fingers_length: 0.000000
     Thumb_inflate: 0.000000
     Thumb_length: 0.000000
+- !<ScriptComponent/e986e5ec-b62c-458d-8fc3-53bca75c227d>
+  PrefabRemaps:
+    []
+  Name: GhostStudyTogether
+  Enabled: true
+  ScriptAsset: !<reference> 66451cc0-b256-40eb-9ca0-8e2d2106abc3
+  ScriptInputsDefault:
+    bridgeUrl: true
+    roomId: true
+    participantId: true
+    learnerName: true
+    pollSeconds: true
+    uniquePerPreview: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      internetModule: !<reference.InternetModule> 46241788-3794-4d79-b8b3-1684fe9f1e20
+      bridgeUrl: "http://127.0.0.1:8766"
+      roomId: demo
+      participantId: lens-a
+      learnerName: Lens learner
+      enabledRoom: true
+      pollSeconds: 0.700000
+      uniquePerPreview: true
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/ec49891e-9104-4085-b33c-f0979cece4f8>
   PrefabRemaps:
     []
@@ -3328,6 +3411,7 @@
   ScriptAsset: !<reference> 7165e8d8-46e3-42f0-bfdb-2c4c51c5878e
   ScriptInputsDefault:
     dimTypeColor: true
+    stepHeightCm: true
     legendHeightCm: true
     tabHeightCm: true
   ScriptTypesDefault:
@@ -3360,6 +3444,21 @@
     []
   Components:
     []
+- !<SceneObject/f0446799-3cb6-4692-a92e-04ad0bf0fe50>
+  PrefabRemaps:
+    []
+  Name: LEAF Plugin Bridge
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 0858eeaf-a267-424e-8e7a-38dd6abcbff1
 - !<SceneObject/f36287fd-ed56-442d-ba20-78f9ef6f3502>
   PrefabRemaps:
     []

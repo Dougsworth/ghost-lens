@@ -66,6 +66,7 @@ export class GhostSpeech extends BaseScriptComponent {
   private listening = false;
   private elapsed = 0;
   private sincePoll = 0;
+  private pollPending = false;
 
   private readonly _onHeard = new Event<string>();
   private readonly _onGaveUp = new Event<void>();
@@ -125,17 +126,16 @@ export class GhostSpeech extends BaseScriptComponent {
   }
 
   private onUpdate(): void {
-    if (!this.listening) return;
     const dt = getDeltaTime();
-    this.elapsed += dt;
+    if (this.listening) this.elapsed += dt;
     this.sincePoll += dt;
 
-    if (this.elapsed >= this.timeoutSec) {
+    if (this.listening && this.elapsed >= this.timeoutSec) {
       this.listening = false;
       this._onGaveUp.invoke();
       return;
     }
-    if (this.sincePoll < this.pollSec) return;
+    if (this.sincePoll < this.pollSec || this.pollPending) return;
     this.sincePoll = 0;
     this.poll();
   }
@@ -149,6 +149,7 @@ export class GhostSpeech extends BaseScriptComponent {
       return;
     }
 
+    this.pollPending = true;
     this.internetModule
       .fetch(req)
       .then((response: Response) => {
@@ -156,7 +157,7 @@ export class GhostSpeech extends BaseScriptComponent {
         response
           .text()
           .then((text: string) => {
-            if (!this.listening) return;
+            // Browser-initiated speech must work without pressing the Lens mic.
             let body: any;
             try {
               body = JSON.parse(text);
@@ -166,18 +167,20 @@ export class GhostSpeech extends BaseScriptComponent {
             const heard = (body.text || "").trim();
             if (heard.length > 0) {
               this.listening = false;
+              print("[GhostSpeech] transcript received: " + heard);
               this._onHeard.invoke(heard);
               return;
             }
             // The page reports it has stopped and heard nothing. Give up now
             // rather than polling an idle microphone to the timeout.
-            if (body.listening === false && this.elapsed > 1.0) {
+            if (this.listening && body.listening === false && this.elapsed > 1.0) {
               this.listening = false;
               this._onGaveUp.invoke();
             }
           })
           .catch(() => {});
       })
-      .catch(() => {});
+      .catch(() => {})
+      .then(() => { this.pollPending = false; });
   }
 }

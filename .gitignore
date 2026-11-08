@@ -46,3 +46,6 @@ tools/webcam-bridge/.env
 .env
 *.credentials.json
 rsg_token.txt
+
+# Local learner course library
+tools/webcam-bridge/*.sqlite3*

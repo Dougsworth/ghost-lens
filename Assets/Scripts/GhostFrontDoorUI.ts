@@ -63,6 +63,7 @@ const NOTEBOOKS: { id: string; label: string }[] = [
   { id: "japanese", label: "Japanese" },
   { id: "asl", label: "ASL" },
   { id: "guitar", label: "Guitar" },
+  { id: "library", label: "My Learning" },
 ];
 
 @component
@@ -156,6 +157,14 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
       this.suggestionTexts[i].text = has ? this.suggestions[i] : "";
       this.suggestionTexts[i].getSceneObject().getParent().enabled = has;
     }
+  }
+
+  /** Reuse the three large, accessible pinch rows as saved-course bookmarks. */
+  showSavedCourses(labels: string[]): void {
+    this.showPicker();
+    if (this.titleText) this.titleText.text = "My Learning";
+    this.setSuggestions(labels);
+    this.setWaiting(labels.length ? "Pinch a lesson to continue" : "No saved lessons yet");
   }
 
   /** Show the picker again, hiding any lesson outline. */
@@ -478,7 +487,7 @@ export class GhostFrontDoorUI extends BaseScriptComponent {
     this.addText(parent, "NotebookLabel", 0, y + 1.9, "Meta",
       this.sheetWidthCm - 4, 0.7, this.dimInkColor).text = "Your notebook";
 
-    const w = 4.6;
+    const w = 3.55;
     const h = 2.2;
     const gap = 0.6;
     const rowW = NOTEBOOKS.length * w + (NOTEBOOKS.length - 1) * gap;

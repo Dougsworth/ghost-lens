@@ -49,7 +49,7 @@
       tabHighlightColor: !<Vec4> {x: 0.460000, y: 0.410000, z: 0.310000, w: 1.000000}
       typeColor: !<Vec4> {x: 0.800000, y: 0.760000, z: 0.680000, w: 1.000000}
       dimTypeColor: !<Vec4> {x: 0.620000, y: 0.580000, z: 0.500000, w: 1.000000}
-      stepHeightCm: 9.500000
+      stepHeightCm: 9.300000
       nameHeightCm: 12.600000
       legendHeightCm: -6.600000
       tabHeightCm: -9.400000

@@ -26,13 +26,20 @@ import {
 import { RoundedRectangleVisual } from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangleVisual";
 import Event, { PublicApi } from "SpectaclesInteractionKit.lspkg/Utils/Event";
 import { Pt } from "./GhostKanaPath";
-import { createDot, createQuads, createWashiSheet } from "./GhostInkRibbon";
+import { createDot, createQuads, createStamp, createWashiSheet } from "./GhostInkRibbon";
 
 // ── Typography ───────────────────────────────────────────────────────────────
 // Sizes are the Snap Specs type scale, calibrated at z = -110 cm. GHOST's sheet
 // sits at 45 cm, so every call passes PANEL_DISTANCE_CM and the scale converts.
 const FONT_SIZE_SCALE = 1.0;
 const PANEL_DISTANCE_CM = 45;
+
+/** Study Together peer colour: the same cyan as peer ink. */
+const PEER_CYAN = new vec4(0.40, 0.80, 1.0, 1.0);
+/** Seconds a peer's cheer stamp stays (slam, rest, fade). */
+const CHEER_TOTAL = 3.2;
+/** Seconds a room note stays (fade in, hold, fade out); long enough to read mid-task. */
+const NOTE_TOTAL = 5.0;
 
 type TextRole =
   | "Title1" | "Headline1" | "Body" | "Caption" | "TabThin"
@@ -172,6 +179,16 @@ export class GhostSheetUI extends BaseScriptComponent {
 
   // ── The one big word ──────────────────────────────────────────────────────
   private bannerText: Text | null = null;
+  /** Study Together race scores, left of the sheet. Null until first used. */
+  private scoreText: Text | null = null;
+  /** Seconds into the score-change pop, or -1 when idle. */
+  private scorePopT = -1;
+  /** A peer's cheer: a small cyan stamp that slams onto this sheet. */
+  private cheerStamp: RenderMeshVisual | null = null;
+  private cheerT = -1;
+  /** A one-line room note ("Mia joined"), faded in and out. */
+  private noteText: Text | null = null;
+  private noteT = -1;
   private bannerFull = "";
   private bannerT = 0;
   private bannerHoldSec = 1.6;
@@ -401,10 +418,17 @@ export class GhostSheetUI extends BaseScriptComponent {
     this.buildRomaji();
     this.buildHook();
     this.buildLine();
+    this.buildScoreboard();
     this.buildDotRoot();
     this.buildStrokeNumberRoot();
     this.buildTabs();
-    this.createEvent("UpdateEvent").bind(() => this.updateBanner(getDeltaTime()));
+    this.createEvent("UpdateEvent").bind(() => {
+      const dt = getDeltaTime();
+      this.updateBanner(dt);
+      this.updateScorePop(dt);
+      this.updateCheer(dt);
+      this.updateNote(dt);
+    });
   }
 
   private buildCounter(): void {
@@ -566,6 +590,131 @@ export class GhostSheetUI extends BaseScriptComponent {
    */
   private buildHook(): void {
     this.hookText = null;
+  }
+
+  /**
+   * The Study Together race board: a short ranked list LEFT of the sheet.
+   * The brief keeps the left side empty during solo practice, and so does
+   * this: the board only appears once a room has scores. It sits at x -12 cm,
+   * inside the ~31 cm frame width at 45 cm, clear of the paper (half-width
+   * 7.5) and of the tabs on the right. Replaces the old plan of writing scores
+   * into the memory hook, which is retired and draws nothing.
+   */
+  private buildScoreboard(): void {
+    // Level with the lower half of the sheet: +4.5 cm clipped at the top-left
+    // corner of the frame in preview, because the sheet itself sits high.
+    // Measured in preview: the frame ends ~13.5 cm left of centre and the
+    // paper starts at -7.5, so the column is -12.9..-7.7 (x -10.3, +/-2.6).
+    const t = this.buildText("RaceBoard", -2.5, "Body", 2.6, 4);
+    t.getSceneObject().getTransform().setLocalPosition(new vec3(-10.3, -2.5, 0.03));
+    this.scoreText = t;
+  }
+
+  /**
+   * A peer finished a character: their cheer lands on THIS sheet as a small
+   * cyan stamp in the bottom-left corner (the learner's own red hanko owns
+   * the bottom-right). It slams in from oversize with a slight overshoot,
+   * rests, then fades. Peer colour matches their ink, so it reads as theirs.
+   */
+  showCheer(): void {
+    if (!this.cheerStamp) {
+      const so = createStamp(this.sceneObject, 2.6, PEER_CYAN, 0.16);
+      so.getTransform().setLocalPosition(new vec3(-5.4, -5.4, 0.16));
+      this.cheerStamp = so.getComponent("Component.RenderMeshVisual") as RenderMeshVisual;
+    }
+    this.cheerStamp.getSceneObject().enabled = true;
+    this.cheerT = 0;
+    this.applyCheer(0);
+  }
+
+  private updateCheer(dt: number): void {
+    if (this.cheerT < 0) return;
+    this.cheerT += dt;
+    if (this.cheerT >= CHEER_TOTAL) {
+      this.cheerT = -1;
+      if (this.cheerStamp) this.cheerStamp.getSceneObject().enabled = false;
+      return;
+    }
+    this.applyCheer(this.cheerT);
+  }
+
+  /** Slam: 1.9x -> 0.92x in 0.18 s, settle to 1.0 by 0.3 s; fade out at the end. */
+  private applyCheer(t: number): void {
+    if (!this.cheerStamp) return;
+    let k: number;
+    if (t < 0.18) {
+      const f = t / 0.18;
+      k = 1.9 + (0.92 - 1.9) * (1 - (1 - f) * (1 - f));
+    } else if (t < 0.3) {
+      k = 0.92 + 0.08 * ((t - 0.18) / 0.12);
+    } else {
+      k = 1;
+    }
+    this.cheerStamp.getSceneObject().getTransform().setLocalScale(new vec3(k, k, 1));
+    // Additive display: brightness IS opacity. Snap in, fade out.
+    const a = Math.min(1, t / 0.08) * (t > CHEER_TOTAL - 0.6 ? (CHEER_TOTAL - t) / 0.6 : 1);
+    this.cheerStamp.mainMaterial.mainPass.baseColor =
+      new vec4(PEER_CYAN.x * a, PEER_CYAN.y * a, PEER_CYAN.z * a, PEER_CYAN.w);
+  }
+
+  /**
+   * One short room note, left of the sheet above the race board: soft fade in
+   * (0.4 s), hold, fade out. A new note replaces the old one, so notes never
+   * stack — the brief's one-thing-at-a-time rule.
+   */
+  showNote(text: string): void {
+    if (!this.noteText) {
+      this.noteText = this.buildText("RoomNote", 2.5, "Body", 2.6, 1.2);
+      this.noteText.getSceneObject().getTransform().setLocalPosition(new vec3(-10.3, 2.5, 0.03));
+    }
+    this.noteText.text = text;
+    this.noteText.getSceneObject().enabled = text.length > 0;
+    this.noteT = text.length > 0 ? 0 : -1;
+    this.applyNote(0);
+  }
+
+  private updateNote(dt: number): void {
+    if (this.noteT < 0 || !this.noteText) return;
+    this.noteT += dt;
+    if (this.noteT >= NOTE_TOTAL) {
+      this.noteT = -1;
+      this.noteText.getSceneObject().enabled = false;
+      return;
+    }
+    this.applyNote(this.noteT);
+  }
+
+  private applyNote(t: number): void {
+    if (!this.noteText) return;
+    const fadeIn = Math.min(1, t / 0.4);
+    const ease = fadeIn * fadeIn * (3 - 2 * fadeIn);
+    const fadeOut = t > NOTE_TOTAL - 0.5 ? Math.max(0, (NOTE_TOTAL - t) / 0.5) : 1;
+    const a = ease * fadeOut;
+    const c = this.typeColor;
+    this.noteText.textFill.color = new vec4(c.x * a, c.y * a, c.z * a, c.w * a);
+  }
+
+  /** Show the race board; a change in the ranking gives it a small pop. */
+  setScoreboard(text: string): void {
+    if (!this.scoreText) return;
+    const changed = this.scoreText.text !== text;
+    this.scoreText.text = text;
+    this.scoreText.getSceneObject().enabled = text.length > 0;
+    if (changed && text.length > 0) this.scorePopT = 0;
+  }
+
+  /** Pop: scale up 22% and settle back over a quarter second, ease-out. */
+  private updateScorePop(dt: number): void {
+    if (this.scorePopT < 0 || !this.scoreText) return;
+    this.scorePopT += dt;
+    const d = 0.25;
+    const f = Math.min(1, this.scorePopT / d);
+    const k = 1 + 0.22 * Math.sin(Math.PI * f) * (1 - f * 0.5);
+    this.scoreText.getSceneObject().getTransform().setLocalScale(new vec3(k, k, 1));
+    if (f >= 1) {
+      this.scoreText.getSceneObject().getTransform().setLocalScale(vec3.one());
+      this.scorePopT = -1;
+    }
   }
 
   /**

@@ -185,6 +185,10 @@ export class GhostTurnController extends BaseScriptComponent {
   private lastActivity = 0;
 
   private readonly _onStrokeAccepted = new Event<number>();
+  private readonly _onStrokePath = new Event<Pt[]>();
+  private readonly _onLiveStroke = new Event<Pt[]>();
+  get onLiveStroke(): PublicApi<Pt[]> { return this._onLiveStroke.publicApi(); }
+  get onStrokePath(): PublicApi<Pt[]> { return this._onStrokePath.publicApi(); }
   private readonly _onStrokeMissed = new Event<MissInfo>();
   private readonly _onCharacterComplete = new Event<void>();
   private readonly _onNeedsDemo = new Event<number>();
@@ -393,6 +397,7 @@ export class GhostTurnController extends BaseScriptComponent {
     if (dx * dx + dy * dy < 0.0225) return;
     this.livePoints.push({ x: q.x, y: q.y });
     this.renderLive();
+    this._onLiveStroke.invoke(this.livePoints.slice());
   }
 
   private endStroke(p: Pt): void {
@@ -440,9 +445,11 @@ export class GhostTurnController extends BaseScriptComponent {
         this.live[i].setColor(this.driedInkColor);
         this.dried.push(this.live[i]);
       }
+      const completedPath = this.livePoints.map((pt: Pt) => ({x: pt.x, y: pt.y}));
       this.live = [];
       this.drawing = false;
       this.livePoints = [];
+      this._onStrokePath.invoke(completedPath);
       this.smoothed = null;
       this.misses = 0;
       this.setPulse(false);

@@ -36,9 +36,13 @@ import { GhostFrontDoorUI } from "./GhostFrontDoorUI";
 import { GhostLessonSource, LessonResult } from "./GhostLessonSource";
 import { GhostCoach } from "./GhostCoach";
 import { GhostSpeech } from "./GhostSpeech";
+import { GhostStudyTogether } from "./GhostStudyTogether";
+import { GhostARActivities } from "./GhostARActivities";
+import { InkRibbon } from "./GhostInkRibbon";
 import { Lesson } from "./GhostLessonSchema";
 import { glyphFromStep, traceableSteps } from "./GhostLessonPath";
 import { Help, SkillTeacher } from "./GhostTeacher";
+import { validateLesson } from "./GhostLessonSchema";
 import {
   GUITAR_LEGEND,
   GUITAR_STRUM_LINE,
@@ -140,6 +144,66 @@ export class GhostMain extends BaseScriptComponent {
   @input
   @hint("Say a skill out loud. In the preview the tracker page listens; the typed suggestions are the fallback.")
   speech!: GhostSpeech;
+
+  @input
+  @allowUndefined
+  @hint("Optional local Study Together relay. Wire this component to enable multiplayer presence and lesson/step updates.")
+  studyTogether: GhostStudyTogether;
+  @input
+  @allowUndefined
+  @hint("Optional native pinchable 3D/quiz/matching activity component. Wire in Lens Studio.")
+  arActivities: GhostARActivities;
+  private activityLessonToken = 0;
+  /** Last room roster printed, so it is logged only when it changes. */
+  private lastPresence = "";
+  private remoteInk: InkRibbon[] = [];
+  private remoteInkCounter = 0;
+  private peerLive: {[key: string]: InkRibbon} = {};
+  private peerLiveIds: {[key: string]: number} = {};
+  private raceScores: {[key: string]: number} = {};
+  private raceLabel = "";
+  private sharedLessonToken = "";
+
+  @input
+  @hint("Stable local learner ID for saved course progress. Set a different ID for each learner.")
+  learnerId: string = "learner-a";
+  private savedProgress: {[key: string]: number} = {};
+  private libraryOpen = false;
+  private libraryCourses: {skill: string; courseId: string; step: number; totalSteps: number}[] = [];
+
+  private courseApi(path: string, method: string, payload: any, onData?: (data: any) => void): void {
+    if (!this.lessonSource || !this.lessonSource.internetModule) return;
+    const base = this.lessonSource.bridgeUrl.replace(/\/lesson.*$/, "");
+    let url = base + path;
+    const opts: any = { method: method };
+    if (payload) {
+      opts.headers = { "Content-Type": "application/json" };
+      opts.body = JSON.stringify(payload);
+    }
+    try {
+      this.lessonSource.internetModule.fetch(new Request(url, opts))
+        .then((response: Response) => {
+          if (response.status !== 200 || !onData) return;
+          response.text().then((raw: string) => {
+            try { onData(JSON.parse(raw)); } catch (e) { print("[GHOST courses] bad response: " + e); }
+          });
+        })
+        .catch((e: any) => print("[GHOST courses] offline: " + e));
+    } catch (e) { print("[GHOST courses] request failed: " + e); }
+  }
+
+  private saveCourseProgress(pos: number): void {
+    if (!this.lesson || !(this.lesson as any).courseId) return;
+    const courseId = (this.lesson as any).courseId;
+    const completed: number[] = [];
+    for (let i = 0; i < pos; i++) completed.push(this.lessonSteps[i]);
+    this.courseApi("/progress", "POST", {
+      learner: this.learnerId, courseId: courseId,
+      step: pos, completed: completed, score: pos
+    });
+  }
+
+  private remoteLessonNames: {[key: string]: string} = {};
 
   @input
   @hint("Brush, paper, stamp and spoken-character sounds.")
@@ -260,6 +324,11 @@ export class GhostMain extends BaseScriptComponent {
       return;
     }
 
+    if (this.arActivities) {
+      this.arActivities.onFinished.add(() => {
+        if (this.mode === "front") this.frontUI.setWaiting("Activity complete! Ask for another lesson.");
+      });
+    }
     this.characters = this.parseLesson(this.lessonSequence);
     if (this.characters.length === 0) {
       print("[GhostMain] ERROR: no usable characters in lessonSequence.");
@@ -283,6 +352,15 @@ export class GhostMain extends BaseScriptComponent {
     this.sheet.onPageTurnComplete.add(() => this.onPageTurnComplete());
 
     this.turn.onStrokeAccepted.add((i: number) => this.onStrokeAccepted(i));
+    this.turn.onLiveStroke.add((points: {x: number; y: number}[]) => {
+      if (this.studyTogether) this.studyTogether.sendLivePath(points);
+    });
+    this.turn.onStrokePath.add((points: {x: number; y: number}[]) => {
+      if (this.studyTogether) {
+        this.studyTogether.sendPath(points);
+        this.studyTogether.finishLivePath();
+      }
+    });
     this.turn.onStrokeMissed.add((m: MissInfo) => this.onStrokeMissed(m));
     this.turn.onNeedsDemo.add((i: number) => this.onNeedsDemo(i));
     this.turn.onCharacterComplete.add(() => this.onCharacterComplete());
@@ -294,9 +372,61 @@ export class GhostMain extends BaseScriptComponent {
 
     this.frontUI.onSkillPicked.add((skill: string) => this.onSkillPicked(skill));
     this.frontUI.onMicPressed.add(() => this.onMicPressed());
-    this.frontUI.onNotebookPicked.add((id: string) => this.onPackSelected(id));
+    this.frontUI.onNotebookPicked.add((id: string) => {
+      if (id === "library") this.openLibrary();
+      else this.onPackSelected(id);
+    });
     this.coach.onTip.add((tip: string) => this.onCoachTip(tip));
     this.speech.onHeard.add((text: string) => this.onHeard(text));
+    if (this.studyTogether) {
+      this.studyTogether.onScores.add((label: string) => {
+        this.raceLabel = label;
+        if (this.mode !== "front" && this.sheetUI) this.sheetUI.setScoreboard(label);
+      });
+      this.studyTogether.onPresence.add((summary: string) => {
+        // Avoid overwriting active lesson UI; presence is available in Logger.
+        // Only on change: it arrives every poll (~0.7 s) and flooded the log.
+        if (summary && summary !== this.lastPresence) print("[GHOST room] " + summary);
+        this.lastPresence = summary;
+      });
+      this.studyTogether.onRemoteEvent.add((event: any) => {
+        const data = event.data || {};
+        print("[GHOST room] " + event.from + " " + data.type);
+        if (data.type === "lesson" && typeof data.skill === "string") {
+          this.remoteLessonNames[event.from] = data.skill;
+          print("[GHOST room] " + event.from + " learning: " + data.skill);
+        }
+        if (data.type === "lesson_full" && data.lesson && this.mode === "front") {
+          const checked = validateLesson(data.lesson);
+          if (checked.ok) {
+            if (this.pending) { this.pending.cancel(); this.pending = null; }
+            this.lessonSkill = data.lesson.skill;
+            this.frontUI.beginOutline(this.lessonSkill);
+            this.onLessonReady({lesson: data.lesson, origin: "bridge", note: "Shared lesson"});
+          }
+        }
+        if (data.type === "ink_live" && data.points && this.sheet && this.sheet.inkRoot) {
+          this.showPeerLive(event.from, data.strokeId, data.points);
+        }
+        if (data.type === "ink_end") this.endPeerLive(event.from);
+        // Room moments, on the sheet: a soft note when someone joins, and a
+        // cheer stamp when a peer finishes a character. Both are no-ops for
+        // the eye while the sheet is hidden (front door), by construction.
+        if (data.type === "join" && this.studyTogether) {
+          this.sheetUI.showNote(this.studyTogether.displayName(event.from) + " joined");
+        }
+        if (data.type === "cheer" && this.studyTogether) {
+          this.sheetUI.showCheer();
+          this.sheetUI.showNote(this.studyTogether.displayName(event.from) + " finished!");
+        }
+        if (data.type === "path" && data.points && this.sheet && this.sheet.inkRoot) {
+          this.endPeerLive(event.from);
+          this.showRemotePath(event.from, data.points);
+        }
+        // Never automatically launch another user's AI request: a remote
+        // lesson might consume credits or interrupt local practice.
+      });
+    }
     this.speech.onGaveUp.add(() => this.onSpeechGaveUp());
 
     this.guitarUI.onReplay.add(() => this.onGuitarReplay());
@@ -437,6 +567,8 @@ export class GhostMain extends BaseScriptComponent {
     if (!this.glyph) return;
     this.mode = "turn";
     this.hintShown = false;
+    // Scores that arrived while on the front door are shown once a sheet is up.
+    if (this.raceLabel) this.sheetUI.setScoreboard(this.raceLabel);
     this.sheetUI.setStrokeCounter(1, this.glyph.strokeCount);
     // The ghost's own furniture comes down as the sheet is handed over: its
     // scattered stroke numbers, and its brush. Both are replaced by the single
@@ -565,7 +697,53 @@ export class GhostMain extends BaseScriptComponent {
     this.beginUserTurn();
   }
 
+  private showPeerLive(peer: string, id: number, points: any[]): void {
+    if (!Array.isArray(points) || points.length < 2 || points.length > 100) return;
+    for (const p of points) {
+      if (!p || typeof p.x !== "number" || typeof p.y !== "number" ||
+          !isFinite(p.x) || !isFinite(p.y) || Math.abs(p.x) > 30 || Math.abs(p.y) > 30) return;
+    }
+    if (this.peerLive[peer] && this.peerLiveIds[peer] !== id) this.endPeerLive(peer);
+    if (!this.peerLive[peer]) {
+      this.peerLive[peer] = new InkRibbon(this.sheet.inkRoot,
+        "LivePeer_" + peer, new vec4(0.40, 0.80, 1.0, 0.85), 0.14, 0.12);
+      this.peerLiveIds[peer] = id;
+    }
+    this.peerLive[peer].setRawPoints(points);
+  }
+  private endPeerLive(peer: string): void {
+    if (this.peerLive[peer]) this.peerLive[peer].sceneObject.destroy();
+    delete this.peerLive[peer];
+    delete this.peerLiveIds[peer];
+  }
+
+  /** Render a completed peer stroke in the local sheet's coordinate system. */
+  private showRemotePath(peer: string, raw: any[]): void {
+    if (!Array.isArray(raw) || raw.length < 2 || raw.length > 100) return;
+    const pts: {x: number; y: number}[] = [];
+    for (const p of raw) {
+      if (!p || typeof p.x !== "number" || typeof p.y !== "number" ||
+          !isFinite(p.x) || !isFinite(p.y) || Math.abs(p.x) > 30 || Math.abs(p.y) > 30) return;
+      pts.push({x: p.x, y: p.y});
+    }
+    const ribbon = new InkRibbon(this.sheet.inkRoot,
+      "PeerInk_" + peer + "_" + (++this.remoteInkCounter),
+      new vec4(0.40, 0.80, 1.0, 1.0), 0.16, 0.12);
+    ribbon.setRawPoints(pts);
+    this.remoteInk.push(ribbon);
+    // Bound mesh count in long sessions; no unbounded AR scene growth.
+    if (this.remoteInk.length > 60) {
+      const oldest = this.remoteInk.shift();
+      if (oldest) oldest.sceneObject.destroy();
+    }
+  }
+
   private onStrokeAccepted(index: number): void {
+    if (this.studyTogether) {
+      this.studyTogether.sendStep(index);
+      this.raceScores["me"] = (this.raceScores["me"] || 0) + 1;
+      this.studyTogether.sendRacePoint(this.raceScores["me"]);
+    }
     if (!this.glyph) return;
     // The stuck-hint was for the stroke just finished; the next starts unaided.
     this.clearHint();
@@ -598,6 +776,7 @@ export class GhostMain extends BaseScriptComponent {
   }
 
   private onStrokeMissed(info: MissInfo): void {
+    if (this.studyTogether) this.studyTogether.finishLivePath();
     // No harsh error and no red X — a soft sound, and the missed part pulses.
     this.audio.playMiss();
     // Struggling: give the outline straight back, at full strength, and start
@@ -633,6 +812,8 @@ export class GhostMain extends BaseScriptComponent {
     this.sheetUI.clearTurnMarkers();
     this.sheetUI.showAllTabs();
     if (this.cleanCharacter) this.cleanRun++;
+    // Tell the room: every peer's sheet gets a cheer stamp.
+    if (this.studyTogether) this.studyTogether.sendCheer();
     // Tell the coach this built-in character is done, so it can schedule its
     // spaced reviews. Planned "teach me anything" steps are one-off drawings,
     // not a set to revisit, so they stay out of it.
@@ -887,6 +1068,7 @@ export class GhostMain extends BaseScriptComponent {
     this.guitarRoot.enabled = false;
     this.frontRoot.enabled = true;
 
+    this.libraryOpen = false;
     this.frontUI.setSuggestions(this.pickSuggestions());
     this.frontUI.showPicker();
   }
@@ -929,6 +1111,26 @@ export class GhostMain extends BaseScriptComponent {
     this.frontUI.setWaiting("Listening...");
   }
 
+  /** Native AR course picker; uses existing UIKit pinch targets and saved SQLite courses. */
+  private openLibrary(): void {
+    if (this.mode !== "front") return;
+    if (this.libraryOpen) {
+      this.libraryOpen = false;
+      this.frontUI.showPicker();
+      this.frontUI.setSuggestions(this.pickSuggestions());
+      return;
+    }
+    this.libraryOpen = true;
+    this.frontUI.showSavedCourses([]);
+    this.frontUI.setWaiting("Opening your notebook...");
+    this.courseApi("/courses?learner=" + encodeURIComponent(this.learnerId), "GET", null, (data: any) => {
+      if (this.mode !== "front" || !this.libraryOpen) return;
+      this.libraryCourses = (data.courses || []).slice(0, 3);
+      this.frontUI.showSavedCourses(this.libraryCourses.map((c) =>
+        (c.step > 0 ? "Continue  " : "Open  ") + c.skill));
+    });
+  }
+
   private onHeard(text: string): void {
     if (this.mode !== "front") return;
     this.frontUI.setWaiting("");
@@ -953,8 +1155,16 @@ export class GhostMain extends BaseScriptComponent {
    * moving and never lies about how far along the work is.
    */
   private onSkillPicked(skill: string): void {
+    if (this.libraryOpen) {
+      const found = this.libraryCourses.find((c) =>
+        ((c.step > 0 ? "Continue  " : "Open  ") + c.skill) === skill);
+      if (!found) return;
+      skill = found.skill;
+      this.libraryOpen = false;
+    }
     this.audio.playTap();
     this.lessonSkill = skill;
+    if (this.studyTogether) this.studyTogether.setSkill(skill);
     this.frontUI.beginOutline(skill);
     this.frontUI.setWaiting("");
     this.frontUI.beginStage("Planning your steps", 0, 0.55);
@@ -1024,8 +1234,10 @@ export class GhostMain extends BaseScriptComponent {
   /** The reviewed lesson has landed. Correct the outline quietly, then begin. */
   private onLessonReady(r: LessonResult): void {
     this.lesson = r.lesson;
+    if (this.studyTogether && r.note !== "Shared lesson") this.studyTogether.sendLesson(r.lesson);
     this.lessonSteps = traceableSteps(r.lesson);
     this.lessonPos = 0;
+    this.savedProgress = {};
     this.frontUI.setWaiting(r.origin === "bank" ? r.note : "");
 
     this.frontUI.beginStage("Drawing it out", 0.85, 0.97);
@@ -1058,21 +1270,66 @@ export class GhostMain extends BaseScriptComponent {
    * grade, so it returns to the front door rather than opening an empty sheet.
    */
   private startPlannedLesson(): void {
-    if (!this.lesson || this.lessonSteps.length === 0) {
-      this.frontUI.setWaiting("That one needs hands, which this build cannot check yet.");
+    if (!this.lesson) return;
+    if (this.lessonSteps.length === 0 && this.arActivities) {
+      const first = this.lesson.steps.find((step) => step.render.kind === "snap3d" || step.render.kind === "objects");
+      if (first) {
+        const render: any = first.render;
+        const shape = render.kind === "snap3d" ? render.placeholder :
+          (render.objects && render.objects[0] ? render.objects[0].shape : "box");
+        if (this.arActivities.openExplore(shape, first.title)) {
+          this.frontRoot.enabled = false;
+          return;
+        }
+      }
+      if (this.lesson.quiz && this.arActivities.openQuiz(this.lesson)) {
+        this.frontRoot.enabled = false;
+        return;
+      }
+      // Generate a matching activity from the lesson's validated step titles
+      // and teaching tips. No additional model call is necessary.
+      const pairs = this.lesson.steps
+        .filter(step => step.title && step.tip && step.title.trim() !== step.tip.trim())
+        .map(step => ({left: step.title.trim().slice(0, 34), right: step.tip.trim().slice(0, 70)}))
+        .filter((pair, index, all) => all.findIndex(other => other.left === pair.left || other.right === pair.right) === index)
+        .slice(0, 3);
+      if (pairs.length >= 2 && this.arActivities.openMatching(pairs)) {
+        this.frontRoot.enabled = false;
+        return;
+      }
+    }
+    if (this.lessonSteps.length === 0) {
+      this.frontUI.setWaiting("No supported interactive activity in this lesson yet.");
       return;
     }
     this.frontRoot.enabled = false;
-    this.beginPlannedStep(0);
+    const courseId = (this.lesson as any).courseId;
+    if (!courseId) { this.beginPlannedStep(0); return; }
+    let started = false;
+    const startOnce = (position: number) => {
+      if (started || !this.lesson || (this.lesson as any).courseId !== courseId) return;
+      started = true;
+      this.beginPlannedStep(position);
+    };
+    this.courseApi("/progress?learner=" + encodeURIComponent(this.learnerId) +
+      "&courseId=" + encodeURIComponent(courseId), "GET", null, (progress: any) => {
+        const step = Math.max(0, Math.min(this.lessonSteps.length - 1, Number(progress.step) || 0));
+        startOnce(step);
+      });
+    const timeout = this.createEvent("DelayedCallbackEvent");
+    timeout.bind(() => startOnce(0));
+    timeout.reset(1.5);
   }
 
   private beginPlannedStep(pos: number): void {
     if (!this.lesson) return;
     if (pos >= this.lessonSteps.length) {
+      this.saveCourseProgress(pos);
       this.showFrontDoor();
       return;
     }
     this.lessonPos = pos;
+    this.saveCourseProgress(pos);
     const step = this.lesson.steps[this.lessonSteps[pos]];
     const glyph = glyphFromStep(step, this.lessonSkill, this.demo.glyphUnitCm);
     if (!glyph) {

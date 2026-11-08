@@ -65,7 +65,15 @@ export class GhostHandInteractor extends BaseInteractor {
   private bridge: WebcamHandBridge | null = null;
   private handPoint: vec3 | null = null;
   private pinching = false;
+  private handVisible = false;
+  private raycastBusy = false;
   private hooked = false;
+  private candidate: Interactable | null = null;
+  private candidateFrames = 0;
+  private lockedTarget: Interactable | null = null;
+  private previousPinch = false;
+  private raycastGeneration = 0;
+  @input @hint("Consecutive frames on a button before hover is accepted. Reduces shaky targeting.") hoverConfirmFrames: number = 2;
   private probe: any = null;
   private hitPoint: vec3 | null = null;
 
@@ -113,8 +121,15 @@ export class GhostHandInteractor extends BaseInteractor {
   private onUpdate(): void {
     if (!this.hooked) this.hookBridge();
 
+    // The bridge emits pinch callbacks only on transitions or while pinched.
+    // Read its live fingertip EVERY frame so hovering works before a pinch.
+    const live = this.bridge;
+    this.handVisible = !!(live && live.hand && live.fingertipWorld);
+    this.handPoint = this.handVisible ? live!.fingertipWorld : null;
+    this.pinching = this.handVisible && !!live!.isPinching;
+
     if (!this.handDrivesUI || !this.handPoint) {
-      this.clearTarget();
+      this.resetInteraction();
       return;
     }
 
@@ -129,15 +144,47 @@ export class GhostHandInteractor extends BaseInteractor {
     }
     const end = eye.add(dir.normalize().uniformScale(this.reachCm));
 
-    this.probe.rayCast(eye, end, (hit: any) => {
-      if (!hit || !hit.collider) {
-        this.clearTarget();
-        return;
+    // Once a pinch begins, keep its original button targeted until release.
+    // Without this, finger jitter causes a press to start on one button and
+    // end on another (or nowhere), so UIKit never emits the click.
+    if (this.lockedTarget) {
+      this.setTarget(this.lockedTarget);
+      if (!this.pinching) {
+        // Keep the release on the same button for this frame.
+        this.lockedTarget = null;
       }
-      this.hitPoint = hit.position;
-      const found = this.findInteractable(hit.collider.getSceneObject());
-      this.setTarget(found);
-    });
+      this.previousPinch = this.pinching;
+      return;
+    }
+    if (this.raycastBusy) return;
+    this.raycastBusy = true;
+    const generation = ++this.raycastGeneration;
+    try {
+      this.probe.rayCast(eye, end, (hit: any) => {
+        this.raycastBusy = false;
+        if (generation !== this.raycastGeneration || !this.handDrivesUI || !this.handVisible) return;
+        const found = hit && hit.collider ? this.findInteractable(hit.collider.getSceneObject()) : null;
+        if (found !== this.candidate) {
+          this.candidate = found;
+          this.candidateFrames = 1;
+        } else this.candidateFrames++;
+        if (this.candidateFrames >= Math.max(1, this.hoverConfirmFrames)) {
+          this.hitPoint = hit && hit.position ? hit.position : null;
+          this.setTarget(found);
+        }
+        // Never initiate a press when the pinch started in empty space.
+        // Require a stable hovered target on the rising pinch edge.
+        if (this.pinching && !this.previousPinch && this.currentInteractable) {
+          this.lockedTarget = this.currentInteractable;
+          this.setTarget(this.lockedTarget);
+        }
+        this.previousPinch = this.pinching;
+      });
+    } catch (e) {
+      this.raycastBusy = false;
+      this.clearTarget();
+      print("[GHOST] Hand UI raycast failed: " + e);
+    }
   }
 
   /** The Interactable on this object, or the nearest one above it. */
@@ -162,9 +209,19 @@ export class GhostHandInteractor extends BaseInteractor {
    */
   private setTarget(interactable: Interactable | null): void {
     this.currentInteractable = interactable;
-    this.currentTrigger = (interactable && this.pinching)
+    this.currentTrigger = (interactable && this.pinching &&
+      (this.lockedTarget === interactable || !this.previousPinch))
       ? InteractorTriggerType.Pinch
       : InteractorTriggerType.None;
+  }
+
+  private resetInteraction(): void {
+    this.raycastGeneration++;
+    this.lockedTarget = null;
+    this.candidate = null;
+    this.candidateFrames = 0;
+    this.previousPinch = false;
+    this.clearTarget();
   }
 
   private clearTarget(): void {
